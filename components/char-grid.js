@@ -1,3 +1,5 @@
+import { element, fragment } from "../lib/dom.js";
+
 const CHUNK_SIZE = 100;
 
 export class CharGrid extends HTMLElement {
@@ -28,22 +30,26 @@ export class CharGrid extends HTMLElement {
     this.shadowRoot.appendChild(
       template.content.cloneNode(true),
     );
-    this.#content = document.createElement("div");
+    this.#content = element("div");
     this.shadowRoot.appendChild(this.#content);
-    this.shadowRoot.addEventListener("click", (e) => {
-      const cell = e.target.closest(".char-cell");
-      if (!cell) return;
-      const idx = parseInt(cell.dataset.index);
-      if (this.#items[idx]) {
-        this.dispatchEvent(new CustomEvent(
-          "char-select",
-          {
-            detail: this.#items[idx],
-            bubbles: true,
-          },
-        ));
-      }
-    });
+    this.shadowRoot.addEventListener(
+      "click",
+      (e) => {
+        const cell =
+          e.target.closest(".char-cell");
+        if (!cell) return;
+        const idx = parseInt(cell.dataset.index);
+        if (this.#items[idx]) {
+          this.dispatchEvent(new CustomEvent(
+            "char-select",
+            {
+              detail: this.#items[idx],
+              bubbles: true,
+            },
+          ));
+        }
+      },
+    );
   }
   
   get selectedIndex() {
@@ -104,14 +110,15 @@ export class CharGrid extends HTMLElement {
       this.#content.appendChild(label);
     }
     
-    const grid = document.createElement("div");
-    grid.className = "grid";
+    const grid = element("div", {
+      className: "grid",
+    });
     this.#content.appendChild(grid);
     
     const first = this.#items.slice(0, CHUNK_SIZE);
-    for (let i = 0; i < first.length; i++) {
+    for (const [i, entry] of first.entries()) {
       grid.appendChild(
-        this.#createCell(first[i], i),
+        this.#createCell(entry, i),
       );
     }
     
@@ -127,10 +134,10 @@ export class CharGrid extends HTMLElement {
       .cloneNode(true)
       .querySelector(".char-cell");
     cell.dataset.index = index;
-    cell.querySelector(".char-glyph").textContent =
-      entry.c;
-    cell.querySelector(".char-name").textContent =
-      entry.n;
+    cell.querySelector(".char-glyph")
+      .textContent = entry.c;
+    cell.querySelector(".char-name")
+      .textContent = entry.n;
     if (index === this.#selectedIndex) {
       cell.classList.add("selected");
     }
@@ -151,13 +158,14 @@ export class CharGrid extends HTMLElement {
         offset + CHUNK_SIZE,
         this.#items.length,
       );
-      const fragment = document.createDocumentFragment();
-      for (let i = offset; i < end; i++) {
-        fragment.appendChild(
-          this.#createCell(this.#items[i], i),
+      const frag = fragment();
+      const slice = this.#items.slice(offset, end);
+      for (const [i, entry] of slice.entries()) {
+        frag.appendChild(
+          this.#createCell(entry, offset + i),
         );
       }
-      grid.appendChild(fragment);
+      grid.appendChild(frag);
       this.#appendChunks(version, end);
     });
   }
@@ -165,7 +173,9 @@ export class CharGrid extends HTMLElement {
   #scrollToSelected() {
     const sel =
       this.shadowRoot.querySelector(".selected");
-    if (sel) sel.scrollIntoView({ block: "nearest" });
+    if (sel) {
+      sel.scrollIntoView({ block: "nearest" });
+    }
   }
 }
 
