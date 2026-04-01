@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>Unicode Picker</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          system-ui, -apple-system, sans-serif;
+        background: #1a1a1a;
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .search-bar {
+        padding: 16px;
+        background: #222;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+      }
+
+      .search-bar input {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 18px;
+        background: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 8px;
+        color: #fff;
+        outline: none;
+      }
+
+      .search-bar input:focus {
+        border-color: #6a9fff;
+        box-shadow:
+          0 0 0 2px rgba(106, 159, 255, 0.25);
+      }
+
+      .search-bar input::placeholder {
+        color: #666;
+      }
+
+      .status {
+        padding: 8px 16px;
+        font-size: 12px;
+        color: #888;
+        background: #222;
+        flex-shrink: 0;
+      }
+
+      .results {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns:
+          repeat(auto-fill, minmax(104px, 1fr));
+        gap: 4px;
+      }
+
+      .char-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 4px;
+        border-radius: 8px;
+        cursor: pointer;
+        gap: 4px;
+        overflow: hidden;
+      }
+
+      .char-cell:hover,
+      .char-cell.selected {
+        background: #2a2a2a;
+      }
+
+      .char-cell.selected {
+        background: #333;
+        outline: 1px solid #555;
+      }
+
+      .char-glyph {
+        font-size: 48px;
+        line-height: 1.2;
+        font-family:
+          "Apple Symbols",
+          "Noto Sans Symbols 2",
+          "Noto Sans Symbols",
+          "Noto Sans",
+          "Segoe UI Symbol",
+          "Arial Unicode MS",
+          system-ui,
+          sans-serif;
+      }
+
+      .char-name {
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        max-width: 100%;
+        word-break: break-word;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform:
+          translateX(-50%) translateY(100px);
+        background: #4a9;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: transform 0.2s ease;
+        pointer-events: none;
+      }
+
+      .toast.visible {
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .empty {
+        padding: 48px;
+        text-align: center;
+        color: #666;
+        font-size: 16px;
+      }
+
+      .section-label {
+        font-size: 11px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 8px 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="search-bar">
+      <input
+        id="search"
+        type="text"
+        placeholder="Search Unicode characters…"
+        autofocus
+      />
+    </div>
+    <div class="status" id="status">Loading…</div>
+    <div class="results" id="results"></div>
+    <div class="toast" id="toast">Copied!</div>
+
+    <script type="module">
+      const RECENTS_KEY = "unicode-picker-recents";
+      const MAX_RECENTS = 36;
+
+      let allChars = [];
+      let filtered = [];
+      let selectedIndex = 0;
+
+      const searchEl =
+        document.getElementById("search");
+      const resultsEl =
+        document.getElementById("results");
+      const statusEl =
+        document.getElementById("status");
+      const toastEl =
+        document.getElementById("toast");
+
+      async function loadData() {
+        const resp = await fetch("unicode-data.json");
+        allChars = await resp.json();
+        const count =
+          allChars.length.toLocaleString();
+        statusEl.textContent =
+          `${count} characters loaded.`;
+        searchEl.focus();
+        render();
+      }
+
+      function getRecents() {
+        try {
+          const raw =
+            localStorage.getItem(RECENTS_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function addRecent(entry) {
+        const recents = getRecents().filter(
+          (rec) => rec.u !== entry.u,
+        );
+        recents.unshift(entry);
+        if (recents.length > MAX_RECENTS) {
+          recents.length = MAX_RECENTS;
+        }
+        localStorage.setItem(
+          RECENTS_KEY,
+          JSON.stringify(recents),
+        );
+      }
+
+      function search(query) {
+        if (!query.trim()) {
+          filtered = [];
+          const count =
+            allChars.length.toLocaleString();
+          statusEl.textContent =
+            `${count} characters loaded.`;
+          selectedIndex = 0;
+          render();
+          return;
+        }
+
+        const terms =
+          query.toUpperCase().split(/\s+/);
+        filtered = allChars.filter((entry) => {
+          return terms.every(
+            (term) => entry.n.includes(term),
+          );
+        });
+
+        const total =
+          filtered.length.toLocaleString();
+        statusEl.textContent =
+          `${total} matches`;
+        selectedIndex = 0;
+        render();
+      }
+
+      function cellHTML(entry, index, cls) {
+        const sel =
+          index === selectedIndex ? " selected" : "";
+        return [
+          `<div`,
+          `  class="${cls} char-cell${sel}"`,
+          `  data-index="${index}"`,
+          `>`,
+          `  <span class="char-glyph">`,
+          `    ${entry.c}`,
+          `  </span>`,
+          `  <span class="char-name">`,
+          `    ${entry.n}`,
+          `  </span>`,
+          `</div>`,
+        ].join("");
+      }
+
+      let renderVersion = 0;
+      const CHUNK_SIZE = 100;
+
+      function render() {
+        renderVersion++;
+        const query = searchEl.value.trim();
+
+        if (!query) {
+          const recents = getRecents();
+          if (recents.length === 0) {
+            resultsEl.innerHTML = [
+              `<div class="empty">`,
+              `  Start typing to search`,
+              `</div>`,
+            ].join("");
+            return;
+          }
+          resultsEl.innerHTML = [
+            `<div class="section-label">`,
+            `  Recent`,
+            `</div>`,
+            `<div class="grid">`,
+            recents.map(
+              (entry, idx) =>
+                cellHTML(entry, idx, "recent"),
+            ).join(""),
+            `</div>`,
+          ].join("");
+          return;
+        }
+
+        if (filtered.length === 0) {
+          resultsEl.innerHTML = [
+            `<div class="empty">`,
+            `  No matches`,
+            `</div>`,
+          ].join("");
+          return;
+        }
+
+        const first =
+          filtered.slice(0, CHUNK_SIZE);
+        resultsEl.innerHTML = [
+          `<div class="grid" id="grid">`,
+          first.map(
+            (entry, idx) =>
+              cellHTML(entry, idx, "result"),
+          ).join(""),
+          `</div>`,
+        ].join("");
+
+        scrollToSelected();
+
+        if (filtered.length > CHUNK_SIZE) {
+          appendChunks(
+            renderVersion,
+            CHUNK_SIZE,
+          );
+        }
+      }
+
+      function appendChunks(version, offset) {
+        if (version !== renderVersion) return;
+        if (offset >= filtered.length) return;
+
+        requestAnimationFrame(() => {
+          if (version !== renderVersion) return;
+          const grid =
+            document.getElementById("grid");
+          if (!grid) return;
+
+          const end =
+            Math.min(
+              offset + CHUNK_SIZE,
+              filtered.length,
+            );
+          const slice =
+            filtered.slice(offset, end);
+          const chunk = slice.map(
+            (entry, rel) => cellHTML(
+              entry, offset + rel, "result",
+            ),
+          );
+          grid.insertAdjacentHTML(
+            "beforeend", chunk.join(""),
+          );
+          appendChunks(version, end);
+        });
+      }
+
+      function scrollToSelected() {
+        const sel =
+          resultsEl.querySelector(".selected");
+        if (sel) {
+          sel.scrollIntoView({
+            block: "nearest",
+          });
+        }
+      }
+
+      async function copyChar(entry) {
+        await navigator.clipboard.writeText(
+          entry.c,
+        );
+        addRecent(entry);
+        toastEl.textContent =
+          `Copied ${entry.c}  (${entry.n})`;
+        toastEl.classList.add("visible");
+        setTimeout(
+          () => toastEl.classList.remove("visible"),
+          1500,
+        );
+      }
+
+      function currentList() {
+        const query = searchEl.value.trim();
+        return query ? filtered : getRecents();
+      }
+
+      searchEl.addEventListener("input", () => {
+        search(searchEl.value);
+      });
+
+      searchEl.addEventListener(
+        "keydown",
+        (evt) => {
+          const list = currentList();
+          if (evt.key === "ArrowDown") {
+            evt.preventDefault();
+            const cols = gridCols();
+            if (selectedIndex + cols < list.length) {
+              selectedIndex += cols;
+              render();
+            }
+          } else if (evt.key === "ArrowUp") {
+            evt.preventDefault();
+            const cols = gridCols();
+            if (selectedIndex - cols >= 0) {
+              selectedIndex -= cols;
+              render();
+            }
+          } else if (evt.key === "ArrowRight") {
+            evt.preventDefault();
+            if (selectedIndex < list.length - 1) {
+              selectedIndex++;
+              render();
+            }
+          } else if (evt.key === "ArrowLeft") {
+            evt.preventDefault();
+            if (selectedIndex > 0) {
+              selectedIndex--;
+              render();
+            }
+          } else if (
+            evt.key === "Enter" &&
+            list.length > 0
+          ) {
+            evt.preventDefault();
+            copyChar(list[selectedIndex]);
+          }
+        },
+      );
+
+      function gridCols() {
+        const grid =
+          resultsEl.querySelector(".grid");
+        if (!grid) return 1;
+        const style = getComputedStyle(grid);
+        return style
+          .getPropertyValue(
+            "grid-template-columns",
+          )
+          .split(" ").length;
+      }
+
+      resultsEl.addEventListener("click", (evt) => {
+        const cell =
+          evt.target.closest(".char-cell");
+        if (!cell) return;
+        const idx =
+          parseInt(cell.dataset.index);
+        const list = currentList();
+        if (list[idx]) copyChar(list[idx]);
+      });
+
+      loadData();
+    </script>
+  </body>
+</html>
