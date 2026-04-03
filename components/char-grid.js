@@ -1,6 +1,6 @@
 import { element, fragment } from "../lib/dom.js";
 
-const ROW_HEIGHT = 108;
+const ROW_HEIGHT = 120;
 const BUFFER_ROWS = 3;
 
 export class CharGrid extends HTMLElement {
@@ -95,6 +95,21 @@ export class CharGrid extends HTMLElement {
 
   get gridCols() {
     return this.#cols;
+  }
+
+  showCopied(index) {
+    const cell = this.shadowRoot.querySelector(
+      `.char-cell[data-index="${index}"]`,
+    );
+    if (!cell) return;
+    cell.classList.remove("copied");
+    void cell.offsetWidth;
+    cell.classList.add("copied");
+    cell.addEventListener(
+      "animationend",
+      () => cell.classList.remove("copied"),
+      { once: true },
+    );
   }
 
   update(

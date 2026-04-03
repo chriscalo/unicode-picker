@@ -7,7 +7,7 @@ const MAX_RECENTS = 36;
 export class UnicodePicker extends HTMLElement {
   #allChars = [];
   #filtered = [];
-  #selectedIndex = 0;
+  #selectedIndex = -1;
   #input;
   #status;
   #grid;
@@ -120,7 +120,11 @@ export class UnicodePicker extends HTMLElement {
   async #copyChar(entry) {
     await navigator.clipboard.writeText(entry.c);
     this.#addRecent(entry);
-    this.#toast.show(`Copied ${entry.c}  (${entry.n})`);
+    const list = this.#currentList();
+    const index = list.indexOf(entry);
+    if (index !== -1) {
+      this.#grid.showCopied(index);
+    }
   }
   
   #onKeydown(e) {
