@@ -12,7 +12,7 @@ export class UnicodePicker extends HTMLElement {
   #status;
   #grid;
   #toast;
-  
+
   constructor() {
     super();
     const template = document.getElementById(
@@ -22,12 +22,16 @@ export class UnicodePicker extends HTMLElement {
     this.shadowRoot.appendChild(
       template.content.cloneNode(true),
     );
-    
-    this.#input = this.shadowRoot.querySelector("input");
-    this.#status = this.shadowRoot.querySelector(".status");
-    this.#grid = this.shadowRoot.querySelector("char-grid");
-    this.#toast = this.shadowRoot.querySelector("copy-toast");
-    
+
+    this.#input =
+      this.shadowRoot.querySelector("input");
+    this.#status =
+      this.shadowRoot.querySelector(".status");
+    this.#grid =
+      this.shadowRoot.querySelector("char-grid");
+    this.#toast =
+      this.shadowRoot.querySelector("copy-toast");
+
     this.#input.addEventListener(
       "input",
       () => this.#search(this.#input.value),
@@ -40,28 +44,40 @@ export class UnicodePicker extends HTMLElement {
       "char-select",
       (e) => this.#copyChar(e.detail),
     );
+    this.#grid.addEventListener(
+      "selection-change",
+      (e) => this.#select(e.detail),
+    );
   }
-  
+
   connectedCallback() {
     this.#allChars = parseUnicodeData(
       document.getElementById("unicode-data")
         .textContent,
     );
-    const count = this.#allChars.length.toLocaleString();
-    this.#status.textContent = `${count} characters loaded.`;
+    const count =
+      this.#allChars.length.toLocaleString();
+    this.#status.textContent =
+      `${count} characters loaded.`;
     this.#input.focus();
     this.#render();
   }
-  
+
+  #select(index) {
+    this.#selectedIndex = index;
+    this.#grid.selectedIndex = index;
+  }
+
   #getRecents() {
     try {
-      const raw = localStorage.getItem(RECENTS_KEY);
+      const raw =
+        localStorage.getItem(RECENTS_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
     }
   }
-  
+
   #addRecent(entry) {
     const recents = this.#getRecents().filter(
       (r) => r.u !== entry.u,
@@ -75,28 +91,33 @@ export class UnicodePicker extends HTMLElement {
       JSON.stringify(recents),
     );
   }
-  
+
   #search(query) {
     if (!query.trim()) {
       this.#filtered = [];
       this.#status.textContent =
-        `${this.#allChars.length.toLocaleString()} characters loaded.`;
-      this.#selectedIndex = 0;
+        `${this.#allChars.length.toLocaleString()}`
+        + ` characters loaded.`;
+      this.#selectedIndex = -1;
       this.#render();
       return;
     }
-    
+
     const terms = query.toUpperCase().split(/\s+/);
     this.#filtered = this.#allChars.filter(
-      (entry) => terms.every((term) => entry.n.includes(term)),
+      (entry) =>
+        terms.every((term) =>
+          entry.n.includes(term),
+        ),
     );
-    
+
     this.#status.textContent =
-      `${this.#filtered.length.toLocaleString()} matches`;
-    this.#selectedIndex = 0;
+      `${this.#filtered.length.toLocaleString()}`
+      + ` matches`;
+    this.#selectedIndex = -1;
     this.#render();
   }
-  
+
   #render() {
     const query = this.#input.value.trim();
     const list = this.#currentList();
@@ -106,17 +127,17 @@ export class UnicodePicker extends HTMLElement {
       return;
     }
 
-    this.#grid.update(list, {
-      selectedIndex: this.#selectedIndex,
-    });
+    this.#grid.update(list);
+    this.#grid.selectedIndex =
+      this.#selectedIndex;
   }
-  
+
   #currentList() {
     return this.#input.value.trim() ?
       this.#filtered :
       this.#allChars;
   }
-  
+
   async #copyChar(entry) {
     await navigator.clipboard.writeText(entry.c);
     this.#addRecent(entry);
@@ -126,54 +147,46 @@ export class UnicodePicker extends HTMLElement {
       this.#grid.showCopied(index);
     }
   }
-  
+
   #onKeydown(e) {
     const list = this.#currentList();
     const cols = this.#grid.gridCols;
-    
+    let newIndex = this.#selectedIndex;
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (
-        this.#selectedIndex + cols < list.length
-      ) {
-        this.#selectedIndex += cols;
-        this.#render();
-        this.#grid.scrollToIndex(
-          this.#selectedIndex,
-        );
+      if (newIndex + cols < list.length) {
+        newIndex += cols;
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (this.#selectedIndex - cols >= 0) {
-        this.#selectedIndex -= cols;
-        this.#render();
-        this.#grid.scrollToIndex(
-          this.#selectedIndex,
-        );
+      if (newIndex - cols >= 0) {
+        newIndex -= cols;
       }
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
-      if (this.#selectedIndex < list.length - 1) {
-        this.#selectedIndex++;
-        this.#render();
-        this.#grid.scrollToIndex(
-          this.#selectedIndex,
-        );
+      if (newIndex < list.length - 1) {
+        newIndex++;
       }
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
-      if (this.#selectedIndex > 0) {
-        this.#selectedIndex--;
-        this.#render();
-        this.#grid.scrollToIndex(
-          this.#selectedIndex,
-        );
+      if (newIndex > 0) {
+        newIndex--;
       }
     } else if (
       e.key === "Enter" && list.length > 0
+      && this.#selectedIndex >= 0
     ) {
       e.preventDefault();
       this.#copyChar(list[this.#selectedIndex]);
+      return;
+    } else {
+      return;
+    }
+
+    if (newIndex !== this.#selectedIndex) {
+      this.#select(newIndex);
+      this.#grid.scrollToIndex(newIndex);
     }
   }
 }

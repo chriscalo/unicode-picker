@@ -1,0 +1,326 @@
+0	Basic Latin
+95	Latin-1 Supplement
+191	Latin Extended-A
+319	Latin Extended-B
+527	IPA Extensions
+623	Spacing Modifier Letters
+703	Combining Diacritical Marks
+815	Greek and Coptic
+950	Cyrillic
+1206	Cyrillic Supplement
+1254	Armenian
+1345	Hebrew
+1433	Arabic
+1689	Syriac
+1766	Arabic Supplement
+1814	Thaana
+1864	NKo
+1926	Samaritan
+1987	Mandaic
+2016	Syriac Supplement
+2027	Arabic Extended-B
+2070	Arabic Extended-A
+2166	Devanagari
+2294	Bengali
+2390	Gurmukhi
+2470	Gujarati
+2561	Oriya
+2652	Tamil
+2724	Telugu
+2825	Kannada
+2917	Malayalam
+3035	Sinhala
+3126	Thai
+3213	Lao
+3296	Tibetan
+3507	Myanmar
+3667	Georgian
+3755	Hangul Jamo
+4011	Ethiopic
+4369	Ethiopic Supplement
+4395	Cherokee
+4487	Unified Canadian Aboriginal Syllabics
+5127	Ogham
+5156	Runic
+5245	Tagalog
+5268	Hanunoo
+5291	Buhid
+5311	Tagbanwa
+5329	Khmer
+5443	Mongolian
+5601	Unified Canadian Aboriginal Syllabics Extended
+5671	Limbu
+5739	Tai Le
+5774	New Tai Lue
+5857	Khmer Symbols
+5889	Buginese
+5919	Tai Tham
+6046	Combining Diacritical Marks Extended
+6104	Balinese
+6231	Sundanese
+6295	Batak
+6351	Lepcha
+6425	Ol Chiki
+6473	Cyrillic Extended-C
+6484	Georgian Extended
+6530	Sundanese Supplement
+6538	Vedic Extensions
+6581	Phonetic Extensions
+6709	Phonetic Extensions Supplement
+6773	Combining Diacritical Marks Supplement
+6837	Latin Extended Additional
+7093	Greek Extended
+7326	General Punctuation
+7437	Superscripts and Subscripts
+7479	Currency Symbols
+7513	Combining Diacritical Marks for Symbols
+7546	Letterlike Symbols
+7626	Number Forms
+7686	Arrows
+7798	Mathematical Operators
+8054	Miscellaneous Technical
+8310	Control Pictures
+8352	Optical Character Recognition
+8363	Enclosed Alphanumerics
+8523	Box Drawing
+8651	Block Elements
+8683	Geometric Shapes
+8779	Miscellaneous Symbols
+9035	Dingbats
+9227	Miscellaneous Mathematical Symbols-A
+9275	Supplemental Arrows-A
+9291	Braille Patterns
+9547	Supplemental Arrows-B
+9675	Miscellaneous Mathematical Symbols-B
+9803	Supplemental Mathematical Operators
+10059	Miscellaneous Symbols and Arrows
+10313	Glagolitic
+10409	Latin Extended-C
+10441	Coptic
+10564	Georgian Supplement
+10604	Tifinagh
+10663	Ethiopic Extended
+10742	Cyrillic Extended-A
+10774	Supplemental Punctuation
+10868	CJK Radicals Supplement
+10983	Kangxi Radicals
+11197	Ideographic Description Characters
+11213	CJK Symbols and Punctuation
+11277	Hiragana
+11370	Katakana
+11466	Bopomofo
+11509	Hangul Compatibility Jamo
+11603	Kanbun
+11619	Bopomofo Extended
+11651	CJK Strokes
+11690	Katakana Phonetic Extensions
+11706	Enclosed CJK Letters and Months
+11961	CJK Compatibility
+12217	Yijing Hexagram Symbols
+12281	Yi Syllables
+13446	Yi Radicals
+13501	Lisu
+13549	Vai
+13849	Cyrillic Extended-B
+13945	Bamum
+14033	Modifier Tone Letters
+14065	Latin Extended-D
+14269	Syloti Nagri
+14314	Common Indic Number Forms
+14324	Phags-pa
+14380	Saurashtra
+14462	Devanagari Extended
+14494	Kayah Li
+14542	Rejang
+14579	Hangul Jamo Extended-A
+14608	Javanese
+14699	Myanmar Extended-B
+14730	Cham
+14813	Myanmar Extended-A
+14845	Tai Viet
+14917	Meetei Mayek Extensions
+14940	Ethiopic Extended-A
+14972	Latin Extended-E
+15032	Cherokee Supplement
+15112	Meetei Mayek
+15168	Hangul Jamo Extended-B
+15240	CJK Compatibility Ideographs
+15712	Alphabetic Presentation Forms
+15770	Arabic Presentation Forms-A
+16426	Variation Selectors
+16442	Vertical Forms
+16452	Combining Half Marks
+16468	CJK Compatibility Forms
+16500	Small Form Variants
+16526	Arabic Presentation Forms-B
+16667	Halfwidth and Fullwidth Forms
+16892	Specials
+16897	Linear B Syllabary
+16985	Linear B Ideograms
+17108	Aegean Numbers
+17165	Ancient Greek Numbers
+17244	Ancient Symbols
+17258	Phaistos Disc
+17304	Lycian
+17333	Carian
+17382	Coptic Epact Numbers
+17410	Old Italic
+17449	Gothic
+17476	Old Permic
+17519	Ugaritic
+17550	Old Persian
+17600	Deseret
+17680	Shavian
+17728	Osmanya
+17768	Osage
+17840	Elbasan
+17880	Caucasian Albanian
+17933	Vithkuqi
+18003	Todhri
+18055	Linear A
+18396	Latin Extended-F
+18453	Cypriot Syllabary
+18508	Imperial Aramaic
+18539	Palmyrene
+18571	Nabataean
+18611	Hatran
+18637	Phoenician
+18666	Lydian
+18693	Sidetic
+18719	Meroitic Hieroglyphs
+18751	Meroitic Cursive
+18841	Kharoshthi
+18909	Old South Arabian
+18941	Old North Arabian
+18973	Manichaean
+19024	Avestan
+19085	Inscriptional Parthian
+19115	Inscriptional Pahlavi
+19142	Psalter Pahlavi
+19171	Old Turkic
+19244	Old Hungarian
+19352	Hanifi Rohingya
+19402	Garay
+19471	Rumi Numeral Symbols
+19502	Yezidi
+19549	Arabic Extended-C
+19570	Old Sogdian
+19610	Sogdian
+19652	Old Uyghur
+19678	Chorasmian
+19706	Elymaic
+19729	Brahmi
+19844	Kaithi
+19912	Sora Sompeng
+19947	Chakma
+20018	Mahajani
+20057	Sharada
+20153	Sinhala Archaic Numbers
+20173	Khojki
+20238	Multani
+20276	Khudawadi
+20345	Grantha
+20431	Tulu-Tigalari
+20511	Newa
+20608	Tirhuta
+20690	Siddham
+20782	Modi
+20861	Mongolian Supplement
+20874	Takri
+20942	Myanmar Extended-C
+20962	Ahom
+21027	Dogra
+21087	Warang Citi
+21171	Dives Akuru
+21243	Nandinagari
+21308	Zanabazar Square
+21380	Soyombo
+21463	Unified Canadian Aboriginal Syllabics Extended-A
+21479	Pau Cin Hau
+21536	Devanagari Extended-A
+21546	Sharada Supplement
+21554	Sunuwar
+21598	Bhaiksuki
+21695	Marchen
+21763	Masaram Gondi
+21838	Gunjala Gondi
+21901	Tolong Siki
+21955	Makasar
+21980	Kawi
+22067	Lisu Supplement
+22068	Tamil Supplement
+22119	Cuneiform
+23041	Cuneiform Numbers and Punctuation
+23157	Early Dynastic Cuneiform
+23353	Cypro-Minoan
+23452	Egyptian Hieroglyphs
+24524	Egyptian Hieroglyph Format Controls
+24562	Egyptian Hieroglyphs Extended-A
+28557	Anatolian Hieroglyphs
+29140	Gurung Khema
+29198	Bamum Supplement
+29767	Mro
+29810	Tangsa
+29899	Bassa Vah
+29935	Pahawh Hmong
+30062	Kirat Rai
+30120	Medefaidrin
+30211	Beria Erfe
+30261	Miao
+30410	Ideographic Symbols and Punctuation
+30422	Tangut Components
+31190	Khitan Small Script
+31661	Tangut Components Supplement
+31776	Kana Extended-B
+31789	Kana Supplement
+32045	Kana Extended-A
+32080	Small Kana Extension
+32089	Nushu
+32485	Duployan
+32628	Shorthand Format Controls
+32632	Symbols for Legacy Computing Supplement
+33327	Miscellaneous Symbols Supplement
+33361	Znamenny Musical Notation
+33546	Byzantine Musical Symbols
+33792	Musical Symbols
+34025	Ancient Greek Musical Notation
+34095	Kaktovik Numerals
+34115	Mayan Numerals
+34135	Tai Xuan Jing Symbols
+34222	Counting Rod Numerals
+34247	Mathematical Alphanumeric Symbols
+35243	Sutton SignWriting
+35915	Latin Extended-G
+35952	Glagolitic Supplement
+35990	Cyrillic Extended-D
+36053	Nyiakeng Puachue Hmong
+36124	Toto
+36155	Wancho
+36214	Nag Mundari
+36256	Ol Onal
+36300	Tai Yo
+36355	Ethiopic Extended-B
+36383	Mende Kikakui
+36596	Adlam
+36684	Indic Siyaq Numbers
+36752	Ottoman Siyaq Numbers
+36813	Arabic Mathematical Alphabetic Symbols
+36956	Mahjong Tiles
+37000	Domino Tiles
+37100	Playing Cards
+37182	Enclosed Alphanumeric Supplement
+37382	Enclosed Ideographic Supplement
+37446	Miscellaneous Symbols and Pictographs
+38214	Emoticons
+38294	Ornamental Dingbats
+38342	Transport and Map Symbols
+38461	Alchemical Symbols
+38589	Geometric Shapes Extended
+38692	Supplemental Arrows-C
+38863	Supplemental Symbols and Pictographs
+39119	Chess Symbols
+39221	Symbols and Pictographs Extended-A
+39341	Symbols for Legacy Computing
+39591	CJK Compatibility Ideographs Supplement
+40133	Tags
+40230	Variation Selectors Supplement

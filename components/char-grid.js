@@ -5,7 +5,7 @@ const BUFFER_ROWS = 3;
 
 export class CharGrid extends HTMLElement {
   #items = [];
-  #selectedIndex = 0;
+  #selectedIndex = -1;
   #label = null;
   #cols = 1;
   #scrollContainer;
@@ -74,6 +74,21 @@ export class CharGrid extends HTMLElement {
       },
     );
 
+    this.shadowRoot.addEventListener(
+      "mousemove",
+      (e) => {
+        const cell =
+          e.target.closest(".char-cell");
+        if (!cell) return;
+        const idx = parseInt(cell.dataset.index);
+        if (idx === this.#selectedIndex) return;
+        this.dispatchEvent(new CustomEvent(
+          "selection-change",
+          { detail: idx, bubbles: true },
+        ));
+      },
+    );
+
     this.#resizeObserver = new ResizeObserver(
       () => {
         this.#measureCols();
@@ -97,6 +112,18 @@ export class CharGrid extends HTMLElement {
     return this.#cols;
   }
 
+  set selectedIndex(idx) {
+    if (idx === this.#selectedIndex) return;
+    this.#selectedIndex = idx;
+    const prev =
+      this.shadowRoot.querySelector(".selected");
+    if (prev) prev.classList.remove("selected");
+    const next = this.shadowRoot.querySelector(
+      `.char-cell[data-index="${idx}"]`,
+    );
+    if (next) next.classList.add("selected");
+  }
+
   showCopied(index) {
     const cell = this.shadowRoot.querySelector(
       `.char-cell[data-index="${index}"]`,
@@ -112,12 +139,8 @@ export class CharGrid extends HTMLElement {
     );
   }
 
-  update(
-    items,
-    { label = null, selectedIndex = 0 } = {},
-  ) {
+  update(items, { label = null } = {}) {
     this.#items = items;
-    this.#selectedIndex = selectedIndex;
     this.#label = label;
     this.#content.replaceChildren();
     this.#scrollContainer.style.display = "";
@@ -141,9 +164,11 @@ export class CharGrid extends HTMLElement {
     const row = Math.floor(index / this.#cols);
     const rowTop = row * ROW_HEIGHT;
     const rowBottom = rowTop + ROW_HEIGHT;
-    const viewTop = this.#scrollContainer.scrollTop;
+    const viewTop =
+      this.#scrollContainer.scrollTop;
     const viewBottom =
-      viewTop + this.#scrollContainer.clientHeight;
+      viewTop
+      + this.#scrollContainer.clientHeight;
 
     if (rowTop < viewTop) {
       this.#scrollContainer.scrollTop = rowTop;
@@ -173,10 +198,18 @@ export class CharGrid extends HTMLElement {
   }
 
   #measureCols() {
-    const width =
-      this.#scrollContainer.clientWidth - 24;
-    this.#cols =
-      Math.max(1, Math.floor(width / 108));
+    const grid = this.#grid;
+    if (!grid || !grid.children.length) {
+      const width =
+        this.#scrollContainer.clientWidth - 24;
+      this.#cols =
+        Math.max(1, Math.floor(width / 116));
+      return;
+    }
+    const style = getComputedStyle(grid);
+    this.#cols = style
+      .getPropertyValue("grid-template-columns")
+      .split(" ").length;
   }
 
   #updateLayout() {
