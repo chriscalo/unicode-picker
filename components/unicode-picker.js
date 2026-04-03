@@ -1,4 +1,3 @@
-import unicodeData from "../unicode-data.json";
 import "./char-grid.js";
 import "./copy-toast.js";
 
@@ -44,7 +43,10 @@ export class UnicodePicker extends HTMLElement {
   }
   
   connectedCallback() {
-    this.#allChars = unicodeData;
+    this.#allChars = parseUnicodeData(
+      document.getElementById("unicode-data")
+        .textContent,
+    );
     const count = this.#allChars.length.toLocaleString();
     this.#status.textContent = `${count} characters loaded.`;
     this.#input.focus();
@@ -174,4 +176,17 @@ export class UnicodePicker extends HTMLElement {
   }
 }
 
-customElements.define("unicode-picker", UnicodePicker);
+customElements.define(
+  "unicode-picker",
+  UnicodePicker,
+);
+
+function parseUnicodeData(tsv) {
+  return tsv.trim().split("\n").map((line) => {
+    const tab = line.indexOf("\t");
+    const c = line.slice(0, tab);
+    const n = line.slice(tab + 1);
+    const u = c.codePointAt(0).toString(16);
+    return { c, n, u };
+  });
+}

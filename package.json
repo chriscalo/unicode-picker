@@ -3,7 +3,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "build:watch": "node --watch-path=. --watch-path=components --watch-path=lib -e \"require('child_process').execSync('npx vite build',{stdio:'inherit'})\"",
+    "preview": "vite preview --port 4173"
   },
   "devDependencies": {
     "vite": "^8.0.3",
