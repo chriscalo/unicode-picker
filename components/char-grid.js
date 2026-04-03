@@ -1,17 +1,23 @@
 import { element, fragment } from "../lib/dom.js";
 
-const CHUNK_SIZE = 100;
+const ROW_HEIGHT = 108;
+const BUFFER_ROWS = 3;
 
 export class CharGrid extends HTMLElement {
   #items = [];
   #selectedIndex = 0;
-  #renderVersion = 0;
   #label = null;
+  #cols = 1;
+  #scrollContainer;
+  #spacer;
+  #grid;
   #content;
   #cellTemplate;
   #emptyTemplate;
   #labelTemplate;
-  
+  #labelEl = null;
+  #resizeObserver;
+
   constructor() {
     super();
     this.#cellTemplate = document.getElementById(
@@ -30,8 +36,25 @@ export class CharGrid extends HTMLElement {
     this.shadowRoot.appendChild(
       template.content.cloneNode(true),
     );
+
+    this.#scrollContainer =
+      this.shadowRoot.querySelector(
+        ".scroll-container",
+      );
+    this.#spacer =
+      this.shadowRoot.querySelector(
+        ".scroll-spacer",
+      );
+    this.#grid =
+      this.shadowRoot.querySelector(".grid");
     this.#content = element("div");
     this.shadowRoot.appendChild(this.#content);
+
+    this.#scrollContainer.addEventListener(
+      "scroll",
+      () => this.#renderVisible(),
+    );
+
     this.shadowRoot.addEventListener(
       "click",
       (e) => {
@@ -50,26 +73,30 @@ export class CharGrid extends HTMLElement {
         }
       },
     );
+
+    this.#resizeObserver = new ResizeObserver(
+      () => {
+        this.#measureCols();
+        this.#updateLayout();
+        this.#renderVisible();
+      },
+    );
   }
-  
-  get selectedIndex() {
-    return this.#selectedIndex;
+
+  connectedCallback() {
+    this.#resizeObserver.observe(
+      this.#scrollContainer,
+    );
   }
-  
-  set selectedIndex(val) {
-    this.#selectedIndex = val;
-    this.render();
+
+  disconnectedCallback() {
+    this.#resizeObserver.disconnect();
   }
-  
+
   get gridCols() {
-    const grid =
-      this.shadowRoot.querySelector(".grid");
-    if (!grid) return 1;
-    return getComputedStyle(grid)
-      .getPropertyValue("grid-template-columns")
-      .split(" ").length;
+    return this.#cols;
   }
-  
+
   update(
     items,
     { label = null, selectedIndex = 0 } = {},
@@ -77,12 +104,16 @@ export class CharGrid extends HTMLElement {
     this.#items = items;
     this.#selectedIndex = selectedIndex;
     this.#label = label;
-    this.render();
+    this.#content.replaceChildren();
+    this.#scrollContainer.style.display = "";
+    this.#updateLabel();
+    this.#updateLayout();
+    this.#renderVisible();
   }
-  
+
   showEmpty(message) {
     this.#items = [];
-    this.#renderVersion++;
+    this.#scrollContainer.style.display = "none";
     this.#content.replaceChildren();
     const empty = this.#emptyTemplate.content
       .cloneNode(true)
@@ -90,45 +121,100 @@ export class CharGrid extends HTMLElement {
     empty.textContent = message;
     this.#content.appendChild(empty);
   }
-  
-  render() {
-    this.#renderVersion++;
-    const version = this.#renderVersion;
-    
-    if (this.#items.length === 0) {
-      this.showEmpty("No matches");
-      return;
-    }
-    
-    this.#content.replaceChildren();
-    
-    if (this.#label) {
-      const label = this.#labelTemplate.content
-        .cloneNode(true)
-        .querySelector(".section-label");
-      label.textContent = this.#label;
-      this.#content.appendChild(label);
-    }
-    
-    const grid = element("div", {
-      className: "grid",
-    });
-    this.#content.appendChild(grid);
-    
-    const first = this.#items.slice(0, CHUNK_SIZE);
-    for (const [i, entry] of first.entries()) {
-      grid.appendChild(
-        this.#createCell(entry, i),
-      );
-    }
-    
-    this.#scrollToSelected();
-    
-    if (this.#items.length > CHUNK_SIZE) {
-      this.#appendChunks(version, CHUNK_SIZE);
+
+  scrollToIndex(index) {
+    const row = Math.floor(index / this.#cols);
+    const rowTop = row * ROW_HEIGHT;
+    const rowBottom = rowTop + ROW_HEIGHT;
+    const viewTop = this.#scrollContainer.scrollTop;
+    const viewBottom =
+      viewTop + this.#scrollContainer.clientHeight;
+
+    if (rowTop < viewTop) {
+      this.#scrollContainer.scrollTop = rowTop;
+    } else if (rowBottom > viewBottom) {
+      this.#scrollContainer.scrollTop =
+        rowBottom
+        - this.#scrollContainer.clientHeight;
     }
   }
-  
+
+  #updateLabel() {
+    if (this.#label) {
+      if (!this.#labelEl) {
+        this.#labelEl =
+          this.#labelTemplate.content
+            .cloneNode(true)
+            .querySelector(".section-label");
+        this.#scrollContainer.prepend(
+          this.#labelEl,
+        );
+      }
+      this.#labelEl.textContent = this.#label;
+    } else if (this.#labelEl) {
+      this.#labelEl.remove();
+      this.#labelEl = null;
+    }
+  }
+
+  #measureCols() {
+    const width =
+      this.#scrollContainer.clientWidth - 24;
+    this.#cols =
+      Math.max(1, Math.floor(width / 108));
+  }
+
+  #updateLayout() {
+    const totalRows =
+      Math.ceil(this.#items.length / this.#cols);
+    this.#spacer.style.height =
+      (totalRows * ROW_HEIGHT) + "px";
+  }
+
+  #renderVisible() {
+    if (this.#items.length === 0) return;
+
+    const scrollTop =
+      this.#scrollContainer.scrollTop;
+    const viewHeight =
+      this.#scrollContainer.clientHeight;
+
+    const firstRow = Math.max(
+      0,
+      Math.floor(scrollTop / ROW_HEIGHT)
+        - BUFFER_ROWS,
+    );
+    const lastRow = Math.min(
+      Math.ceil(this.#items.length / this.#cols)
+        - 1,
+      Math.ceil(
+        (scrollTop + viewHeight) / ROW_HEIGHT,
+      ) + BUFFER_ROWS,
+    );
+
+    const startIndex = firstRow * this.#cols;
+    const endIndex = Math.min(
+      (lastRow + 1) * this.#cols,
+      this.#items.length,
+    );
+
+    this.#grid.style.top =
+      (firstRow * ROW_HEIGHT) + "px";
+    this.#grid.replaceChildren();
+
+    const frag = fragment();
+    for (
+      const [i, entry] of
+      this.#items.slice(startIndex, endIndex)
+        .entries()
+    ) {
+      frag.appendChild(
+        this.#createCell(entry, startIndex + i),
+      );
+    }
+    this.#grid.appendChild(frag);
+  }
+
   #createCell(entry, index) {
     const cell = this.#cellTemplate.content
       .cloneNode(true)
@@ -142,40 +228,6 @@ export class CharGrid extends HTMLElement {
       cell.classList.add("selected");
     }
     return cell;
-  }
-  
-  #appendChunks(version, offset) {
-    if (version !== this.#renderVersion) return;
-    if (offset >= this.#items.length) return;
-    
-    requestAnimationFrame(() => {
-      if (version !== this.#renderVersion) return;
-      const grid =
-        this.shadowRoot.querySelector(".grid");
-      if (!grid) return;
-      
-      const end = Math.min(
-        offset + CHUNK_SIZE,
-        this.#items.length,
-      );
-      const frag = fragment();
-      const slice = this.#items.slice(offset, end);
-      for (const [i, entry] of slice.entries()) {
-        frag.appendChild(
-          this.#createCell(entry, offset + i),
-        );
-      }
-      grid.appendChild(frag);
-      this.#appendChunks(version, end);
-    });
-  }
-  
-  #scrollToSelected() {
-    const sel =
-      this.shadowRoot.querySelector(".selected");
-    if (sel) {
-      sel.scrollIntoView({ block: "nearest" });
-    }
   }
 }
 

@@ -99,28 +99,14 @@ export class UnicodePicker extends HTMLElement {
   
   #render() {
     const query = this.#input.value.trim();
-    
-    if (!query) {
-      const recents = this.#getRecents();
-      if (recents.length === 0) {
-        this.#grid.showEmpty(
-          "Start typing to search",
-        );
-      } else {
-        this.#grid.update(recents, {
-          label: "Recent",
-          selectedIndex: this.#selectedIndex,
-        });
-      }
-      return;
-    }
-    
-    if (this.#filtered.length === 0) {
+    const list = this.#currentList();
+
+    if (query && list.length === 0) {
       this.#grid.showEmpty("No matches");
       return;
     }
-    
-    this.#grid.update(this.#filtered, {
+
+    this.#grid.update(list, {
       selectedIndex: this.#selectedIndex,
     });
   }
@@ -128,7 +114,7 @@ export class UnicodePicker extends HTMLElement {
   #currentList() {
     return this.#input.value.trim() ?
       this.#filtered :
-      this.#getRecents();
+      this.#allChars;
   }
   
   async #copyChar(entry) {
@@ -148,24 +134,36 @@ export class UnicodePicker extends HTMLElement {
       ) {
         this.#selectedIndex += cols;
         this.#render();
+        this.#grid.scrollToIndex(
+          this.#selectedIndex,
+        );
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (this.#selectedIndex - cols >= 0) {
         this.#selectedIndex -= cols;
         this.#render();
+        this.#grid.scrollToIndex(
+          this.#selectedIndex,
+        );
       }
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
       if (this.#selectedIndex < list.length - 1) {
         this.#selectedIndex++;
         this.#render();
+        this.#grid.scrollToIndex(
+          this.#selectedIndex,
+        );
       }
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       if (this.#selectedIndex > 0) {
         this.#selectedIndex--;
         this.#render();
+        this.#grid.scrollToIndex(
+          this.#selectedIndex,
+        );
       }
     } else if (
       e.key === "Enter" && list.length > 0
