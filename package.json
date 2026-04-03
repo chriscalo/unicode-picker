@@ -2,6 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "data": "node build-data.js",
     "dev": "vite",
     "build": "vite build",
     "build:watch": "node --watch-path=. --watch-path=components --watch-path=lib -e \"require('child_process').execSync('npx vite build',{stdio:'inherit'})\"",
