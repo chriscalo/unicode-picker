@@ -124,9 +124,9 @@ export class UnicodePicker extends HTMLElement {
   }
   
   #currentList() {
-    return this.#input.value.trim()
-      ? this.#filtered
-      : this.#getRecents();
+    return this.#input.value.trim() ?
+      this.#filtered :
+      this.#getRecents();
   }
   
   async #copyChar(entry) {

@@ -5,9 +5,9 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #1a1a1a;
-  color: #e0e0e0;
   height: 100vh;
   overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e0e0e0;
+  background: #1a1a1a;
 }
