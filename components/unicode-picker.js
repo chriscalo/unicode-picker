@@ -6,12 +6,14 @@ const MAX_RECENTS = 36;
 
 export class UnicodePicker extends HTMLElement {
   #allChars = [];
+  #blocks = [];
   #filtered = [];
   #selectedIndex = -1;
   #input;
   #status;
   #grid;
   #toast;
+  #blocksNav;
 
   constructor() {
     super();
@@ -31,6 +33,8 @@ export class UnicodePicker extends HTMLElement {
       this.shadowRoot.querySelector("char-grid");
     this.#toast =
       this.shadowRoot.querySelector("copy-toast");
+    this.#blocksNav =
+      this.shadowRoot.querySelector(".blocks-nav");
 
     this.#input.addEventListener(
       "input",
@@ -48,6 +52,18 @@ export class UnicodePicker extends HTMLElement {
       "selection-change",
       (e) => this.#select(e.detail),
     );
+    this.#blocksNav.addEventListener(
+      "click",
+      (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.classList.contains("dimmed")) {
+          return;
+        }
+        const index = parseInt(btn.dataset.index);
+        this.#grid.scrollToIndex(index);
+        this.#select(index);
+      },
+    );
   }
 
   connectedCallback() {
@@ -55,12 +71,62 @@ export class UnicodePicker extends HTMLElement {
       document.getElementById("unicode-data")
         .textContent,
     );
+    this.#blocks = parseBlocks(
+      document.getElementById("unicode-blocks")
+        .textContent,
+    );
+    this.#buildBlocksNav();
     const count =
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
       `${count} characters loaded.`;
     this.#input.focus();
     this.#render();
+  }
+
+  #buildBlocksNav() {
+    const frag = document.createDocumentFragment();
+    for (const block of this.#blocks) {
+      const btn = document.createElement("button");
+      btn.textContent = block.name;
+      btn.dataset.index = block.startIndex;
+      frag.appendChild(btn);
+    }
+    this.#blocksNav.appendChild(frag);
+  }
+
+  #updateBlocksDimming() {
+    const query = this.#input.value.trim();
+    const buttons =
+      this.#blocksNav.querySelectorAll("button");
+
+    if (!query) {
+      for (const btn of buttons) {
+        btn.classList.remove("dimmed");
+      }
+      return;
+    }
+
+    const matchIndices = new Set(
+      this.#filtered.map(
+        (entry) => this.#allChars.indexOf(entry),
+      ),
+    );
+
+    for (const [i, btn] of buttons.entries()) {
+      const blockStart = this.#blocks[i].startIndex;
+      const blockEnd = i + 1 < this.#blocks.length ?
+        this.#blocks[i + 1].startIndex :
+        this.#allChars.length;
+      let hasMatch = false;
+      for (const idx of matchIndices) {
+        if (idx >= blockStart && idx < blockEnd) {
+          hasMatch = true;
+          break;
+        }
+      }
+      btn.classList.toggle("dimmed", !hasMatch);
+    }
   }
 
   #select(index) {
@@ -100,6 +166,7 @@ export class UnicodePicker extends HTMLElement {
         + ` characters loaded.`;
       this.#selectedIndex = -1;
       this.#render();
+      this.#updateBlocksDimming();
       return;
     }
 
@@ -116,6 +183,7 @@ export class UnicodePicker extends HTMLElement {
       + ` matches`;
     this.#selectedIndex = -1;
     this.#render();
+    this.#updateBlocksDimming();
   }
 
   #render() {
@@ -203,5 +271,14 @@ function parseUnicodeData(tsv) {
     const n = line.slice(tab + 1);
     const u = c.codePointAt(0).toString(16);
     return { c, n, u };
+  });
+}
+
+function parseBlocks(tsv) {
+  return tsv.trim().split("\n").map((line) => {
+    const tab = line.indexOf("\t");
+    const startIndex = parseInt(line.slice(0, tab));
+    const name = line.slice(tab + 1);
+    return { startIndex, name };
   });
 }

@@ -24,20 +24,27 @@ export default defineConfig({
 });
 
 function inlineUnicodeData() {
-  const file = resolve("unicode-data.tsv");
+  const dataFile = resolve("unicode-data.tsv");
+  const blocksFile = resolve("unicode-blocks.tsv");
 
   return {
     name: "inline-unicode-data",
     transformIndexHtml(html) {
-      const tsv = readFileSync(file, "utf8");
-      const tag =
+      const data = readFileSync(dataFile, "utf8");
+      const blocks = readFileSync(blocksFile, "utf8");
+      const tags = [
         `    <script type="text/tab-separated-values"`
-        + ` id="unicode-data">\n`
-        + tsv
-        + `\n    </script>`;
+          + ` id="unicode-data">\n`
+          + data
+          + `\n    </script>`,
+        `    <script type="text/tab-separated-values"`
+          + ` id="unicode-blocks">\n`
+          + blocks
+          + `\n    </script>`,
+      ].join("\n");
       return html.replace(
         "</body>",
-        tag + "\n  </body>",
+        tags + "\n  </body>",
       );
     },
   };

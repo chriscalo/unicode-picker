@@ -250,6 +250,48 @@
           background: var(--color-bg-raised);
         }
         
+        .main {
+          display: flex;
+          flex: 1;
+          min-height: 0;
+        }
+
+        .blocks-nav {
+          flex-shrink: 0;
+          width: 200px;
+          border-right:
+            1px solid var(--color-border-subtle);
+          overflow-y: auto;
+          background: var(--color-bg-raised);
+        }
+
+        .blocks-nav button {
+          display: block;
+          width: 100%;
+          padding: var(--space-1) var(--space-3);
+          border: none;
+          font-family: var(--font-ui);
+          font-size: var(--text-xs);
+          line-height: var(--leading-normal);
+          text-align: left;
+          color: var(--color-text-secondary);
+          background: none;
+          cursor: pointer;
+        }
+
+        .blocks-nav button:hover {
+          color: var(--color-text-primary);
+          background: var(--color-bg-hover);
+        }
+
+        .blocks-nav button.active {
+          color: var(--color-accent);
+        }
+
+        .blocks-nav button.dimmed {
+          opacity: 0.3;
+        }
+
         .results {
           flex: 1;
           min-height: 0;
@@ -263,8 +305,11 @@
         />
       </div>
       <div class="status">Loading…</div>
-      <div class="results">
-        <char-grid></char-grid>
+      <div class="main">
+        <nav class="blocks-nav"></nav>
+        <div class="results">
+          <char-grid></char-grid>
+        </div>
       </div>
       <copy-toast></copy-toast>
     </template>
