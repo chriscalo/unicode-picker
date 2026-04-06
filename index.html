@@ -59,10 +59,6 @@
       <div class="empty"></div>
     </template>
     
-    <template id="char-grid-label-template">
-      <div class="section-label"></div>
-    </template>
-    
     <template id="char-grid-template">
       <style>
         :host {
@@ -78,11 +74,63 @@
           overflow-y: auto;
         }
         
+        .sticky-header {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          height: 32px;
+          margin-bottom: -32px;
+          display: flex;
+          align-items: flex-end;
+          padding: 0 var(--space-1);
+          font-family: var(--font-ui);
+          font-size: var(--text-xs);
+          font-weight: var(--weight-medium);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--color-text-tertiary);
+          background: var(--color-bg-base);
+        }
+        
+        .sticky-header:empty {
+          display: none;
+        }
+        
         .scroll-spacer {
           position: relative;
         }
         
         .grid {
+          position: absolute;
+          left: 0;
+          right: 0;
+          display: grid;
+          grid-template-columns:
+            repeat(auto-fill, minmax(104px, 1fr));
+          gap: var(--space-3);
+        }
+        
+        .block-section {
+          position: absolute;
+          left: 0;
+          right: 0;
+        }
+        
+        .section-label {
+          box-sizing: border-box;
+          height: 32px;
+          display: flex;
+          align-items: flex-end;
+          padding: 0 var(--space-1);
+          font-family: var(--font-ui);
+          font-size: var(--text-xs);
+          font-weight: var(--weight-medium);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--color-text-tertiary);
+        }
+        
+        .block-grid {
           position: absolute;
           left: 0;
           right: 0;
@@ -173,17 +221,9 @@
           color: var(--color-text-tertiary);
         }
         
-        .section-label {
-          padding: var(--space-2) var(--space-1);
-          font-family: var(--font-ui);
-          font-size: var(--text-xs);
-          font-weight: var(--weight-medium);
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: var(--color-text-tertiary);
-        }
       </style>
       <div class="scroll-container">
+        <div class="sticky-header"></div>
         <div class="scroll-spacer">
           <div class="grid"></div>
         </div>

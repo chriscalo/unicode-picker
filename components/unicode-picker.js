@@ -64,6 +64,24 @@ export class UnicodePicker extends HTMLElement {
         this.#select(index);
       },
     );
+    this.#grid.addEventListener(
+      "block-change",
+      (e) => {
+        const { startIndex } = e.detail;
+        for (const btn of
+          this.#blocksNav.querySelectorAll(
+            "button",
+          )
+        ) {
+          btn.classList.toggle(
+            "active",
+            parseInt(btn.dataset.index)
+              === startIndex,
+          );
+        }
+        this.#scrollBlockIntoView();
+      },
+    );
   }
 
   connectedCallback() {
@@ -82,6 +100,7 @@ export class UnicodePicker extends HTMLElement {
       `${count} characters loaded.`;
     this.#input.focus();
     this.#render();
+    this.#scrollBlockIntoView();
   }
 
   #buildBlocksNav() {
@@ -170,6 +189,7 @@ export class UnicodePicker extends HTMLElement {
       return;
     }
 
+    this.#clearActiveBlock();
     const terms = query.toUpperCase().split(/\s+/);
     this.#filtered = this.#allChars.filter(
       (entry) =>
@@ -195,7 +215,13 @@ export class UnicodePicker extends HTMLElement {
       return;
     }
 
-    this.#grid.update(list);
+    if (query) {
+      this.#grid.update(list);
+    } else {
+      this.#grid.update(list, {
+        blocks: this.#blocks,
+      });
+    }
     this.#grid.selectedIndex =
       this.#selectedIndex;
   }
@@ -204,6 +230,24 @@ export class UnicodePicker extends HTMLElement {
     return this.#input.value.trim() ?
       this.#filtered :
       this.#allChars;
+  }
+
+  #clearActiveBlock() {
+    for (const btn of
+      this.#blocksNav.querySelectorAll(
+        ".active",
+      )
+    ) {
+      btn.classList.remove("active");
+    }
+  }
+
+  #scrollBlockIntoView() {
+    const active =
+      this.#blocksNav.querySelector(".active");
+    if (active) {
+      active.scrollIntoView({ block: "nearest" });
+    }
   }
 
   async #copyChar(entry) {
