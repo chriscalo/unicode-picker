@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "data": "node build-data.js",
+    "fonts": "node build-fonts.js",
     "dev": "vite",
     "build": "vite build",
     "build:watch": "vite build --watch",
