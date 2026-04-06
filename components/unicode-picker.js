@@ -8,6 +8,8 @@ export class UnicodePicker extends HTMLElement {
   #allChars = [];
   #blocks = [];
   #filtered = [];
+  #filteredBlocks = [];
+  #indexMap = new Map();
   #selectedIndex = -1;
   #input;
   #status;
@@ -94,6 +96,7 @@ export class UnicodePicker extends HTMLElement {
         .textContent,
     );
     this.#buildBlocksNav();
+    this.#buildIndexMap();
     const count =
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
@@ -197,6 +200,8 @@ export class UnicodePicker extends HTMLElement {
           entry.n.includes(term),
         ),
     );
+    this.#filteredBlocks =
+      this.#computeFilteredBlocks();
 
     this.#status.textContent =
       `${this.#filtered.length.toLocaleString()}`
@@ -215,13 +220,10 @@ export class UnicodePicker extends HTMLElement {
       return;
     }
 
-    if (query) {
-      this.#grid.update(list);
-    } else {
-      this.#grid.update(list, {
-        blocks: this.#blocks,
-      });
-    }
+    const blocks = query ?
+      this.#filteredBlocks :
+      this.#blocks;
+    this.#grid.update(list, { blocks });
     this.#grid.selectedIndex =
       this.#selectedIndex;
   }
@@ -230,6 +232,64 @@ export class UnicodePicker extends HTMLElement {
     return this.#input.value.trim() ?
       this.#filtered :
       this.#allChars;
+  }
+
+  #buildIndexMap() {
+    this.#indexMap = new Map();
+    for (
+      let i = 0;
+      i < this.#allChars.length;
+      i++
+    ) {
+      this.#indexMap.set(
+        this.#allChars[i], i,
+      );
+    }
+  }
+
+  #computeFilteredBlocks() {
+    if (!this.#filtered.length) return [];
+
+    const blocks = [];
+    let currentBlockIdx = -1;
+
+    for (
+      let i = 0;
+      i < this.#filtered.length;
+      i++
+    ) {
+      const origIdx = this.#indexMap.get(
+        this.#filtered[i],
+      );
+      const blockIdx =
+        this.#blockIndexFor(origIdx);
+
+      if (blockIdx !== currentBlockIdx) {
+        blocks.push({
+          startIndex: i,
+          name: this.#blocks[blockIdx].name,
+        });
+        currentBlockIdx = blockIdx;
+      }
+    }
+
+    return blocks;
+  }
+
+  #blockIndexFor(origIdx) {
+    let lo = 0;
+    let hi = this.#blocks.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (
+        this.#blocks[mid].startIndex <= origIdx
+      ) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo;
   }
 
   #clearActiveBlock() {

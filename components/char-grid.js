@@ -1,7 +1,7 @@
 import { element, fragment } from "../lib/dom.js";
 
 const ROW_HEIGHT = 128;
-const HEADER_HEIGHT = 32;
+const HEADER_HEIGHT = 28;
 const BUFFER_ROWS = 3;
 
 export class CharGrid extends HTMLElement {
@@ -156,6 +156,7 @@ export class CharGrid extends HTMLElement {
     this.#content.replaceChildren();
     this.#blocksContainer.replaceChildren();
     this.#scrollContainer.style.display = "";
+    this.#scrollContainer.scrollTop = 0;
     this.#computeBlockLayout();
     this.#updateLayout();
     this.#renderVisible();
