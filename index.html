@@ -148,6 +148,7 @@
         }
         
         .char-cell {
+          box-sizing: border-box;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -208,7 +209,7 @@
         .char-name {
           display: -webkit-box;
           -webkit-box-orient: vertical;
-          -webkit-line-clamp: 3;
+          -webkit-line-clamp: 2;
           max-width: 100%;
           overflow: hidden;
           font-family: var(--font-ui);
