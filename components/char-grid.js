@@ -1,7 +1,7 @@
 import { element, fragment } from "../lib/dom.js";
 
 const ROW_HEIGHT = 138;
-const HEADER_HEIGHT = 36;
+const HEADER_HEIGHT = 40;
 const BUFFER_ROWS = 3;
 
 export class CharGrid extends HTMLElement {
