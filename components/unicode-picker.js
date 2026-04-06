@@ -198,10 +198,16 @@ export class UnicodePicker extends HTMLElement {
     this.#clearActiveBlock();
     const terms = query.toUpperCase().split(/\s+/);
     this.#filtered = this.#allChars.filter(
-      (entry) =>
-        terms.every((term) =>
-          entry.n.includes(term),
-        ),
+      (entry, i) => {
+        const blockIdx = this.#blockIndexFor(i);
+        const blockName =
+          this.#blocks[blockIdx].name
+            .toUpperCase();
+        return terms.every((term) =>
+          entry.n.includes(term)
+          || blockName.includes(term),
+        );
+      },
     );
     this.#filteredBlocks =
       this.#computeFilteredBlocks();
