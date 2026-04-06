@@ -201,6 +201,7 @@
           flex-direction: column;
           height: 100vh;
           overflow: hidden;
+          container-type: inline-size;
         }
         
         .search-bar {
@@ -290,6 +291,32 @@
 
         .blocks-nav button.dimmed {
           display: none;
+        }
+
+        @container (max-width: 900px) {
+          .main {
+            flex-direction: column;
+          }
+
+          .blocks-nav {
+            display: flex;
+            flex-shrink: 0;
+            width: auto;
+            border-right: none;
+            border-bottom:
+              1px solid
+              var(--color-border-subtle);
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .blocks-nav button {
+            flex-shrink: 0;
+            width: auto;
+            white-space: nowrap;
+          }
         }
 
         .results {
