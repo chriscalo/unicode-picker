@@ -1,6 +1,6 @@
 import { element, fragment } from "../lib/dom.js";
 
-const ROW_HEIGHT = 128;
+const ROW_HEIGHT = 132;
 const HEADER_HEIGHT = 36;
 const BUFFER_ROWS = 3;
 
