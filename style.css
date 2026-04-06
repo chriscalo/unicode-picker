@@ -11,22 +11,25 @@
 @layer tokens {
   :root {
     /* — Color (hue 162 teal-green throughout) — */
-    --color-bg-base:       oklch(0.16 0.015 162);
-    --color-bg-raised:     oklch(0.19 0.015 162);
-    --color-bg-surface:    oklch(0.22 0.02 162);
-    --color-bg-hover:      oklch(0.26 0.025 162);
-    --color-bg-selected:   oklch(0.26 0.025 162);
+    --color-bg-base:       oklch(0.13 0.015 162);
+    --color-bg-raised:     oklch(0.16 0.015 162);
+    --color-bg-surface:    oklch(0.19 0.02 162);
+    --color-bg-hover:      oklch(0.24 0.025 162);
+    --color-bg-selected:   oklch(0.24 0.025 162);
 
-    --color-text-primary:  oklch(0.90 0.02 162);
-    --color-text-secondary: oklch(0.58 0.03 162);
-    --color-text-tertiary: oklch(0.45 0.02 162);
+    --color-text-primary:  oklch(0.93 0.02 162);
+    --color-text-secondary: oklch(0.68 0.03 162);
+    --color-text-tertiary: oklch(0.55 0.02 162);
 
-    --color-border-subtle: oklch(0.28 0.02 162);
-    --color-border-strong: oklch(0.40 0.03 162);
+    --color-border-subtle: oklch(0.35 0.02 162);
+    --color-border-strong: oklch(0.50 0.03 162);
 
     --color-accent:        oklch(0.72 0.17 162);
     --color-accent-subtle: oklch(0.72 0.17 162 / 0.15);
     --color-accent-text:   oklch(0.16 0.04 162);
+
+    --color-success:       oklch(0.72 0.17 162);
+    --color-success-text:  oklch(0.16 0.04 162);
     
     /* — Typography — */
     --font-ui:
