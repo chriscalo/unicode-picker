@@ -376,6 +376,13 @@ export class UnicodePicker extends HTMLElement {
       e.preventDefault();
       this.#copyChar(list[this.#selectedIndex]);
       return;
+    } else if (e.key === "Escape") {
+      if (this.#input.value) {
+        e.preventDefault();
+        this.#input.value = "";
+        this.#search("");
+      }
+      return;
     } else {
       return;
     }
