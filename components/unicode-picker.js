@@ -103,7 +103,7 @@ export class UnicodePicker extends HTMLElement {
     const count =
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
-      `${count} characters loaded.`;
+      `${count} characters`;
     this.#input.focus();
     this.#render();
     this.#scrollBlockIntoView();
@@ -188,7 +188,7 @@ export class UnicodePicker extends HTMLElement {
       this.#filtered = [];
       this.#status.textContent =
         `${this.#allChars.length.toLocaleString()}`
-        + ` characters loaded.`;
+        + ` characters`;
       this.#selectedIndex = -1;
       this.#render();
       this.#updateBlocksDimming();
@@ -214,7 +214,7 @@ export class UnicodePicker extends HTMLElement {
 
     this.#status.textContent =
       `${this.#filtered.length.toLocaleString()}`
-      + ` matches`;
+      + ` matching characters`;
     this.#selectedIndex = -1;
     this.#render();
     this.#updateBlocksDimming();
