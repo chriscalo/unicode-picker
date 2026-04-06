@@ -61,7 +61,10 @@ export class UnicodePicker extends HTMLElement {
         if (!btn || btn.classList.contains("dimmed")) {
           return;
         }
-        const index = parseInt(btn.dataset.index);
+        const index =
+          this.#resolveBlockIndex(
+            parseInt(btn.dataset.index),
+          );
         this.#grid.scrollToIndex(index);
         this.#select(index);
       },
@@ -290,6 +293,21 @@ export class UnicodePicker extends HTMLElement {
       }
     }
     return lo;
+  }
+
+  #resolveBlockIndex(origIndex) {
+    if (!this.#input.value.trim()) {
+      return origIndex;
+    }
+    const blockName = this.#blocks.find(
+      (b) => b.startIndex === origIndex,
+    )?.name;
+    if (!blockName) return origIndex;
+    const filtered = this.#filteredBlocks.find(
+      (b) => b.name === blockName,
+    );
+    return filtered ?
+      filtered.startIndex : origIndex;
   }
 
   #clearActiveBlock() {

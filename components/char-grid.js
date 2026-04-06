@@ -104,6 +104,11 @@ export class CharGrid extends HTMLElement {
         this.#computeBlockLayout();
         this.#updateLayout();
         this.#renderVisible();
+        if (this.#blockLayout.length) {
+          this.#stickyHeader.style.transform =
+            "";
+          this.#updateStickyHeader();
+        }
       },
     );
   }
@@ -382,18 +387,12 @@ export class CharGrid extends HTMLElement {
   }
 
   #measureCols() {
-    const grid = this.#grid;
-    if (!grid || !grid.children.length) {
-      const width =
-        this.#scrollContainer.clientWidth - 24;
-      this.#cols =
-        Math.max(1, Math.floor(width / 116));
-      return;
-    }
-    const style = getComputedStyle(grid);
-    this.#cols = style
-      .getPropertyValue("grid-template-columns")
-      .split(" ").length;
+    const width =
+      this.#scrollContainer.clientWidth - 24;
+    this.#cols = Math.max(
+      1,
+      Math.floor((width + 12) / 116),
+    );
   }
 
   #renderVisible() {
