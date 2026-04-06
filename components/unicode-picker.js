@@ -8,6 +8,8 @@ export class UnicodePicker extends HTMLElement {
   #allChars = [];
   #blocks = [];
   #filtered = [];
+  #filteredBlocks = [];
+  #indexMap = new Map();
   #selectedIndex = -1;
   #input;
   #status;
@@ -59,9 +61,30 @@ export class UnicodePicker extends HTMLElement {
         if (!btn || btn.classList.contains("dimmed")) {
           return;
         }
-        const index = parseInt(btn.dataset.index);
+        const index =
+          this.#resolveBlockIndex(
+            parseInt(btn.dataset.index),
+          );
         this.#grid.scrollToIndex(index);
         this.#select(index);
+      },
+    );
+    this.#grid.addEventListener(
+      "block-change",
+      (e) => {
+        const { startIndex } = e.detail;
+        for (const btn of
+          this.#blocksNav.querySelectorAll(
+            "button",
+          )
+        ) {
+          btn.classList.toggle(
+            "active",
+            parseInt(btn.dataset.index)
+              === startIndex,
+          );
+        }
+        this.#scrollBlockIntoView();
       },
     );
   }
@@ -76,12 +99,14 @@ export class UnicodePicker extends HTMLElement {
         .textContent,
     );
     this.#buildBlocksNav();
+    this.#buildIndexMap();
     const count =
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
       `${count} characters loaded.`;
     this.#input.focus();
     this.#render();
+    this.#scrollBlockIntoView();
   }
 
   #buildBlocksNav() {
@@ -170,6 +195,7 @@ export class UnicodePicker extends HTMLElement {
       return;
     }
 
+    this.#clearActiveBlock();
     const terms = query.toUpperCase().split(/\s+/);
     this.#filtered = this.#allChars.filter(
       (entry) =>
@@ -177,6 +203,8 @@ export class UnicodePicker extends HTMLElement {
           entry.n.includes(term),
         ),
     );
+    this.#filteredBlocks =
+      this.#computeFilteredBlocks();
 
     this.#status.textContent =
       `${this.#filtered.length.toLocaleString()}`
@@ -195,7 +223,10 @@ export class UnicodePicker extends HTMLElement {
       return;
     }
 
-    this.#grid.update(list);
+    const blocks = query ?
+      this.#filteredBlocks :
+      this.#blocks;
+    this.#grid.update(list, { blocks });
     this.#grid.selectedIndex =
       this.#selectedIndex;
   }
@@ -204,6 +235,97 @@ export class UnicodePicker extends HTMLElement {
     return this.#input.value.trim() ?
       this.#filtered :
       this.#allChars;
+  }
+
+  #buildIndexMap() {
+    this.#indexMap = new Map();
+    for (
+      let i = 0;
+      i < this.#allChars.length;
+      i++
+    ) {
+      this.#indexMap.set(
+        this.#allChars[i], i,
+      );
+    }
+  }
+
+  #computeFilteredBlocks() {
+    if (!this.#filtered.length) return [];
+
+    const blocks = [];
+    let currentBlockIdx = -1;
+
+    for (
+      let i = 0;
+      i < this.#filtered.length;
+      i++
+    ) {
+      const origIdx = this.#indexMap.get(
+        this.#filtered[i],
+      );
+      const blockIdx =
+        this.#blockIndexFor(origIdx);
+
+      if (blockIdx !== currentBlockIdx) {
+        blocks.push({
+          startIndex: i,
+          name: this.#blocks[blockIdx].name,
+        });
+        currentBlockIdx = blockIdx;
+      }
+    }
+
+    return blocks;
+  }
+
+  #blockIndexFor(origIdx) {
+    let lo = 0;
+    let hi = this.#blocks.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (
+        this.#blocks[mid].startIndex <= origIdx
+      ) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo;
+  }
+
+  #resolveBlockIndex(origIndex) {
+    if (!this.#input.value.trim()) {
+      return origIndex;
+    }
+    const blockName = this.#blocks.find(
+      (b) => b.startIndex === origIndex,
+    )?.name;
+    if (!blockName) return origIndex;
+    const filtered = this.#filteredBlocks.find(
+      (b) => b.name === blockName,
+    );
+    return filtered ?
+      filtered.startIndex : origIndex;
+  }
+
+  #clearActiveBlock() {
+    for (const btn of
+      this.#blocksNav.querySelectorAll(
+        ".active",
+      )
+    ) {
+      btn.classList.remove("active");
+    }
+  }
+
+  #scrollBlockIntoView() {
+    const active =
+      this.#blocksNav.querySelector(".active");
+    if (active) {
+      active.scrollIntoView({ block: "nearest" });
+    }
   }
 
   async #copyChar(entry) {
