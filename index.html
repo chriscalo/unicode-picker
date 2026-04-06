@@ -266,6 +266,10 @@
         
         .search-bar {
           flex-shrink: 0;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: var(--space-1) var(--space-3);
           padding: var(--space-4);
           border-bottom:
             1px solid var(--color-border-subtle);
@@ -273,7 +277,8 @@
         }
         
         .search-bar input {
-          width: 100%;
+          flex: 1;
+          min-width: 0;
           padding: var(--space-3) var(--space-4);
           border:
             1px solid var(--color-border-strong);
@@ -304,11 +309,10 @@
         
         .status {
           flex-shrink: 0;
-          padding: var(--space-2) var(--space-4);
           font-family: var(--font-ui);
-          font-size: var(--text-sm);
-          color: var(--color-text-secondary);
-          background: var(--color-bg-raised);
+          font-size: var(--text-xs);
+          color: var(--color-text-tertiary);
+          white-space: nowrap;
         }
         
         .main {
@@ -390,8 +394,8 @@
           placeholder="Search Unicode characters…"
           autofocus
         />
+        <div class="status">Loading…</div>
       </div>
-      <div class="status">Loading…</div>
       <div class="main">
         <nav class="blocks-nav"></nav>
         <div class="results">
