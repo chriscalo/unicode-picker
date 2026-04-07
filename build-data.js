@@ -49,7 +49,7 @@ for (const line of source.trim().split("\n")) {
   if (name.startsWith("<")) continue;
 
   const block = blocks.find(
-    (b) => codepoint >= b.start && codepoint <= b.end,
+    b => codepoint >= b.start && codepoint <= b.end,
   );
   if (block && !blockIndices.has(block.name)) {
     blockIndices.set(block.name, entries.length);

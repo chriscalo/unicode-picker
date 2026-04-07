@@ -66,9 +66,9 @@ export class CharGrid extends HTMLElement {
 
     this.shadowRoot.addEventListener(
       "click",
-      (e) => {
+      event => {
         const cell =
-          e.target.closest(".char-cell");
+          event.target.closest(".char-cell");
         if (!cell) return;
         const idx = parseInt(cell.dataset.index);
         if (this.#items[idx]) {
@@ -85,9 +85,9 @@ export class CharGrid extends HTMLElement {
 
     this.shadowRoot.addEventListener(
       "mousemove",
-      (e) => {
+      event => {
         const cell =
-          e.target.closest(".char-cell");
+          event.target.closest(".char-cell");
         if (!cell) return;
         const idx = parseInt(cell.dataset.index);
         if (idx === this.#selectedIndex) return;
@@ -134,9 +134,10 @@ export class CharGrid extends HTMLElement {
       return target < this.#items.length ?
         target : index;
     }
-    const bi =
+    const blockIndex =
       this.#blockLayoutIndex(index);
-    const block = this.#blockLayout[bi];
+    const block =
+      this.#blockLayout[blockIndex];
     const local = index - block.startIndex;
     const row =
       Math.floor(local / this.#cols);
@@ -151,7 +152,8 @@ export class CharGrid extends HTMLElement {
       );
     }
 
-    const next = this.#blockLayout[bi + 1];
+    const next =
+      this.#blockLayout[blockIndex + 1];
     if (!next) return index;
     return Math.min(
       next.startIndex + col,
@@ -164,9 +166,10 @@ export class CharGrid extends HTMLElement {
       const target = index - this.#cols;
       return target >= 0 ? target : index;
     }
-    const bi =
+    const blockIndex =
       this.#blockLayoutIndex(index);
-    const block = this.#blockLayout[bi];
+    const block =
+      this.#blockLayout[blockIndex];
     const local = index - block.startIndex;
     const row =
       Math.floor(local / this.#cols);
@@ -177,7 +180,8 @@ export class CharGrid extends HTMLElement {
         + (row - 1) * this.#cols + col;
     }
 
-    const prev = this.#blockLayout[bi - 1];
+    const prev =
+      this.#blockLayout[blockIndex - 1];
     if (!prev) return index;
     const lastRow = prev.charRows - 1;
     return Math.min(
@@ -192,7 +196,7 @@ export class CharGrid extends HTMLElement {
     this.#selectedIndex = idx;
     const prev =
       this.shadowRoot.querySelector(
-        '[aria-selected="true"]',
+        "[aria-selected='true']",
       );
     if (prev) prev.removeAttribute(
       "aria-selected",
@@ -279,11 +283,13 @@ export class CharGrid extends HTMLElement {
     const layout = [];
     let offset = 0;
 
-    for (let i = 0; i < this.#blocks.length; i++) {
-      const block = this.#blocks[i];
+    for (
+      const [blockIdx, block] of
+      this.#blocks.entries()
+    ) {
       const nextStart =
-        i + 1 < this.#blocks.length ?
-          this.#blocks[i + 1].startIndex :
+        blockIdx + 1 < this.#blocks.length ?
+          this.#blocks[blockIdx + 1].startIndex :
           this.#items.length;
       const charCount =
         nextStart - block.startIndex;
@@ -383,36 +389,36 @@ export class CharGrid extends HTMLElement {
   }
 
   #blockLayoutIndex(index) {
-    let lo = 0;
-    let hi = this.#blockLayout.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
+    let low = 0;
+    let high = this.#blockLayout.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
       if (
         this.#blockLayout[mid].startIndex
           <= index
       ) {
-        lo = mid;
+        low = mid;
       } else {
-        hi = mid - 1;
+        high = mid - 1;
       }
     }
-    return lo;
+    return low;
   }
 
   #blockIndexAtPixel(pixel) {
-    let lo = 0;
-    let hi = this.#blockLayout.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
+    let low = 0;
+    let high = this.#blockLayout.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
       if (
         this.#blockLayout[mid].pixelTop <= pixel
       ) {
-        lo = mid;
+        low = mid;
       } else {
-        hi = mid - 1;
+        high = mid - 1;
       }
     }
-    return lo;
+    return low;
   }
 
   #scrollToIndexFlat(index) {
@@ -546,12 +552,14 @@ export class CharGrid extends HTMLElement {
 
     const frag = fragment();
     for (
-      const [i, entry] of
+      const [offset, entry] of
       this.#items.slice(startIndex, endIndex)
         .entries()
     ) {
       frag.appendChild(
-        this.#createCell(entry, startIndex + i),
+        this.#createCell(
+          entry, startIndex + offset,
+        ),
       );
     }
     this.#grid.appendChild(frag);
@@ -630,9 +638,8 @@ export class CharGrid extends HTMLElement {
         );
 
         const cellFrag = fragment();
-        for (
-          let idx = startIdx; idx < endIdx; idx++
-        ) {
+        let idx = startIdx;
+        while (idx < endIdx) {
           if (this.#items[idx]) {
             cellFrag.appendChild(
               this.#createCell(
@@ -640,6 +647,7 @@ export class CharGrid extends HTMLElement {
               ),
             );
           }
+          idx++;
         }
         grid.appendChild(cellFrag);
         section.appendChild(grid);

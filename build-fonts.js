@@ -248,18 +248,20 @@ async function main() {
   // Fetch in batches of 10 to avoid overwhelming
   // the API
   const results = [];
-  const BATCH = 10;
-  for (let i = 0; i < NOTO_FONTS.length; i += BATCH) {
-    const batch = NOTO_FONTS.slice(i, i + BATCH);
+  const BATCH_SIZE = 10;
+  let offset = 0;
+  while (offset < NOTO_FONTS.length) {
+    const batch = NOTO_FONTS.slice(offset, offset + BATCH_SIZE);
     const batchResults =
       await Promise.all(batch.map(fetchFontCSS));
     results.push(...batchResults);
+    offset += BATCH_SIZE;
   }
 
   const successful =
-    results.filter((r) => r !== null);
+    results.filter(r => r !== null);
   const failed =
-    results.filter((r) => r === null).length;
+    results.filter(r => r === null).length;
 
   // Build the combined CSS
   const header =

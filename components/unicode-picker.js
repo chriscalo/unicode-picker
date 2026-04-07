@@ -59,20 +59,21 @@ export class UnicodePicker extends HTMLElement {
     );
     this.#input.addEventListener(
       "keydown",
-      (e) => this.#onKeydown(e),
+      event => this.#onKeydown(event),
     );
     this.#grid.addEventListener(
       "char-select",
-      (e) => this.#copyChar(e.detail),
+      event => this.#copyChar(event.detail),
     );
     this.#grid.addEventListener(
       "selection-change",
-      (e) => this.#select(e.detail),
+      event => this.#select(event.detail),
     );
     this.#blocksNav.addEventListener(
       "click",
-      (e) => {
-        const btn = e.target.closest("button");
+      event => {
+        const btn =
+          event.target.closest("button");
         if (!btn || btn.disabled) {
           return;
         }
@@ -87,8 +88,8 @@ export class UnicodePicker extends HTMLElement {
     );
     this.#grid.addEventListener(
       "block-change",
-      (e) => {
-        const { startIndex } = e.detail;
+      event => {
+        const { startIndex } = event.detail;
         for (const btn of
           this.#blocksNav.querySelectorAll(
             "button",
@@ -156,14 +157,22 @@ export class UnicodePicker extends HTMLElement {
       ),
     );
 
-    for (const [i, btn] of buttons.entries()) {
-      const blockStart = this.#blocks[i].startIndex;
-      const blockEnd = i + 1 < this.#blocks.length ?
-        this.#blocks[i + 1].startIndex :
+    for (
+      const [blockIdx, btn] of
+      buttons.entries()
+    ) {
+      const blockStart =
+        this.#blocks[blockIdx].startIndex;
+      const blockEnd =
+        blockIdx + 1 < this.#blocks.length ?
+        this.#blocks[blockIdx + 1].startIndex :
         this.#allChars.length;
       let hasMatch = false;
-      for (const idx of matchIndices) {
-        if (idx >= blockStart && idx < blockEnd) {
+      for (const matchIdx of matchIndices) {
+        if (
+          matchIdx >= blockStart
+          && matchIdx < blockEnd
+        ) {
           hasMatch = true;
           break;
         }
@@ -196,7 +205,7 @@ export class UnicodePicker extends HTMLElement {
 
   #addRecent(entry) {
     const recents = this.#getRecents().filter(
-      (r) => r.u !== entry.u,
+      recent => recent.u !== entry.u,
     );
     recents.unshift(entry);
     if (recents.length > MAX_RECENTS) {
@@ -223,8 +232,9 @@ export class UnicodePicker extends HTMLElement {
     this.#clearActiveBlock();
     const terms = query.toUpperCase().split(/\s+/);
     this.#filtered = this.#allChars.filter(
-      (entry, i) => {
-        const blockIdx = this.#blockIndexFor(i);
+      (entry, index) => {
+        const blockIdx =
+          this.#blockIndexFor(index);
         const blockName =
           this.#blocks[blockIdx].name
             .toUpperCase();
@@ -271,13 +281,10 @@ export class UnicodePicker extends HTMLElement {
   #buildIndexMap() {
     this.#indexMap = new Map();
     for (
-      let i = 0;
-      i < this.#allChars.length;
-      i++
+      const [idx, char] of
+      this.#allChars.entries()
     ) {
-      this.#indexMap.set(
-        this.#allChars[i], i,
-      );
+      this.#indexMap.set(char, idx);
     }
   }
 
@@ -288,19 +295,17 @@ export class UnicodePicker extends HTMLElement {
     let currentBlockIdx = -1;
 
     for (
-      let i = 0;
-      i < this.#filtered.length;
-      i++
+      const [idx, entry] of
+      this.#filtered.entries()
     ) {
-      const origIdx = this.#indexMap.get(
-        this.#filtered[i],
-      );
+      const origIdx =
+        this.#indexMap.get(entry);
       const blockIdx =
         this.#blockIndexFor(origIdx);
 
       if (blockIdx !== currentBlockIdx) {
         blocks.push({
-          startIndex: i,
+          startIndex: idx,
           name: this.#blocks[blockIdx].name,
         });
         currentBlockIdx = blockIdx;
@@ -311,19 +316,19 @@ export class UnicodePicker extends HTMLElement {
   }
 
   #blockIndexFor(origIdx) {
-    let lo = 0;
-    let hi = this.#blocks.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
+    let low = 0;
+    let high = this.#blocks.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
       if (
         this.#blocks[mid].startIndex <= origIdx
       ) {
-        lo = mid;
+        low = mid;
       } else {
-        hi = mid - 1;
+        high = mid - 1;
       }
     }
-    return lo;
+    return low;
   }
 
   #resolveBlockIndex(origIndex) {
@@ -331,11 +336,11 @@ export class UnicodePicker extends HTMLElement {
       return origIndex;
     }
     const blockName = this.#blocks.find(
-      (b) => b.startIndex === origIndex,
+      block => block.startIndex === origIndex,
     )?.name;
     if (!blockName) return origIndex;
     const filtered = this.#filteredBlocks.find(
-      (b) => b.name === blockName,
+      block => block.name === blockName,
     );
     return filtered ?
       filtered.startIndex : origIndex;
@@ -344,7 +349,7 @@ export class UnicodePicker extends HTMLElement {
   #clearActiveBlock() {
     for (const btn of
       this.#blocksNav.querySelectorAll(
-        '[aria-current="true"]',
+        "[aria-current='true']",
       )
     ) {
       btn.removeAttribute("aria-current");
@@ -354,7 +359,7 @@ export class UnicodePicker extends HTMLElement {
   #scrollBlockIntoView() {
     const active =
       this.#blocksNav.querySelector(
-        '[aria-current="true"]',
+        "[aria-current='true']",
       );
     if (active) {
       active.scrollIntoView({ block: "nearest" });
@@ -371,47 +376,47 @@ export class UnicodePicker extends HTMLElement {
     }
   }
 
-  #onKeydown(e) {
+  #onKeydown(event) {
     const list = this.#currentList();
     const cols = this.#grid.gridCols;
     let newIndex = this.#selectedIndex;
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
       if (newIndex < 0) {
         newIndex = 0;
       } else {
         newIndex =
           this.#grid.moveDown(newIndex);
       }
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
       if (newIndex < 0) {
         newIndex = 0;
       } else {
         newIndex =
           this.#grid.moveUp(newIndex);
       }
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
       if (newIndex < list.length - 1) {
         newIndex++;
       }
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
       if (newIndex > 0) {
         newIndex--;
       }
     } else if (
-      e.key === "Enter" && list.length > 0
+      event.key === "Enter" && list.length > 0
       && this.#selectedIndex >= 0
     ) {
-      e.preventDefault();
+      event.preventDefault();
       this.#copyChar(list[this.#selectedIndex]);
       return;
-    } else if (e.key === "Escape") {
+    } else if (event.key === "Escape") {
       if (this.#input.value) {
-        e.preventDefault();
+        event.preventDefault();
         this.#input.value = "";
         this.#search("");
         this.#updateClearBtn();
@@ -436,10 +441,11 @@ customElements.define(
 function parseUnicodeData(tsv) {
   return tsv.trim().split("\n").map((line) => {
     const tab = line.indexOf("\t");
-    const c = line.slice(0, tab);
-    const n = line.slice(tab + 1);
-    const u = c.codePointAt(0).toString(16);
-    return { c, n, u };
+    const char = line.slice(0, tab);
+    const name = line.slice(tab + 1);
+    const hex =
+      char.codePointAt(0).toString(16);
+    return { c: char, n: name, u: hex };
   });
 }
 

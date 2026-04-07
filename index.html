@@ -11,8 +11,8 @@
       crossorigin
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
     />
     <link rel="stylesheet" href="./noto-fonts.css" />
     <link rel="stylesheet" href="./style.css" />
@@ -201,8 +201,13 @@
           font-weight: var(--weight-medium);
           color: var(--color-accent-text);
           background: var(--color-accent);
-          background-image:
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23082619' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+          background-image: url("data:image/svg+xml,\
+%3Csvg xmlns='http://www.w3.org/2000/svg' \
+width='14' height='14' viewBox='0 0 24 24' \
+fill='none' stroke='%23082619' stroke-width='3' \
+stroke-linecap='round' stroke-linejoin='round'\
+%3E%3Cpolyline points='20 6 9 17 4 12'/%3E\
+%3C/svg%3E");
           background-repeat: no-repeat;
           background-position: calc(50% - 28px) center;
           content: "Copied";
@@ -213,9 +218,15 @@
         }
 
         @keyframes copied-fade {
-          0% { opacity: 1; }
-          80% { opacity: 1; }
-          100% { opacity: 0; }
+          0% {
+            opacity: 1;
+          }
+          80% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
         }
         
         .char-glyph {
@@ -451,7 +462,14 @@
             autofocus
           />
           <button class="clear-btn" aria-label="Clear search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
