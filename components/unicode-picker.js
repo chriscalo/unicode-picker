@@ -82,6 +82,7 @@ export class UnicodePicker extends HTMLElement {
           );
         this.#grid.scrollToIndex(index);
         this.#select(index);
+        this.#input.focus();
       },
     );
     this.#grid.addEventListener(
