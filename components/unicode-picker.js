@@ -12,6 +12,7 @@ export class UnicodePicker extends HTMLElement {
   #indexMap = new Map();
   #selectedIndex = -1;
   #input;
+  #clearBtn;
   #status;
   #grid;
   #toast;
@@ -29,6 +30,8 @@ export class UnicodePicker extends HTMLElement {
 
     this.#input =
       this.shadowRoot.querySelector("input");
+    this.#clearBtn =
+      this.shadowRoot.querySelector(".clear-btn");
     this.#status =
       this.shadowRoot.querySelector(".status");
     this.#grid =
@@ -40,7 +43,19 @@ export class UnicodePicker extends HTMLElement {
 
     this.#input.addEventListener(
       "input",
-      () => this.#search(this.#input.value),
+      () => {
+        this.#search(this.#input.value);
+        this.#updateClearBtn();
+      },
+    );
+    this.#clearBtn.addEventListener(
+      "click",
+      () => {
+        this.#input.value = "";
+        this.#search("");
+        this.#updateClearBtn();
+        this.#input.focus();
+      },
     );
     this.#input.addEventListener(
       "keydown",
@@ -152,6 +167,13 @@ export class UnicodePicker extends HTMLElement {
       }
       btn.classList.toggle("dimmed", !hasMatch);
     }
+  }
+
+  #updateClearBtn() {
+    this.#clearBtn.classList.toggle(
+      "visible",
+      this.#input.value.length > 0,
+    );
   }
 
   #select(index) {
@@ -381,6 +403,7 @@ export class UnicodePicker extends HTMLElement {
         e.preventDefault();
         this.#input.value = "";
         this.#search("");
+        this.#updateClearBtn();
       }
       return;
     } else {
