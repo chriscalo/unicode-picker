@@ -378,13 +378,19 @@ export class UnicodePicker extends HTMLElement {
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (newIndex + cols < list.length) {
-        newIndex += cols;
+      if (newIndex < 0) {
+        newIndex = 0;
+      } else {
+        newIndex =
+          this.#grid.moveDown(newIndex);
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (newIndex - cols >= 0) {
-        newIndex -= cols;
+      if (newIndex < 0) {
+        newIndex = 0;
+      } else {
+        newIndex =
+          this.#grid.moveUp(newIndex);
       }
     } else if (e.key === "ArrowRight") {
       e.preventDefault();

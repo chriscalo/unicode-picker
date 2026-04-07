@@ -128,6 +128,65 @@ export class CharGrid extends HTMLElement {
     return this.#cols;
   }
 
+  moveDown(index) {
+    if (!this.#blockLayout.length) {
+      const target = index + this.#cols;
+      return target < this.#items.length ?
+        target : index;
+    }
+    const bi =
+      this.#blockLayoutIndex(index);
+    const block = this.#blockLayout[bi];
+    const local = index - block.startIndex;
+    const row =
+      Math.floor(local / this.#cols);
+    const col = local % this.#cols;
+
+    if (row + 1 < block.charRows) {
+      return Math.min(
+        block.startIndex
+          + (row + 1) * this.#cols + col,
+        block.startIndex
+          + block.charCount - 1,
+      );
+    }
+
+    const next = this.#blockLayout[bi + 1];
+    if (!next) return index;
+    return Math.min(
+      next.startIndex + col,
+      next.startIndex + next.charCount - 1,
+    );
+  }
+
+  moveUp(index) {
+    if (!this.#blockLayout.length) {
+      const target = index - this.#cols;
+      return target >= 0 ? target : index;
+    }
+    const bi =
+      this.#blockLayoutIndex(index);
+    const block = this.#blockLayout[bi];
+    const local = index - block.startIndex;
+    const row =
+      Math.floor(local / this.#cols);
+    const col = local % this.#cols;
+
+    if (row > 0) {
+      return block.startIndex
+        + (row - 1) * this.#cols + col;
+    }
+
+    const prev = this.#blockLayout[bi - 1];
+    if (!prev) return index;
+    const lastRow = prev.charRows - 1;
+    return Math.min(
+      prev.startIndex
+        + lastRow * this.#cols + col,
+      prev.startIndex + prev.charCount - 1,
+    );
+  }
+
   set selectedIndex(idx) {
     if (idx === this.#selectedIndex) return;
     this.#selectedIndex = idx;
@@ -318,19 +377,26 @@ export class CharGrid extends HTMLElement {
   }
 
   #blockForIndex(index) {
+    return this.#blockLayout[
+      this.#blockLayoutIndex(index)
+    ] || null;
+  }
+
+  #blockLayoutIndex(index) {
     let lo = 0;
     let hi = this.#blockLayout.length - 1;
     while (lo < hi) {
       const mid = (lo + hi + 1) >> 1;
       if (
-        this.#blockLayout[mid].startIndex <= index
+        this.#blockLayout[mid].startIndex
+          <= index
       ) {
         lo = mid;
       } else {
         hi = mid - 1;
       }
     }
-    return this.#blockLayout[lo] || null;
+    return lo;
   }
 
   #blockIndexAtPixel(pixel) {
