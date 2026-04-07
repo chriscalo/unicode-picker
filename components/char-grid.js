@@ -161,36 +161,26 @@ export class CharGrid extends HTMLElement {
     this.#currentBlockIdx = -1;
     this.#content.replaceChildren();
     this.#blocksContainer.replaceChildren();
-    this.#scrollContainer.classList.remove(
-      "hidden",
-    );
+    this.#scrollContainer.hidden = false;
     this.#scrollContainer.scrollTop = 0;
     this.#computeBlockLayout();
     this.#updateLayout();
     this.#renderVisible();
     if (this.#blockLayout.length) {
       this.#updateStickyHeader();
-      this.#stickyHeader.classList.remove(
-        "hidden",
-      );
+      this.#stickyHeader.hidden = false;
     } else {
       this.#stickyHeader.textContent = "";
-      this.#stickyHeader.classList.add(
-        "hidden",
-      );
+      this.#stickyHeader.hidden = true;
     }
   }
 
   showEmpty(message) {
     this.#items = [];
     this.#blockLayout = [];
-    this.#scrollContainer.classList.add(
-      "hidden",
-    );
+    this.#scrollContainer.hidden = true;
     this.#stickyHeader.textContent = "";
-    this.#stickyHeader.classList.add(
-      "hidden",
-    );
+    this.#stickyHeader.hidden = true;
     this.#content.replaceChildren();
     const empty = this.#emptyTemplate.content
       .cloneNode(true)
@@ -448,7 +438,7 @@ export class CharGrid extends HTMLElement {
   }
 
   #renderVisibleFlat() {
-    this.#grid.classList.remove("hidden");
+    this.#grid.hidden = false;
     this.#blocksContainer.replaceChildren();
 
     const scrollTop =
@@ -496,7 +486,7 @@ export class CharGrid extends HTMLElement {
   }
 
   #renderVisibleWithBlocks() {
-    this.#grid.classList.add("hidden");
+    this.#grid.hidden = true;
 
     const scrollTop =
       this.#scrollContainer.scrollTop;
