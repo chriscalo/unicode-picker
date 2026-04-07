@@ -182,10 +182,8 @@ export class UnicodePicker extends HTMLElement {
   }
 
   #updateClearBtn() {
-    this.#clearBtn.classList.toggle(
-      "visible",
-      this.#input.value.length > 0,
-    );
+    this.#clearBtn.disabled =
+      this.#input.value.length === 0;
   }
 
   #select(index) {

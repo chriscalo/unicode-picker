@@ -350,8 +350,6 @@ stroke-linecap='round' stroke-linejoin='round'\
           color: var(--color-text-tertiary);
           background: none;
           cursor: pointer;
-          opacity: 0;
-          pointer-events: none;
           transition:
             opacity var(--duration-fast)
               var(--ease-out),
@@ -359,9 +357,9 @@ stroke-linecap='round' stroke-linejoin='round'\
               var(--ease-out);
         }
         
-        .clear-btn.visible {
-          opacity: 1;
-          pointer-events: auto;
+        .clear-btn:disabled {
+          opacity: 0;
+          pointer-events: none;
         }
         
         .clear-btn:hover {
@@ -461,7 +459,7 @@ stroke-linecap='round' stroke-linejoin='round'\
             placeholder="Search Unicode characters…"
             autofocus
           />
-          <button class="clear-btn" aria-label="Clear search">
+          <button class="clear-btn" disabled aria-label="Clear search">
             <svg
               viewBox="0 0 24 24"
               fill="none"
