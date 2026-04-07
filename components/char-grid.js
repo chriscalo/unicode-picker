@@ -105,8 +105,9 @@ export class CharGrid extends HTMLElement {
         this.#updateLayout();
         this.#renderVisible();
         if (this.#blockLayout.length) {
-          this.#stickyHeader.style.transform =
-            "";
+          this.#stickyHeader.style.setProperty(
+            "--header-translate", "0px",
+          );
           this.#updateStickyHeader();
         }
       },
@@ -160,26 +161,36 @@ export class CharGrid extends HTMLElement {
     this.#currentBlockIdx = -1;
     this.#content.replaceChildren();
     this.#blocksContainer.replaceChildren();
-    this.#scrollContainer.style.display = "";
+    this.#scrollContainer.classList.remove(
+      "hidden",
+    );
     this.#scrollContainer.scrollTop = 0;
     this.#computeBlockLayout();
     this.#updateLayout();
     this.#renderVisible();
     if (this.#blockLayout.length) {
       this.#updateStickyHeader();
-      this.#stickyHeader.style.display = "";
+      this.#stickyHeader.classList.remove(
+        "hidden",
+      );
     } else {
       this.#stickyHeader.textContent = "";
-      this.#stickyHeader.style.display = "none";
+      this.#stickyHeader.classList.add(
+        "hidden",
+      );
     }
   }
 
   showEmpty(message) {
     this.#items = [];
     this.#blockLayout = [];
-    this.#scrollContainer.style.display = "none";
+    this.#scrollContainer.classList.add(
+      "hidden",
+    );
     this.#stickyHeader.textContent = "";
-    this.#stickyHeader.style.display = "none";
+    this.#stickyHeader.classList.add(
+      "hidden",
+    );
     this.#content.replaceChildren();
     const empty = this.#emptyTemplate.content
       .cloneNode(true)
@@ -244,14 +255,18 @@ export class CharGrid extends HTMLElement {
 
   #updateLayout() {
     if (this.#blockLayout.length) {
-      this.#spacer.style.height =
-        this.#totalHeight + "px";
+      this.#spacer.style.setProperty(
+        "--spacer-height",
+        this.#totalHeight + "px",
+      );
     } else {
       const totalRows = Math.ceil(
         this.#items.length / this.#cols,
       );
-      this.#spacer.style.height =
-        (totalRows * ROW_HEIGHT) + "px";
+      this.#spacer.style.setProperty(
+        "--spacer-height",
+        (totalRows * ROW_HEIGHT) + "px",
+      );
     }
   }
 
@@ -290,13 +305,19 @@ export class CharGrid extends HTMLElement {
         (scrollTop + HEADER_HEIGHT)
         - nextBlock.pixelTop;
       if (overlap > 0) {
-        this.#stickyHeader.style.transform =
-          `translateY(${-overlap}px)`;
+        this.#stickyHeader.style.setProperty(
+          "--header-translate",
+          `${-overlap}px`,
+        );
       } else {
-        this.#stickyHeader.style.transform = "";
+        this.#stickyHeader.style.setProperty(
+          "--header-translate", "0px",
+        );
       }
     } else {
-      this.#stickyHeader.style.transform = "";
+      this.#stickyHeader.style.setProperty(
+        "--header-translate", "0px",
+      );
     }
   }
 
@@ -406,7 +427,7 @@ export class CharGrid extends HTMLElement {
   }
 
   #renderVisibleFlat() {
-    this.#grid.style.display = "";
+    this.#grid.classList.remove("hidden");
     this.#blocksContainer.replaceChildren();
 
     const scrollTop =
@@ -433,8 +454,10 @@ export class CharGrid extends HTMLElement {
       this.#items.length,
     );
 
-    this.#grid.style.top =
-      (firstRow * ROW_HEIGHT) + "px";
+    this.#grid.style.setProperty(
+      "--grid-top",
+      (firstRow * ROW_HEIGHT) + "px",
+    );
     this.#grid.replaceChildren();
 
     const frag = fragment();
@@ -451,7 +474,7 @@ export class CharGrid extends HTMLElement {
   }
 
   #renderVisibleWithBlocks() {
-    this.#grid.style.display = "none";
+    this.#grid.classList.add("hidden");
 
     const scrollTop =
       this.#scrollContainer.scrollTop;
@@ -475,7 +498,10 @@ export class CharGrid extends HTMLElement {
       const section = element("div", {
         className: "block-section",
       });
-      section.style.top = block.pixelTop + "px";
+      section.style.setProperty(
+        "--section-top",
+        block.pixelTop + "px",
+      );
 
       const label = element("div", {
         className: "section-label",
@@ -502,10 +528,12 @@ export class CharGrid extends HTMLElement {
         const grid = element("div", {
           className: "block-grid",
         });
-        grid.style.top =
+        grid.style.setProperty(
+          "--grid-top",
           (HEADER_HEIGHT
             + firstCharRow * ROW_HEIGHT)
-          + "px";
+          + "px",
+        );
 
         const startIdx =
           block.startIndex

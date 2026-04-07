@@ -69,6 +69,10 @@
           overflow: hidden;
         }
         
+        .hidden {
+          display: none !important;
+        }
+        
         .scroll-container {
           flex: 1;
           padding: 0 var(--space-3) var(--space-3);
@@ -93,6 +97,8 @@
           letter-spacing: 0.08em;
           color: var(--color-text-secondary);
           background: var(--color-bg-base);
+          transform:
+            translateY(var(--header-translate, 0px));
         }
         
         .sticky-header:empty {
@@ -101,10 +107,12 @@
         
         .scroll-spacer {
           position: relative;
+          height: var(--spacer-height, 0);
         }
         
         .grid {
           position: absolute;
+          top: var(--grid-top, 0);
           left: 0;
           right: 0;
           display: grid;
@@ -122,6 +130,7 @@
         
         .block-section {
           position: absolute;
+          top: var(--section-top, 0);
           left: 0;
           right: 0;
         }
@@ -144,6 +153,7 @@
         
         .block-grid {
           position: absolute;
+          top: var(--grid-top, 0);
           left: 0;
           right: 0;
           display: grid;
