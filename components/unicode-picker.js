@@ -58,7 +58,7 @@ export class UnicodePicker extends HTMLElement {
       "click",
       (e) => {
         const btn = e.target.closest("button");
-        if (!btn || btn.classList.contains("dimmed")) {
+        if (!btn || btn.disabled) {
           return;
         }
         const index =
@@ -78,10 +78,12 @@ export class UnicodePicker extends HTMLElement {
             "button",
           )
         ) {
-          btn.classList.toggle(
-            "active",
+          const isCurrent =
             parseInt(btn.dataset.index)
-              === startIndex,
+              === startIndex;
+          btn.setAttribute(
+            "aria-current",
+            String(isCurrent),
           );
         }
         this.#scrollBlockIntoView();
@@ -127,7 +129,7 @@ export class UnicodePicker extends HTMLElement {
 
     if (!query) {
       for (const btn of buttons) {
-        btn.classList.remove("dimmed");
+        btn.disabled = false;
       }
       return;
     }
@@ -150,7 +152,7 @@ export class UnicodePicker extends HTMLElement {
           break;
         }
       }
-      btn.classList.toggle("dimmed", !hasMatch);
+      btn.disabled = !hasMatch;
     }
   }
 
@@ -319,16 +321,18 @@ export class UnicodePicker extends HTMLElement {
   #clearActiveBlock() {
     for (const btn of
       this.#blocksNav.querySelectorAll(
-        ".active",
+        '[aria-current="true"]',
       )
     ) {
-      btn.classList.remove("active");
+      btn.removeAttribute("aria-current");
     }
   }
 
   #scrollBlockIntoView() {
     const active =
-      this.#blocksNav.querySelector(".active");
+      this.#blocksNav.querySelector(
+        '[aria-current="true"]',
+      );
     if (active) {
       active.scrollIntoView({ block: "nearest" });
     }

@@ -180,7 +180,7 @@
           cursor: pointer;
         }
         
-        .char-cell.selected {
+        .char-cell[aria-selected="true"] {
           background: var(--color-bg-hover);
         }
 
@@ -359,11 +359,11 @@
           background: var(--color-bg-hover);
         }
 
-        .blocks-nav button.active {
+        .blocks-nav button[aria-current="true"] {
           color: var(--color-accent);
         }
 
-        .blocks-nav button.dimmed {
+        .blocks-nav button:disabled {
           display: none;
         }
 

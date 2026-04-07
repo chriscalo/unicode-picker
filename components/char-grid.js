@@ -132,12 +132,18 @@ export class CharGrid extends HTMLElement {
     if (idx === this.#selectedIndex) return;
     this.#selectedIndex = idx;
     const prev =
-      this.shadowRoot.querySelector(".selected");
-    if (prev) prev.classList.remove("selected");
+      this.shadowRoot.querySelector(
+        '[aria-selected="true"]',
+      );
+    if (prev) prev.removeAttribute(
+      "aria-selected",
+    );
     const next = this.shadowRoot.querySelector(
       `.char-cell[data-index="${idx}"]`,
     );
-    if (next) next.classList.add("selected");
+    if (next) next.setAttribute(
+      "aria-selected", "true",
+    );
   }
 
   showCopied(index) {
@@ -591,7 +597,9 @@ export class CharGrid extends HTMLElement {
     cell.querySelector(".char-name")
       .textContent = entry.n;
     if (index === this.#selectedIndex) {
-      cell.classList.add("selected");
+      cell.setAttribute(
+        "aria-selected", "true",
+      );
     }
     return cell;
   }
