@@ -1,7 +1,5 @@
 import { element, fragment } from "../lib/dom.js";
 
-const ROW_HEIGHT = 138;
-const HEADER_HEIGHT = 40;
 const BUFFER_ROWS = 3;
 
 export class CharGrid extends HTMLElement {
@@ -11,6 +9,8 @@ export class CharGrid extends HTMLElement {
   #totalHeight = 0;
   #currentBlockIdx = -1;
   #selectedIndex = -1;
+  #rowHeight = 0;
+  #headerHeight = 0;
   #cols = 1;
   #scrollContainer;
   #spacer;
@@ -100,13 +100,14 @@ export class CharGrid extends HTMLElement {
 
     this.#resizeObserver = new ResizeObserver(
       () => {
-        this.#measureCols();
+        this.#measureLayout();
         this.#computeBlockLayout();
         this.#updateLayout();
         this.#renderVisible();
         if (this.#blockLayout.length) {
-          this.#stickyHeader.style.transform =
-            "";
+          this.#stickyHeader.style.setProperty(
+            "--header-translate", "0px",
+          );
           this.#updateStickyHeader();
         }
       },
@@ -131,12 +132,18 @@ export class CharGrid extends HTMLElement {
     if (idx === this.#selectedIndex) return;
     this.#selectedIndex = idx;
     const prev =
-      this.shadowRoot.querySelector(".selected");
-    if (prev) prev.classList.remove("selected");
+      this.shadowRoot.querySelector(
+        '[aria-selected="true"]',
+      );
+    if (prev) prev.removeAttribute(
+      "aria-selected",
+    );
     const next = this.shadowRoot.querySelector(
       `.char-cell[data-index="${idx}"]`,
     );
-    if (next) next.classList.add("selected");
+    if (next) next.setAttribute(
+      "aria-selected", "true",
+    );
   }
 
   showCopied(index) {
@@ -160,26 +167,26 @@ export class CharGrid extends HTMLElement {
     this.#currentBlockIdx = -1;
     this.#content.replaceChildren();
     this.#blocksContainer.replaceChildren();
-    this.#scrollContainer.style.display = "";
+    this.#scrollContainer.hidden = false;
     this.#scrollContainer.scrollTop = 0;
     this.#computeBlockLayout();
     this.#updateLayout();
     this.#renderVisible();
     if (this.#blockLayout.length) {
       this.#updateStickyHeader();
-      this.#stickyHeader.style.display = "";
+      this.#stickyHeader.hidden = false;
     } else {
       this.#stickyHeader.textContent = "";
-      this.#stickyHeader.style.display = "none";
+      this.#stickyHeader.hidden = true;
     }
   }
 
   showEmpty(message) {
     this.#items = [];
     this.#blockLayout = [];
-    this.#scrollContainer.style.display = "none";
+    this.#scrollContainer.hidden = true;
     this.#stickyHeader.textContent = "";
-    this.#stickyHeader.style.display = "none";
+    this.#stickyHeader.hidden = true;
     this.#content.replaceChildren();
     const empty = this.#emptyTemplate.content
       .cloneNode(true)
@@ -231,11 +238,11 @@ export class CharGrid extends HTMLElement {
         charCount,
         charRows,
         pixelTop: offset,
-        charsPixelTop: offset + HEADER_HEIGHT,
+        charsPixelTop: offset + this.#headerHeight,
       });
 
       offset +=
-        HEADER_HEIGHT + charRows * ROW_HEIGHT;
+        this.#headerHeight + charRows * this.#rowHeight;
     }
 
     this.#blockLayout = layout;
@@ -244,14 +251,18 @@ export class CharGrid extends HTMLElement {
 
   #updateLayout() {
     if (this.#blockLayout.length) {
-      this.#spacer.style.height =
-        this.#totalHeight + "px";
+      this.#spacer.style.setProperty(
+        "--spacer-height",
+        this.#totalHeight + "px",
+      );
     } else {
       const totalRows = Math.ceil(
         this.#items.length / this.#cols,
       );
-      this.#spacer.style.height =
-        (totalRows * ROW_HEIGHT) + "px";
+      this.#spacer.style.setProperty(
+        "--spacer-height",
+        (totalRows * this.#rowHeight) + "px",
+      );
     }
   }
 
@@ -287,16 +298,22 @@ export class CharGrid extends HTMLElement {
       this.#blockLayout[blockIdx + 1];
     if (nextBlock) {
       const overlap =
-        (scrollTop + HEADER_HEIGHT)
+        (scrollTop + this.#headerHeight)
         - nextBlock.pixelTop;
       if (overlap > 0) {
-        this.#stickyHeader.style.transform =
-          `translateY(${-overlap}px)`;
+        this.#stickyHeader.style.setProperty(
+          "--header-translate",
+          `${-overlap}px`,
+        );
       } else {
-        this.#stickyHeader.style.transform = "";
+        this.#stickyHeader.style.setProperty(
+          "--header-translate", "0px",
+        );
       }
     } else {
-      this.#stickyHeader.style.transform = "";
+      this.#stickyHeader.style.setProperty(
+        "--header-translate", "0px",
+      );
     }
   }
 
@@ -334,8 +351,8 @@ export class CharGrid extends HTMLElement {
 
   #scrollToIndexFlat(index) {
     const row = Math.floor(index / this.#cols);
-    const rowTop = row * ROW_HEIGHT;
-    const rowBottom = rowTop + ROW_HEIGHT;
+    const rowTop = row * this.#rowHeight;
+    const rowBottom = rowTop + this.#rowHeight;
     const viewTop =
       this.#scrollContainer.scrollTop;
     const viewBottom =
@@ -359,12 +376,12 @@ export class CharGrid extends HTMLElement {
     );
     const rowTop =
       block.charsPixelTop
-      + rowInBlock * ROW_HEIGHT;
-    const rowBottom = rowTop + ROW_HEIGHT;
+      + rowInBlock * this.#rowHeight;
+    const rowBottom = rowTop + this.#rowHeight;
     const scrollTop =
       this.#scrollContainer.scrollTop;
     const effectiveTop =
-      scrollTop + HEADER_HEIGHT;
+      scrollTop + this.#headerHeight;
     const viewBottom =
       scrollTop
       + this.#scrollContainer.clientHeight;
@@ -373,7 +390,7 @@ export class CharGrid extends HTMLElement {
       this.#scrollContainer.scrollTop =
         rowInBlock === 0 ?
           block.pixelTop :
-          rowTop - HEADER_HEIGHT;
+          rowTop - this.#headerHeight;
     } else if (rowBottom > viewBottom) {
       if (rowInBlock === 0) {
         this.#scrollContainer.scrollTop =
@@ -386,12 +403,33 @@ export class CharGrid extends HTMLElement {
     }
   }
 
-  #measureCols() {
+  #measureLayout() {
+    const gridCS = getComputedStyle(this.#grid);
+    const cellHeight =
+      parseFloat(gridCS.gridAutoRows);
+    const gap = parseFloat(gridCS.gap);
+    this.#rowHeight = cellHeight + gap;
+
+    const headerCS =
+      getComputedStyle(this.#stickyHeader);
+    this.#headerHeight =
+      parseFloat(headerCS.height) + gap;
+
+    const colMin = parseFloat(
+      gridCS.getPropertyValue("--_col-min"),
+    );
+    const containerCS =
+      getComputedStyle(this.#scrollContainer);
+    const padH =
+      parseFloat(containerCS.paddingLeft)
+      + parseFloat(containerCS.paddingRight);
     const width =
-      this.#scrollContainer.clientWidth - 24;
+      this.#scrollContainer.clientWidth - padH;
     this.#cols = Math.max(
       1,
-      Math.floor((width + 12) / 116),
+      Math.floor(
+        (width + gap) / (colMin + gap),
+      ),
     );
   }
 
@@ -406,7 +444,7 @@ export class CharGrid extends HTMLElement {
   }
 
   #renderVisibleFlat() {
-    this.#grid.style.display = "";
+    this.#grid.hidden = false;
     this.#blocksContainer.replaceChildren();
 
     const scrollTop =
@@ -416,14 +454,15 @@ export class CharGrid extends HTMLElement {
 
     const firstRow = Math.max(
       0,
-      Math.floor(scrollTop / ROW_HEIGHT)
+      Math.floor(scrollTop / this.#rowHeight)
         - BUFFER_ROWS,
     );
     const lastRow = Math.min(
       Math.ceil(this.#items.length / this.#cols)
         - 1,
       Math.ceil(
-        (scrollTop + viewHeight) / ROW_HEIGHT,
+        (scrollTop + viewHeight)
+        / this.#rowHeight,
       ) + BUFFER_ROWS,
     );
 
@@ -433,8 +472,10 @@ export class CharGrid extends HTMLElement {
       this.#items.length,
     );
 
-    this.#grid.style.top =
-      (firstRow * ROW_HEIGHT) + "px";
+    this.#grid.style.setProperty(
+      "--grid-top",
+      (firstRow * this.#rowHeight) + "px",
+    );
     this.#grid.replaceChildren();
 
     const frag = fragment();
@@ -451,13 +492,14 @@ export class CharGrid extends HTMLElement {
   }
 
   #renderVisibleWithBlocks() {
-    this.#grid.style.display = "none";
+    this.#grid.hidden = true;
 
     const scrollTop =
       this.#scrollContainer.scrollTop;
     const viewHeight =
       this.#scrollContainer.clientHeight;
-    const bufferPx = BUFFER_ROWS * ROW_HEIGHT;
+    const bufferPx =
+      BUFFER_ROWS * this.#rowHeight;
     const viewTop = scrollTop - bufferPx;
     const viewBottom =
       scrollTop + viewHeight + bufferPx;
@@ -468,14 +510,17 @@ export class CharGrid extends HTMLElement {
     for (const block of this.#blockLayout) {
       const blockBottom =
         block.charsPixelTop
-        + block.charRows * ROW_HEIGHT;
+        + block.charRows * this.#rowHeight;
       if (blockBottom < viewTop) continue;
       if (block.pixelTop > viewBottom) break;
 
       const section = element("div", {
         className: "block-section",
       });
-      section.style.top = block.pixelTop + "px";
+      section.style.setProperty(
+        "--section-top",
+        block.pixelTop + "px",
+      );
 
       const label = element("div", {
         className: "section-label",
@@ -487,14 +532,14 @@ export class CharGrid extends HTMLElement {
         0,
         Math.floor(
           (viewTop - block.charsPixelTop)
-          / ROW_HEIGHT,
+          / this.#rowHeight,
         ),
       );
       const lastCharRow = Math.min(
         block.charRows - 1,
         Math.ceil(
           (viewBottom - block.charsPixelTop)
-          / ROW_HEIGHT,
+          / this.#rowHeight,
         ),
       );
 
@@ -502,10 +547,12 @@ export class CharGrid extends HTMLElement {
         const grid = element("div", {
           className: "block-grid",
         });
-        grid.style.top =
-          (HEADER_HEIGHT
-            + firstCharRow * ROW_HEIGHT)
-          + "px";
+        grid.style.setProperty(
+          "--grid-top",
+          (this.#headerHeight
+            + firstCharRow * this.#rowHeight)
+          + "px",
+        );
 
         const startIdx =
           block.startIndex
@@ -550,7 +597,9 @@ export class CharGrid extends HTMLElement {
     cell.querySelector(".char-name")
       .textContent = entry.n;
     if (index === this.#selectedIndex) {
-      cell.classList.add("selected");
+      cell.setAttribute(
+        "aria-selected", "true",
+      );
     }
     return cell;
   }

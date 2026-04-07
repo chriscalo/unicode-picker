@@ -67,6 +67,7 @@
           flex-direction: column;
           height: 100%;
           overflow: hidden;
+          --_col-min: 104px;
         }
         
         .scroll-container {
@@ -93,6 +94,8 @@
           letter-spacing: 0.08em;
           color: var(--color-text-secondary);
           background: var(--color-bg-base);
+          transform:
+            translateY(var(--header-translate, 0px));
         }
         
         .sticky-header:empty {
@@ -101,15 +104,17 @@
         
         .scroll-spacer {
           position: relative;
+          height: var(--spacer-height, 0);
         }
         
         .grid {
           position: absolute;
+          top: var(--grid-top, 0);
           left: 0;
           right: 0;
           display: grid;
           grid-template-columns:
-            repeat(auto-fill, minmax(104px, 1fr));
+            repeat(auto-fill, minmax(var(--_col-min), 1fr));
           grid-auto-rows: calc(
             2 * var(--space-3)
             + var(--text-glyph) * var(--leading-tight)
@@ -122,6 +127,7 @@
         
         .block-section {
           position: absolute;
+          top: var(--section-top, 0);
           left: 0;
           right: 0;
         }
@@ -144,11 +150,12 @@
         
         .block-grid {
           position: absolute;
+          top: var(--grid-top, 0);
           left: 0;
           right: 0;
           display: grid;
           grid-template-columns:
-            repeat(auto-fill, minmax(104px, 1fr));
+            repeat(auto-fill, minmax(var(--_col-min), 1fr));
           grid-auto-rows: calc(
             2 * var(--space-3)
             + var(--text-glyph) * var(--leading-tight)
@@ -173,7 +180,7 @@
           cursor: pointer;
         }
         
-        .char-cell.selected {
+        .char-cell[aria-selected="true"] {
           background: var(--color-bg-hover);
         }
 
@@ -239,6 +246,10 @@
           font-size: var(--text-base);
           text-align: center;
           color: var(--color-text-tertiary);
+        }
+
+        [hidden] {
+          display: none;
         }
         
       </style>
@@ -393,11 +404,11 @@
           background: var(--color-bg-hover);
         }
 
-        .blocks-nav button.active {
+        .blocks-nav button[aria-current="true"] {
           color: var(--color-accent);
         }
 
-        .blocks-nav button.dimmed {
+        .blocks-nav button:disabled {
           display: none;
         }
 
