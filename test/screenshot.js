@@ -75,6 +75,7 @@ async function capture() {
   const desktop = await browser.newContext({
     viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 2,
+    permissions: ["clipboard-write"],
   });
   const page = await desktop.newPage();
   await page.goto(BASE);
