@@ -1,4 +1,5 @@
 import { element, fragment } from "../lib/dom.js";
+import "./char-grid.css";
 
 const BUFFER_ROWS = 3;
 
