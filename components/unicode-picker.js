@@ -456,6 +456,7 @@ export class UnicodePicker extends HTMLElement {
     let newIndex = this.#selectedIndex;
 
     if (event.key === "ArrowDown") {
+      if (!list.length) return;
       event.preventDefault();
       if (newIndex < 0) {
         newIndex = 0;
@@ -464,6 +465,7 @@ export class UnicodePicker extends HTMLElement {
           this.#grid.moveDown(newIndex);
       }
     } else if (event.key === "ArrowUp") {
+      if (!list.length) return;
       event.preventDefault();
       if (newIndex < 0) {
         newIndex = 0;
