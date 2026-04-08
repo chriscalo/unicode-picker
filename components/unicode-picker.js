@@ -125,6 +125,7 @@ export class UnicodePicker extends HTMLElement {
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
       `${count} characters`;
+    this.#updateClearBtn();
     this.#input.focus();
     this.#render();
     this.#scrollBlockIntoView();
