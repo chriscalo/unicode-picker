@@ -1,5 +1,4 @@
 import { element, fragment } from "../lib/dom.js";
-import "./char-grid.css";
 
 const BUFFER_ROWS = 3;
 
@@ -34,22 +33,23 @@ export class CharGrid extends HTMLElement {
     const template = document.getElementById(
       "char-grid-template",
     );
-    this.appendChild(
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.appendChild(
       template.content.cloneNode(true),
     );
 
     this.#scrollContainer =
-      this.querySelector(
+      this.shadowRoot.querySelector(
         ".scroll-container",
       );
     this.#spacer =
-      this.querySelector(
+      this.shadowRoot.querySelector(
         ".scroll-spacer",
       );
     this.#grid =
-      this.querySelector(".grid");
+      this.shadowRoot.querySelector(".grid");
     this.#stickyHeader =
-      this.querySelector(
+      this.shadowRoot.querySelector(
         ".sticky-header",
       );
     this.#blocksContainer = element("div");
@@ -57,14 +57,14 @@ export class CharGrid extends HTMLElement {
       this.#blocksContainer,
     );
     this.#content = element("div");
-    this.appendChild(this.#content);
+    this.shadowRoot.appendChild(this.#content);
 
     this.#scrollContainer.addEventListener(
       "scroll",
       () => this.#onScroll(),
     );
 
-    this.addEventListener(
+    this.shadowRoot.addEventListener(
       "click",
       event => {
         const cell =
@@ -83,7 +83,7 @@ export class CharGrid extends HTMLElement {
       },
     );
 
-    this.addEventListener(
+    this.shadowRoot.addEventListener(
       "mousemove",
       event => {
         const cell =
@@ -195,13 +195,13 @@ export class CharGrid extends HTMLElement {
     if (idx === this.#selectedIndex) return;
     this.#selectedIndex = idx;
     const prev =
-      this.querySelector(
+      this.shadowRoot.querySelector(
         "[aria-selected='true']",
       );
     if (prev) prev.removeAttribute(
       "aria-selected",
     );
-    const next = this.querySelector(
+    const next = this.shadowRoot.querySelector(
       `.char-cell[data-index="${idx}"]`,
     );
     if (next) next.setAttribute(
@@ -210,7 +210,7 @@ export class CharGrid extends HTMLElement {
   }
 
   showCopied(index) {
-    const cell = this.querySelector(
+    const cell = this.shadowRoot.querySelector(
       `.char-cell[data-index="${index}"]`,
     );
     if (!cell) return;
