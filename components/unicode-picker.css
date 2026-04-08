@@ -40,18 +40,6 @@ unicode-picker .search-bar input {
   line-height: var(--leading-normal);
   color: var(--color-text-primary);
   background: var(--color-bg-hover);
-  outline: none;
-  transition:
-    border-color var(--duration-fast)
-      var(--ease-out),
-    box-shadow var(--duration-fast)
-      var(--ease-out);
-}
-
-unicode-picker .search-bar input:focus-visible {
-  border-color: var(--color-accent);
-  box-shadow:
-    0 0 0 2px var(--color-accent-subtle);
 }
 
 unicode-picker .search-bar input::placeholder {
@@ -87,12 +75,6 @@ unicode-picker .clear-btn:disabled {
 
 unicode-picker .clear-btn:hover {
   color: var(--color-text-primary);
-}
-
-unicode-picker .clear-btn:focus-visible {
-  color: var(--color-text-primary);
-  box-shadow:
-    0 0 0 2px var(--color-accent-subtle);
 }
 
 unicode-picker .clear-btn svg {
