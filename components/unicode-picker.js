@@ -83,8 +83,13 @@ export class UnicodePicker extends HTMLElement {
           );
         this.#grid.scrollToIndex(index);
         this.#select(index);
+        this.#setRovingTab(btn);
         this.#input.focus();
       },
+    );
+    this.#blocksNav.addEventListener(
+      "keydown",
+      event => this.#onNavKeydown(event),
     );
     this.#grid.addEventListener(
       "block-change",
@@ -102,6 +107,9 @@ export class UnicodePicker extends HTMLElement {
             "aria-current",
             String(isCurrent),
           );
+          if (isCurrent) {
+            this.#setRovingTab(btn);
+          }
         }
         this.#scrollBlockIntoView();
       },
@@ -130,10 +138,15 @@ export class UnicodePicker extends HTMLElement {
 
   #buildBlocksNav() {
     const frag = document.createDocumentFragment();
-    for (const block of this.#blocks) {
+    for (
+      const [i, block] of
+      this.#blocks.entries()
+    ) {
       const btn = document.createElement("button");
       btn.textContent = block.name;
       btn.dataset.index = block.startIndex;
+      btn.setAttribute("role", "option");
+      btn.tabIndex = i === 0 ? 0 : -1;
       frag.appendChild(btn);
     }
     this.#blocksNav.appendChild(frag);
@@ -361,6 +374,65 @@ export class UnicodePicker extends HTMLElement {
       );
     if (active) {
       active.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  #setRovingTab(btn) {
+    for (const b of
+      this.#blocksNav.querySelectorAll("button")
+    ) {
+      b.tabIndex = -1;
+    }
+    btn.tabIndex = 0;
+  }
+
+  #visibleNavButtons() {
+    return [
+      ...this.#blocksNav.querySelectorAll(
+        "button:not(:disabled)",
+      ),
+    ];
+  }
+
+  #onNavKeydown(event) {
+    const buttons = this.#visibleNavButtons();
+    if (!buttons.length) return;
+    const current = document.activeElement;
+    const idx = buttons.indexOf(current);
+    let next;
+
+    switch (event.key) {
+      case "ArrowDown":
+      case "ArrowRight":
+        event.preventDefault();
+        next = buttons[
+          idx + 1 < buttons.length ? idx + 1 : 0
+        ];
+        break;
+      case "ArrowUp":
+      case "ArrowLeft":
+        event.preventDefault();
+        next = buttons[
+          idx - 1 >= 0 ?
+            idx - 1 : buttons.length - 1
+        ];
+        break;
+      case "Home":
+        event.preventDefault();
+        next = buttons[0];
+        break;
+      case "End":
+        event.preventDefault();
+        next = buttons[buttons.length - 1];
+        break;
+      default:
+        return;
+    }
+
+    if (next) {
+      this.#setRovingTab(next);
+      next.focus();
+      next.click();
     }
   }
 
