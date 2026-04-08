@@ -35,31 +35,35 @@ function diffSnapshots() {
   }
 }
 
+function q(el, sel) {
+  const root = el.shadowRoot || el;
+  return root.querySelector(sel);
+}
+
 async function scrollGrid(page, px) {
   await page.evaluate((scrollPx) => {
-    // Works in both shadow DOM and light DOM
+    function q(el, sel) {
+      return (el.shadowRoot || el)
+        .querySelector(sel);
+    }
     const picker =
       document.querySelector("unicode-picker");
-    const grid = picker.shadowRoot
-      ? picker.shadowRoot
-          .querySelector("char-grid")
-          .shadowRoot
-          .querySelector(".scroll-container")
-      : picker.querySelector(
-          "char-grid .scroll-container",
-        );
-    grid.scrollTop = scrollPx;
+    const grid = q(picker, "char-grid");
+    const container =
+      q(grid, ".scroll-container");
+    container.scrollTop = scrollPx;
   }, px);
 }
 
 async function clickBlock(page, index) {
   await page.evaluate((idx) => {
+    function q(el, sel) {
+      return (el.shadowRoot || el)
+        .querySelector(sel);
+    }
     const picker =
       document.querySelector("unicode-picker");
-    const nav = picker.shadowRoot
-      ? picker.shadowRoot
-          .querySelector(".blocks-nav")
-      : picker.querySelector(".blocks-nav");
+    const nav = q(picker, ".blocks-nav");
     const buttons =
       nav.querySelectorAll("button");
     if (buttons[idx]) buttons[idx].click();

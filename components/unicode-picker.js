@@ -1,5 +1,6 @@
 import "./char-grid.js";
 import "./copy-toast.js";
+import "./unicode-picker.css";
 
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
@@ -23,23 +24,22 @@ export class UnicodePicker extends HTMLElement {
     const template = document.getElementById(
       "unicode-picker-template",
     );
-    this.attachShadow({ mode: "open" });
-    this.shadowRoot.appendChild(
+    this.appendChild(
       template.content.cloneNode(true),
     );
 
     this.#input =
-      this.shadowRoot.querySelector("input");
+      this.querySelector("input");
     this.#clearBtn =
-      this.shadowRoot.querySelector(".clear-btn");
+      this.querySelector(".clear-btn");
     this.#status =
-      this.shadowRoot.querySelector(".status");
+      this.querySelector(".status");
     this.#grid =
-      this.shadowRoot.querySelector("char-grid");
+      this.querySelector("char-grid");
     this.#toast =
-      this.shadowRoot.querySelector("copy-toast");
+      this.querySelector("copy-toast");
     this.#blocksNav =
-      this.shadowRoot.querySelector(".blocks-nav");
+      this.querySelector(".blocks-nav");
 
     this.#input.addEventListener(
       "input",
