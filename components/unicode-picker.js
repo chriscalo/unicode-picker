@@ -452,7 +452,6 @@ export class UnicodePicker extends HTMLElement {
 
   #onKeydown(event) {
     const list = this.#currentList();
-    const cols = this.#grid.gridCols;
     let newIndex = this.#selectedIndex;
 
     if (event.key === "ArrowDown") {
