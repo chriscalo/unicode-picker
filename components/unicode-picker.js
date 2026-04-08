@@ -77,13 +77,7 @@ export class UnicodePicker extends HTMLElement {
         if (!btn || btn.disabled) {
           return;
         }
-        const index =
-          this.#resolveBlockIndex(
-            parseInt(btn.dataset.index),
-          );
-        this.#grid.scrollToIndex(index);
-        this.#select(index);
-        this.#setRovingTab(btn);
+        this.#activateBlock(btn);
         this.#input.focus();
       },
     );
@@ -377,6 +371,16 @@ export class UnicodePicker extends HTMLElement {
     }
   }
 
+  #activateBlock(btn) {
+    const index =
+      this.#resolveBlockIndex(
+        parseInt(btn.dataset.index),
+      );
+    this.#grid.scrollToIndex(index);
+    this.#select(index);
+    this.#setRovingTab(btn);
+  }
+
   #setRovingTab(btn) {
     for (const b of
       this.#blocksNav.querySelectorAll("button")
@@ -430,9 +434,8 @@ export class UnicodePicker extends HTMLElement {
     }
 
     if (next) {
-      this.#setRovingTab(next);
+      this.#activateBlock(next);
       next.focus();
-      next.click();
     }
   }
 
