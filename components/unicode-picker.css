@@ -124,6 +124,10 @@ unicode-picker .blocks-nav button:hover {
   background: var(--color-bg-hover);
 }
 
+unicode-picker .blocks-nav button:focus-visible {
+  outline-offset: -3px;
+}
+
 unicode-picker
   .blocks-nav button[aria-current="true"] {
   color: var(--color-accent);
