@@ -1,15 +1,10 @@
+import "./copy-toast.css";
+
 export class CopyToast extends HTMLElement {
   #timeout = null;
   
   constructor() {
     super();
-    const template = document.getElementById(
-      "copy-toast-template",
-    );
-    this.attachShadow({ mode: "open" });
-    this.shadowRoot.appendChild(
-      template.content.cloneNode(true),
-    );
   }
   
   show(message, duration = 1500) {

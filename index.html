@@ -18,36 +18,6 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <template id="copy-toast-template">
-      <style>
-        :host {
-          position: fixed;
-          bottom: var(--space-6);
-          left: 50%;
-          z-index: 10;
-          padding: var(--space-2) var(--space-6);
-          border-radius: var(--radius-md);
-          font-family: var(--font-ui);
-          font-size: var(--text-sm);
-          font-weight: var(--weight-medium);
-          line-height: var(--leading-normal);
-          color: var(--color-success-text);
-          background: var(--color-success);
-          transform:
-            translateX(-50%)
-            translateY(calc(100% + var(--space-8)));
-          transition:
-            transform var(--duration-normal)
-            var(--ease-out);
-          pointer-events: none;
-        }
-        
-        :host(.visible) {
-          transform: translateX(-50%) translateY(0);
-        }
-      </style>
-      <slot></slot>
-    </template>
     
     <template id="char-cell-template">
       <div class="char-cell">
