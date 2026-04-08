@@ -30,8 +30,8 @@
 
     --color-focus:         oklch(0.72 0.17 162 / 0.5);
 
-    --color-success:       oklch(0.72 0.17 162);
-    --color-success-text:  oklch(0.16 0.04 162);
+    --color-success:       var(--color-accent);
+    --color-success-text:  var(--color-accent-text);
     
     /* — Typography — */
     --font-ui:
