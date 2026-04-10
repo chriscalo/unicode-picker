@@ -55,8 +55,8 @@ for (const line of source.trim().split("\n")) {
     blockIndices.set(block.name, entries.length);
   }
 
-  const char = String.fromCodePoint(codepoint);
-  entries.push(char + "\t" + name);
+  const hex = codepoint.toString(16).toUpperCase();
+  entries.push(hex + "\t" + name);
 }
 
 writeFileSync(

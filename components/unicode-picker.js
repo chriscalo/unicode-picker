@@ -516,10 +516,10 @@ customElements.define(
 function parseUnicodeData(tsv) {
   return tsv.trim().split("\n").map((line) => {
     const tab = line.indexOf("\t");
-    const char = line.slice(0, tab);
+    const hex = line.slice(0, tab);
     const name = line.slice(tab + 1);
-    const hex =
-      char.codePointAt(0).toString(16);
+    const char =
+      String.fromCodePoint(parseInt(hex, 16));
     return { c: char, n: name, u: hex };
   });
 }
