@@ -108,7 +108,6 @@ char-grid .char-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-2);
   border: 1px solid var(--color-border-subtle);
@@ -167,10 +166,15 @@ stroke-linecap='round' stroke-linejoin='round'\
 }
 
 char-grid .char-glyph {
+  height: calc(var(--text-glyph) * var(--leading-tight));
+  text-align: center;
+  white-space: pre;
   font-family: var(--font-glyph);
   font-size: var(--text-glyph);
   line-height: var(--leading-tight);
   color: var(--color-text-primary);
+  border: 1px solid color-mix(in srgb, var(--color-border-subtle) 50%, transparent);
+  border-radius: var(--radius-xs, 2px);
 }
 
 char-grid .char-name {
