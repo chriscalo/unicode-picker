@@ -95,6 +95,19 @@ export class UnicodePicker extends HTMLElement {
       "keydown",
       event => this.#onNavKeydown(event),
     );
+    this.addEventListener(
+      "keydown",
+      event => {
+        if (
+          event.key === "f"
+          && (event.metaKey || event.ctrlKey)
+        ) {
+          event.preventDefault();
+          this.#input.focus();
+          this.#input.select();
+        }
+      },
+    );
     this.#grid.addEventListener(
       "block-change",
       event => {
