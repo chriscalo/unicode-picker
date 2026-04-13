@@ -98,10 +98,10 @@ export class UnicodePicker extends HTMLElement {
     this.addEventListener(
       "keydown",
       event => {
-        if (
-          event.key === "f"
-          && (event.metaKey || event.ctrlKey)
-        ) {
+        const mod = /Mac|iPhone|iPad/.test(
+          navigator.platform,
+        ) ? event.metaKey : event.ctrlKey;
+        if (event.key === "f" && mod) {
           event.preventDefault();
           this.#input.focus();
           this.#input.select();
