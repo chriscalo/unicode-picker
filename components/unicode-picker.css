@@ -111,10 +111,10 @@ unicode-picker .theme-toggle input {
 
 unicode-picker .toggle-track {
   position: relative;
-  width: 44px;
-  height: 24px;
+  width: 56px;
+  height: 30px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 12px;
+  border-radius: 15px;
   background: var(--color-bg-hover);
   transition:
     background var(--duration-fast)
@@ -130,8 +130,8 @@ unicode-picker .toggle-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--color-text-secondary);
   transition:
@@ -143,7 +143,7 @@ unicode-picker .toggle-thumb {
 
 unicode-picker .theme-toggle input:checked
   ~ .toggle-track .toggle-thumb {
-  transform: translateX(20px);
+  transform: translateX(26px);
 }
 
 unicode-picker .theme-toggle
@@ -162,8 +162,8 @@ unicode-picker .toggle-track:hover
 }
 
 unicode-picker .toggle-thumb svg {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   color: var(--color-bg-base);
 }
 
