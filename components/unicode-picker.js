@@ -5,6 +5,9 @@ import "./unicode-picker.css";
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
 const THEME_KEY = "unicode-picker-theme";
+const IS_MAC = /Mac|iPhone|iPad/.test(
+  navigator.platform,
+);
 
 export class UnicodePicker extends HTMLElement {
   #allChars = [];
@@ -98,9 +101,8 @@ export class UnicodePicker extends HTMLElement {
     this.addEventListener(
       "keydown",
       event => {
-        const mod = /Mac|iPhone|iPad/.test(
-          navigator.platform,
-        ) ? event.metaKey : event.ctrlKey;
+        const mod = IS_MAC ?
+          event.metaKey : event.ctrlKey;
         if (event.key === "f" && mod) {
           event.preventDefault();
           this.#input.focus();
