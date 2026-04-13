@@ -20,7 +20,7 @@ export class UnicodePicker extends HTMLElement {
   #toast;
   #blocksNav;
   #themeToggle;
-
+  
   constructor() {
     super();
     const template = document.getElementById(
@@ -29,7 +29,7 @@ export class UnicodePicker extends HTMLElement {
     this.appendChild(
       template.content.cloneNode(true),
     );
-
+    
     this.#input =
       this.querySelector("input");
     this.#clearBtn =
@@ -46,7 +46,7 @@ export class UnicodePicker extends HTMLElement {
       this.querySelector(
         ".theme-toggle input",
       );
-
+    
     this.#initTheme();
     this.#themeToggle.addEventListener(
       "change",
@@ -132,7 +132,7 @@ export class UnicodePicker extends HTMLElement {
       },
     );
   }
-
+  
   connectedCallback() {
     this.#allChars = parseUnicodeData(
       document.getElementById("unicode-data")
@@ -153,7 +153,7 @@ export class UnicodePicker extends HTMLElement {
     this.#render();
     this.#scrollBlockIntoView();
   }
-
+  
   #initTheme() {
     let saved;
     try {
@@ -170,51 +170,51 @@ export class UnicodePicker extends HTMLElement {
     this.#themeToggle.checked =
       theme === "dark";
   }
-
+  
   #onThemeToggle() {
-    const next = this.#themeToggle.checked
-      ? "dark" : "light";
+    const next = this.#themeToggle.checked ?
+      "dark" : "light";
     document.documentElement.dataset.theme =
       next;
     try {
       localStorage.setItem(THEME_KEY, next);
     } catch {}
   }
-
+  
   #buildBlocksNav() {
     const frag = document.createDocumentFragment();
     for (
-      const [i, block] of
+      const [index, block] of
       this.#blocks.entries()
     ) {
       const btn = document.createElement("button");
       btn.textContent = block.name;
       btn.dataset.index = block.startIndex;
       btn.setAttribute("role", "option");
-      btn.tabIndex = i === 0 ? 0 : -1;
+      btn.tabIndex = index === 0 ? 0 : -1;
       frag.appendChild(btn);
     }
     this.#blocksNav.appendChild(frag);
   }
-
+  
   #updateBlocksDimming() {
     const query = this.#input.value.trim();
     const buttons =
       this.#blocksNav.querySelectorAll("button");
-
+    
     if (!query) {
       for (const btn of buttons) {
         btn.disabled = false;
       }
       return;
     }
-
+    
     const matchIndices = new Set(
       this.#filtered.map(
         (entry) => this.#allChars.indexOf(entry),
       ),
     );
-
+    
     for (
       const [blockIdx, btn] of
       buttons.entries()
@@ -238,17 +238,17 @@ export class UnicodePicker extends HTMLElement {
       btn.disabled = !hasMatch;
     }
   }
-
+  
   #updateClearBtn() {
     this.#clearBtn.disabled =
       this.#input.value.length === 0;
   }
-
+  
   #select(index) {
     this.#selectedIndex = index;
     this.#grid.selectedIndex = index;
   }
-
+  
   #getRecents() {
     try {
       const raw =
@@ -258,7 +258,7 @@ export class UnicodePicker extends HTMLElement {
       return [];
     }
   }
-
+  
   #addRecent(entry) {
     const recents = this.#getRecents().filter(
       recent => recent.u !== entry.u,
@@ -272,7 +272,7 @@ export class UnicodePicker extends HTMLElement {
       JSON.stringify(recents),
     );
   }
-
+  
   #search(query) {
     if (!query.trim()) {
       this.#filtered = [];
@@ -284,7 +284,7 @@ export class UnicodePicker extends HTMLElement {
       this.#updateBlocksDimming();
       return;
     }
-
+    
     this.#clearActiveBlock();
     const terms = query.toUpperCase().split(/\s+/);
     this.#filtered = this.#allChars.filter(
@@ -302,7 +302,7 @@ export class UnicodePicker extends HTMLElement {
     );
     this.#filteredBlocks =
       this.#computeFilteredBlocks();
-
+    
     this.#status.textContent =
       `${this.#filtered.length.toLocaleString()}`
       + ` matching characters`;
@@ -310,16 +310,16 @@ export class UnicodePicker extends HTMLElement {
     this.#render();
     this.#updateBlocksDimming();
   }
-
+  
   #render() {
     const query = this.#input.value.trim();
     const list = this.#currentList();
-
+    
     if (query && list.length === 0) {
       this.#grid.showEmpty("No matches");
       return;
     }
-
+    
     const blocks = query ?
       this.#filteredBlocks :
       this.#blocks;
@@ -327,13 +327,13 @@ export class UnicodePicker extends HTMLElement {
     this.#grid.selectedIndex =
       this.#selectedIndex;
   }
-
+  
   #currentList() {
     return this.#input.value.trim() ?
       this.#filtered :
       this.#allChars;
   }
-
+  
   #buildIndexMap() {
     this.#indexMap = new Map();
     for (
@@ -343,13 +343,13 @@ export class UnicodePicker extends HTMLElement {
       this.#indexMap.set(char, idx);
     }
   }
-
+  
   #computeFilteredBlocks() {
     if (!this.#filtered.length) return [];
-
+    
     const blocks = [];
     let currentBlockIdx = -1;
-
+    
     for (
       const [idx, entry] of
       this.#filtered.entries()
@@ -358,7 +358,7 @@ export class UnicodePicker extends HTMLElement {
         this.#indexMap.get(entry);
       const blockIdx =
         this.#blockIndexFor(origIdx);
-
+      
       if (blockIdx !== currentBlockIdx) {
         blocks.push({
           startIndex: idx,
@@ -367,10 +367,10 @@ export class UnicodePicker extends HTMLElement {
         currentBlockIdx = blockIdx;
       }
     }
-
+    
     return blocks;
   }
-
+  
   #blockIndexFor(origIdx) {
     let low = 0;
     let high = this.#blocks.length - 1;
@@ -386,7 +386,7 @@ export class UnicodePicker extends HTMLElement {
     }
     return low;
   }
-
+  
   #resolveBlockIndex(origIndex) {
     if (!this.#input.value.trim()) {
       return origIndex;
@@ -401,7 +401,7 @@ export class UnicodePicker extends HTMLElement {
     return filtered ?
       filtered.startIndex : origIndex;
   }
-
+  
   #clearActiveBlock() {
     for (const btn of
       this.#blocksNav.querySelectorAll(
@@ -411,7 +411,7 @@ export class UnicodePicker extends HTMLElement {
       btn.removeAttribute("aria-current");
     }
   }
-
+  
   #scrollBlockIntoView() {
     const active =
       this.#blocksNav.querySelector(
@@ -421,7 +421,7 @@ export class UnicodePicker extends HTMLElement {
       active.scrollIntoView({ block: "nearest" });
     }
   }
-
+  
   #activateBlock(btn) {
     const index =
       this.#resolveBlockIndex(
@@ -431,16 +431,16 @@ export class UnicodePicker extends HTMLElement {
     this.#select(index);
     this.#setRovingTab(btn);
   }
-
+  
   #setRovingTab(btn) {
-    for (const b of
+    for (const other of
       this.#blocksNav.querySelectorAll("button")
     ) {
-      b.tabIndex = -1;
+      other.tabIndex = -1;
     }
     btn.tabIndex = 0;
   }
-
+  
   #visibleNavButtons() {
     return [
       ...this.#blocksNav.querySelectorAll(
@@ -448,14 +448,14 @@ export class UnicodePicker extends HTMLElement {
       ),
     ];
   }
-
+  
   #onNavKeydown(event) {
     const buttons = this.#visibleNavButtons();
     if (!buttons.length) return;
     const current = document.activeElement;
     const idx = buttons.indexOf(current);
     let next;
-
+    
     switch (event.key) {
       case "ArrowDown":
       case "ArrowRight":
@@ -483,13 +483,13 @@ export class UnicodePicker extends HTMLElement {
       default:
         return;
     }
-
+    
     if (next) {
       this.#activateBlock(next);
       next.focus();
     }
   }
-
+  
   async #copyChar(entry) {
     await navigator.clipboard.writeText(entry.c);
     this.#addRecent(entry);
@@ -499,11 +499,11 @@ export class UnicodePicker extends HTMLElement {
       this.#grid.showCopied(index);
     }
   }
-
+  
   #onKeydown(event) {
     const list = this.#currentList();
     let newIndex = this.#selectedIndex;
-
+    
     if (event.key === "ArrowDown") {
       if (!list.length) return;
       event.preventDefault();
@@ -550,7 +550,7 @@ export class UnicodePicker extends HTMLElement {
     } else {
       return;
     }
-
+    
     if (newIndex !== this.#selectedIndex) {
       this.#select(newIndex);
       this.#grid.scrollToIndex(newIndex);
