@@ -89,7 +89,6 @@ export class UnicodePicker extends HTMLElement {
           return;
         }
         this.#activateBlock(btn);
-        this.#input.focus();
       },
     );
     this.#blocksNav.addEventListener(
