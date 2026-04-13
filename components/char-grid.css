@@ -121,7 +121,7 @@ char-grid .char-cell[aria-selected="true"] {
 }
 
 char-grid .char-cell[aria-selected="true"] .char-glyph {
-  background: oklch(0.93 0.02 162 / 0.15);
+  background: var(--color-glyph-bg-selected);
 }
 
 char-grid .char-cell.copied {
@@ -157,6 +157,16 @@ stroke-linecap='round' stroke-linejoin='round'\
     var(--ease-out) forwards;
 }
 
+[data-theme="light"] char-grid .char-cell.copied::after {
+  background-image: url("data:image/svg+xml,\
+%3Csvg xmlns='http://www.w3.org/2000/svg' \
+width='14' height='14' viewBox='0 0 24 24' \
+fill='none' stroke='%23f5faf8' stroke-width='3' \
+stroke-linecap='round' stroke-linejoin='round'\
+%3E%3Cpolyline points='20 6 9 17 4 12'/%3E\
+%3C/svg%3E");
+}
+
 @keyframes copied-fade {
   0% {
     opacity: 1;
@@ -177,7 +187,7 @@ char-grid .char-glyph {
   font-size: var(--text-glyph);
   line-height: var(--leading-tight);
   color: var(--color-text-primary);
-  background: oklch(0.93 0.02 162 / 0.12);
+  background: var(--color-glyph-bg);
   border-radius: var(--radius-xs, 2px);
 }
 

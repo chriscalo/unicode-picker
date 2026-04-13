@@ -19,10 +19,18 @@ unicode-picker .search-bar {
   background: var(--color-bg-raised);
 }
 
+unicode-picker .search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 unicode-picker .input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
 unicode-picker .search-bar input {
@@ -80,6 +88,45 @@ unicode-picker .clear-btn:hover {
 unicode-picker .clear-btn svg {
   width: 14px;
   height: 14px;
+}
+
+unicode-picker .theme-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-hover);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+unicode-picker .theme-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+unicode-picker .theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+unicode-picker .theme-toggle .icon-sun {
+  display: none;
+}
+
+[data-theme="light"] unicode-picker .theme-toggle .icon-sun {
+  display: block;
+}
+
+[data-theme="light"] unicode-picker .theme-toggle .icon-moon {
+  display: none;
 }
 
 unicode-picker .status {

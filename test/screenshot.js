@@ -79,6 +79,7 @@ async function capture() {
   const desktop = await browser.newContext({
     viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 2,
+    colorScheme: "dark",
     permissions: ["clipboard-write"],
   });
   const page = await desktop.newPage();
@@ -150,6 +151,7 @@ async function capture() {
   const narrow = await browser.newContext({
     viewport: { width: 600, height: 900 },
     deviceScaleFactor: 2,
+    colorScheme: "dark",
   });
   const narrowPage = await narrow.newPage();
   await narrowPage.goto(BASE);
