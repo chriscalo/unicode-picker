@@ -43,12 +43,14 @@ export class UnicodePicker extends HTMLElement {
     this.#blocksNav =
       this.querySelector(".blocks-nav");
     this.#themeToggle =
-      this.querySelector(".theme-toggle");
+      this.querySelector(
+        ".theme-toggle input",
+      );
 
     this.#initTheme();
     this.#themeToggle.addEventListener(
-      "click",
-      () => this.#toggleTheme(),
+      "change",
+      () => this.#onThemeToggle(),
     );
     this.#input.addEventListener(
       "input",
@@ -150,13 +152,13 @@ export class UnicodePicker extends HTMLElement {
       ?? (prefersDark ? "dark" : "light");
     document.documentElement.dataset.theme =
       theme;
+    this.#themeToggle.checked =
+      theme === "dark";
   }
 
-  #toggleTheme() {
-    const current =
-      document.documentElement.dataset.theme;
-    const next =
-      current === "dark" ? "light" : "dark";
+  #onThemeToggle() {
+    const next = this.#themeToggle.checked
+      ? "dark" : "light";
     document.documentElement.dataset.theme =
       next;
     localStorage.setItem(THEME_KEY, next);
