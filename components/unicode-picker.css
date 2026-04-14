@@ -22,7 +22,7 @@ unicode-picker .search-bar {
 unicode-picker .search-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
 }
 
 unicode-picker .input-wrapper {
@@ -111,7 +111,7 @@ unicode-picker .theme-toggle input {
 
 unicode-picker .toggle-track {
   position: relative;
-  width: 72px;
+  width: 62px;
   height: 38px;
   border: 1px solid var(--color-border-strong);
   border-radius: 19px;
@@ -143,7 +143,7 @@ unicode-picker .toggle-thumb {
 
 unicode-picker .theme-toggle input:checked
   ~ .toggle-track .toggle-thumb {
-  transform: translateX(34px);
+  transform: translateX(24px);
 }
 
 unicode-picker .theme-toggle
