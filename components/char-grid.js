@@ -65,6 +65,15 @@ export class CharGrid extends HTMLElement {
     );
     
     this.addEventListener(
+      "mousedown",
+      event => {
+        if (event.target.closest(".char-cell")) {
+          event.preventDefault();
+        }
+      },
+    );
+    
+    this.addEventListener(
       "click",
       event => {
         const cell =
