@@ -1,13 +1,11 @@
 import "./char-grid.js";
 import "./copy-toast.js";
 import "./unicode-picker.css";
+import { KEY, KeyListener } from "../lib/key-listener.js";
 
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
 const THEME_KEY = "unicode-picker-theme";
-const IS_MAC = /Mac|iPhone|iPad/.test(
-  navigator.platform,
-);
 
 export class UnicodePicker extends HTMLElement {
   #allChars = [];
@@ -71,10 +69,13 @@ export class UnicodePicker extends HTMLElement {
         this.#input.focus();
       },
     );
-    this.#input.addEventListener(
-      "keydown",
-      event => this.#onKeydown(event),
-    );
+    new KeyListener(this.#input)
+      .keydown(KEY.Down, () => this.#moveGrid("down"))
+      .keydown(KEY.Up, () => this.#moveGrid("up"))
+      .keydown(KEY.Right, () => this.#moveGrid("right"))
+      .keydown(KEY.Left, () => this.#moveGrid("left"))
+      .keydown(KEY.Enter, () => this.#copySelected())
+      .keydown(KEY.Esc, () => this.#clearSearch());
     this.#grid.addEventListener(
       "char-select",
       event => this.#copyChar(event.detail),
@@ -94,22 +95,18 @@ export class UnicodePicker extends HTMLElement {
         this.#activateBlock(btn);
       },
     );
-    this.#blocksNav.addEventListener(
-      "keydown",
-      event => this.#onNavKeydown(event),
-    );
-    this.addEventListener(
-      "keydown",
-      event => {
-        const mod = IS_MAC ?
-          event.metaKey : event.ctrlKey;
-        if (event.key === "f" && mod) {
-          event.preventDefault();
-          this.#input.focus();
-          this.#input.select();
-        }
-      },
-    );
+    new KeyListener(this.#blocksNav)
+      .keydown(KEY.Down, () => this.#moveNav(1))
+      .keydown(KEY.Right, () => this.#moveNav(1))
+      .keydown(KEY.Up, () => this.#moveNav(-1))
+      .keydown(KEY.Left, () => this.#moveNav(-1))
+      .keydown(KEY.Home, () => this.#focusNavStart())
+      .keydown(KEY.End, () => this.#focusNavEnd());
+    new KeyListener(this)
+      .keydown(KEY.Mod.f, () => {
+        this.#input.focus();
+        this.#input.select();
+      });
     this.#grid.addEventListener(
       "block-change",
       event => {
@@ -451,45 +448,33 @@ export class UnicodePicker extends HTMLElement {
     ];
   }
   
-  #onNavKeydown(event) {
+  #moveNav(delta) {
     const buttons = this.#visibleNavButtons();
     if (!buttons.length) return;
-    const current = document.activeElement;
-    const idx = buttons.indexOf(current);
-    let next;
-    
-    switch (event.key) {
-      case "ArrowDown":
-      case "ArrowRight":
-        event.preventDefault();
-        next = buttons[
-          idx + 1 < buttons.length ? idx + 1 : 0
-        ];
-        break;
-      case "ArrowUp":
-      case "ArrowLeft":
-        event.preventDefault();
-        next = buttons[
-          idx - 1 >= 0 ?
-            idx - 1 : buttons.length - 1
-        ];
-        break;
-      case "Home":
-        event.preventDefault();
-        next = buttons[0];
-        break;
-      case "End":
-        event.preventDefault();
-        next = buttons[buttons.length - 1];
-        break;
-      default:
-        return;
-    }
-    
-    if (next) {
-      this.#activateBlock(next);
-      next.focus();
-    }
+    const idx = Math.max(0,
+      buttons.indexOf(document.activeElement),
+    );
+    const next =
+      (idx + delta + buttons.length)
+      % buttons.length;
+    const btn = buttons[next];
+    this.#activateBlock(btn);
+    btn.focus();
+  }
+  
+  #focusNavStart() {
+    const btn = this.#visibleNavButtons()[0];
+    if (!btn) return;
+    this.#activateBlock(btn);
+    btn.focus();
+  }
+  
+  #focusNavEnd() {
+    const btn =
+      this.#visibleNavButtons().at(-1);
+    if (!btn) return;
+    this.#activateBlock(btn);
+    btn.focus();
   }
   
   async #copyChar(entry) {
@@ -502,60 +487,50 @@ export class UnicodePicker extends HTMLElement {
     }
   }
   
-  #onKeydown(event) {
+  #moveGrid(direction) {
     const list = this.#currentList();
-    let newIndex = this.#selectedIndex;
+    const index = this.#selectedIndex;
+    let next;
     
-    if (event.key === "ArrowDown") {
+    if (direction === "down") {
       if (!list.length) return;
-      event.preventDefault();
-      if (newIndex < 0) {
-        newIndex = 0;
-      } else {
-        newIndex =
-          this.#grid.moveDown(newIndex);
-      }
-    } else if (event.key === "ArrowUp") {
+      next = index < 0 ?
+        0 : this.#grid.moveDown(index);
+    } else if (direction === "up") {
       if (!list.length) return;
-      event.preventDefault();
-      if (newIndex < 0) {
-        newIndex = 0;
-      } else {
-        newIndex =
-          this.#grid.moveUp(newIndex);
-      }
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      if (newIndex < list.length - 1) {
-        newIndex++;
-      }
-    } else if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      if (newIndex > 0) {
-        newIndex--;
-      }
-    } else if (
-      event.key === "Enter" && list.length > 0
-      && this.#selectedIndex >= 0
-    ) {
-      event.preventDefault();
-      this.#copyChar(list[this.#selectedIndex]);
-      return;
-    } else if (event.key === "Escape") {
-      if (this.#input.value) {
-        event.preventDefault();
-        this.#input.value = "";
-        this.#search("");
-        this.#updateClearBtn();
-      }
-      return;
-    } else {
-      return;
+      next = index < 0 ?
+        0 : this.#grid.moveUp(index);
+    } else if (direction === "right") {
+      if (index >= list.length - 1) return;
+      next = index + 1;
+    } else if (direction === "left") {
+      if (index <= 0) return;
+      next = index - 1;
     }
     
-    if (newIndex !== this.#selectedIndex) {
-      this.#select(newIndex);
-      this.#grid.scrollToIndex(newIndex);
+    if (next !== index) {
+      this.#select(next);
+      this.#grid.scrollToIndex(next);
+    }
+  }
+  
+  #copySelected() {
+    const list = this.#currentList();
+    if (
+      list.length > 0
+      && this.#selectedIndex >= 0
+    ) {
+      this.#copyChar(
+        list[this.#selectedIndex],
+      );
+    }
+  }
+  
+  #clearSearch() {
+    if (this.#input.value) {
+      this.#input.value = "";
+      this.#search("");
+      this.#updateClearBtn();
     }
   }
 }
