@@ -143,7 +143,10 @@ export class UnicodePicker extends HTMLElement {
   }
 
   #initTheme() {
-    const saved = localStorage.getItem(THEME_KEY);
+    let saved;
+    try {
+      saved = localStorage.getItem(THEME_KEY);
+    } catch {}
     const prefersDark =
       window.matchMedia(
         "(prefers-color-scheme: dark)",
@@ -161,7 +164,9 @@ export class UnicodePicker extends HTMLElement {
       ? "dark" : "light";
     document.documentElement.dataset.theme =
       next;
-    localStorage.setItem(THEME_KEY, next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {}
   }
 
   #buildBlocksNav() {

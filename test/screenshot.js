@@ -173,6 +173,33 @@ async function capture() {
     }));
 
   await narrow.close();
+
+  // ── Light mode (1280 × 900) ─────────────────
+  const light = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    deviceScaleFactor: 2,
+    colorScheme: "light",
+  });
+  const lightPage = await light.newPage();
+  await lightPage.goto(BASE);
+  await lightPage.waitForLoadState("networkidle");
+  await lightPage.waitForTimeout(500);
+
+  // 12. Light — default
+  save("12-light-default.png",
+    await lightPage.screenshot({
+      scale: "device",
+    }));
+
+  // 13. Light — search
+  await lightPage.fill("input", "arrow");
+  await lightPage.waitForTimeout(300);
+  save("13-light-search.png",
+    await lightPage.screenshot({
+      scale: "device",
+    }));
+
+  await light.close();
   await browser.close();
 
   return diffSnapshots();
