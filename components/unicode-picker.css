@@ -58,7 +58,7 @@ unicode-picker .search-bar input {
   font-weight: var(--weight-regular);
   line-height: var(--leading-normal);
   color: var(--color-text-primary);
-  background: var(--color-bg-hover);
+  background: var(--color-input-bg);
 }
 
 unicode-picker .search-bar input::placeholder {
@@ -126,7 +126,7 @@ unicode-picker .toggle-track {
   height: 38px;
   border: 1px solid var(--color-border-strong);
   border-radius: 19px;
-  background: var(--color-bg-hover);
+  background: var(--color-toggle-track);
   transition:
     background var(--duration-fast)
       var(--ease-out),
@@ -144,7 +144,7 @@ unicode-picker .toggle-thumb {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: oklch(0.58 0.09 162);
+  background: var(--color-toggle-thumb);
   transition:
     transform var(--duration-normal)
       var(--ease-out);
@@ -169,7 +169,7 @@ unicode-picker .toggle-thumb svg {
   position: absolute;
   width: var(--icon-sm);
   height: var(--icon-sm);
-  color: var(--color-bg-raised);
+  color: var(--color-toggle-icon);
   transition:
     opacity var(--duration-normal)
       var(--ease-out),

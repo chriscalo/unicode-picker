@@ -117,7 +117,7 @@ char-grid .char-cell {
 }
 
 char-grid .char-cell[aria-selected="true"] {
-  background: var(--color-bg-hover);
+  background: var(--color-bg-selected);
 }
 
 char-grid .char-cell[aria-selected="true"] .char-glyph {
