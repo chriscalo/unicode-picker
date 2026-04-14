@@ -10,98 +10,140 @@
 
 @layer tokens {
   :root {
-    /*
-     * ── Primitive tokens ──
-     * Named by what they ARE, not what they are FOR.
-     * Themes override only this layer.
-     */
-
-    /* Neutral teal scale (low chroma, tinted gray) */
-    --primitive-teal-100: oklch(0.13 0.015 162);
-    --primitive-teal-200: oklch(0.16 0.015 162);
-    --primitive-teal-300: oklch(0.19 0.02 162);
-    --primitive-teal-400: oklch(0.24 0.025 162);
-    --primitive-teal-500: oklch(0.35 0.02 162);
-    --primitive-teal-600: oklch(0.50 0.03 162);
-    --primitive-teal-700: oklch(0.55 0.02 162);
-    --primitive-teal-800: oklch(0.68 0.03 162);
-    --primitive-teal-900: oklch(0.93 0.02 162);
-
-    /* Accent teal (high chroma) */
-    --primitive-accent:
-      oklch(0.72 0.17 162);
-    --primitive-accent-subtle:
-      oklch(0.72 0.17 162 / 0.15);
-    --primitive-accent-dim:
-      oklch(0.72 0.17 162 / 0.5);
-    --primitive-accent-contrast:
-      oklch(0.16 0.04 162);
-
-    /* Mid-tone teal (medium chroma) */
-    --primitive-teal-mid:
-      oklch(0.58 0.09 162);
-
-    /* Transparent teal overlays */
-    --primitive-teal-overlay:
-      oklch(0.93 0.02 162 / 0.12);
-    --primitive-teal-overlay-strong:
-      oklch(0.93 0.02 162 / 0.15);
+    /* Seed color and chroma easing power */
+    --color-seed: oklch(0.50 0.07 162);
+    --chroma-power: 0.5;
 
     /*
-     * ── Semantic tokens ──
-     * Named by what they MEAN in the UI.
-     * Each references a primitive.
-     * These do NOT change per theme.
+     * Color scale — 21 steps from 00 (black) to 99 (white).
+     * Each step sets lightness and eases chroma via:
+     *   oklch(from seed <L> calc(c * pow(<base>, power)) h)
+     * where base is 0 at extremes, 1 at step 50.
      */
+    --color-00: oklch(
+      from var(--color-seed) 0%
+      calc(c * pow(0.00, var(--chroma-power))) h
+    );
+    --color-05: oklch(
+      from var(--color-seed) 5%
+      calc(c * pow(0.10, var(--chroma-power))) h
+    );
+    --color-10: oklch(
+      from var(--color-seed) 10%
+      calc(c * pow(0.20, var(--chroma-power))) h
+    );
+    --color-15: oklch(
+      from var(--color-seed) 15%
+      calc(c * pow(0.30, var(--chroma-power))) h
+    );
+    --color-20: oklch(
+      from var(--color-seed) 20%
+      calc(c * pow(0.40, var(--chroma-power))) h
+    );
+    --color-25: oklch(
+      from var(--color-seed) 25%
+      calc(c * pow(0.50, var(--chroma-power))) h
+    );
+    --color-30: oklch(
+      from var(--color-seed) 30%
+      calc(c * pow(0.60, var(--chroma-power))) h
+    );
+    --color-35: oklch(
+      from var(--color-seed) 35%
+      calc(c * pow(0.70, var(--chroma-power))) h
+    );
+    --color-40: oklch(
+      from var(--color-seed) 40%
+      calc(c * pow(0.80, var(--chroma-power))) h
+    );
+    --color-45: oklch(
+      from var(--color-seed) 45%
+      calc(c * pow(0.90, var(--chroma-power))) h
+    );
+    --color-50: oklch(
+      from var(--color-seed) 50%
+      calc(c * pow(1.00, var(--chroma-power))) h
+    );
+    --color-55: oklch(
+      from var(--color-seed) 55%
+      calc(c * pow(0.90, var(--chroma-power))) h
+    );
+    --color-60: oklch(
+      from var(--color-seed) 60%
+      calc(c * pow(0.80, var(--chroma-power))) h
+    );
+    --color-65: oklch(
+      from var(--color-seed) 65%
+      calc(c * pow(0.70, var(--chroma-power))) h
+    );
+    --color-70: oklch(
+      from var(--color-seed) 70%
+      calc(c * pow(0.60, var(--chroma-power))) h
+    );
+    --color-75: oklch(
+      from var(--color-seed) 75%
+      calc(c * pow(0.50, var(--chroma-power))) h
+    );
+    --color-80: oklch(
+      from var(--color-seed) 80%
+      calc(c * pow(0.40, var(--chroma-power))) h
+    );
+    --color-85: oklch(
+      from var(--color-seed) 85%
+      calc(c * pow(0.30, var(--chroma-power))) h
+    );
+    --color-90: oklch(
+      from var(--color-seed) 90%
+      calc(c * pow(0.20, var(--chroma-power))) h
+    );
+    --color-95: oklch(
+      from var(--color-seed) 95%
+      calc(c * pow(0.10, var(--chroma-power))) h
+    );
+    --color-99: oklch(
+      from var(--color-seed) 99%
+      calc(c * pow(0.00, var(--chroma-power))) h
+    );
+
+    /* — Semantic tokens (dark theme, default) — */
 
     /* Backgrounds */
-    --color-bg-base:    var(--primitive-teal-100);
-    --color-bg-raised:  var(--primitive-teal-200);
-    --color-bg-surface: var(--primitive-teal-300);
-    --color-bg-hover:   var(--primitive-teal-400);
-    --color-bg-selected:
-      var(--primitive-teal-400);
+    --color-bg-base:       var(--color-10);
+    --color-bg-raised:     var(--color-15);
+    --color-bg-surface:    var(--color-20);
+    --color-bg-hover:      var(--color-25);
+    --color-bg-selected:   var(--color-25);
 
     /* Component backgrounds */
-    --color-input-bg:     var(--primitive-teal-400);
-    --color-toggle-track: var(--primitive-teal-400);
-    --color-toggle-thumb: var(--primitive-teal-mid);
-    --color-toggle-icon:  var(--primitive-teal-200);
+    --color-input-bg:      var(--color-25);
+    --color-toggle-track:  var(--color-25);
+    --color-toggle-thumb:  var(--color-55);
+    --color-toggle-icon:   var(--color-15);
 
     /* Text */
-    --color-text-primary:
-      var(--primitive-teal-900);
-    --color-text-secondary:
-      var(--primitive-teal-800);
-    --color-text-tertiary:
-      var(--primitive-teal-700);
+    --color-text-primary:  var(--color-90);
+    --color-text-secondary: var(--color-70);
+    --color-text-tertiary: var(--color-55);
 
     /* Borders */
-    --color-border-subtle:
-      var(--primitive-teal-500);
-    --color-border-strong:
-      var(--primitive-teal-600);
+    --color-border-subtle: var(--color-30);
+    --color-border-strong: var(--color-40);
 
     /* Accent */
-    --color-accent:
-      var(--primitive-accent);
-    --color-accent-subtle:
-      var(--primitive-accent-subtle);
-    --color-accent-text:
-      var(--primitive-accent-contrast);
+    --color-accent:        var(--color-65);
+    --color-accent-subtle: oklch(from var(--color-65) l c h / 0.15);
+    --color-accent-text:   var(--color-10);
 
     /* Focus */
-    --color-focus: var(--primitive-accent-dim);
+    --color-focus:         oklch(from var(--color-65) l c h / 0.5);
 
     /* Success (aliases accent) */
-    --color-success:      var(--color-accent);
-    --color-success-text: var(--color-accent-text);
+    --color-success:       var(--color-accent);
+    --color-success-text:  var(--color-accent-text);
 
     /* Glyph */
-    --color-glyph-bg:
-      var(--primitive-teal-overlay);
-    --color-glyph-bg-selected:
-      var(--primitive-teal-overlay-strong);
+    --color-glyph-bg:      oklch(from var(--color-90) l c h / 0.12);
+    --color-glyph-bg-selected: oklch(from var(--color-90) l c h / 0.15);
 
     color-scheme: dark;
 
@@ -155,31 +197,34 @@
       cubic-bezier(0.77, 0, 0.175, 1);
   }
 
-  /* Light theme — overrides only primitives */
+  /* — Semantic tokens (light theme) — */
   [data-theme="light"] {
-    --primitive-teal-100: oklch(0.97 0.005 162);
-    --primitive-teal-200: oklch(0.94 0.008 162);
-    --primitive-teal-300: oklch(0.91 0.01 162);
-    --primitive-teal-400: oklch(0.88 0.015 162);
-    --primitive-teal-500: oklch(0.82 0.015 162);
-    --primitive-teal-600: oklch(0.70 0.025 162);
-    --primitive-teal-700: oklch(0.55 0.02 162);
-    --primitive-teal-800: oklch(0.42 0.03 162);
-    --primitive-teal-900: oklch(0.18 0.02 162);
+    --color-bg-base:       var(--color-99);
+    --color-bg-raised:     var(--color-95);
+    --color-bg-surface:    var(--color-90);
+    --color-bg-hover:      var(--color-85);
+    --color-bg-selected:   var(--color-85);
 
-    --primitive-accent:
-      oklch(0.55 0.17 162);
-    --primitive-accent-subtle:
-      oklch(0.55 0.17 162 / 0.12);
-    --primitive-accent-dim:
-      oklch(0.55 0.17 162 / 0.45);
-    --primitive-accent-contrast:
-      oklch(0.98 0.01 162);
+    --color-input-bg:      var(--color-85);
+    --color-toggle-track:  var(--color-85);
+    --color-toggle-thumb:  var(--color-55);
+    --color-toggle-icon:   var(--color-95);
 
-    --primitive-teal-overlay:
-      oklch(0.18 0.02 162 / 0.07);
-    --primitive-teal-overlay-strong:
-      oklch(0.18 0.02 162 / 0.10);
+    --color-text-primary:  var(--color-10);
+    --color-text-secondary: var(--color-35);
+    --color-text-tertiary: var(--color-50);
+
+    --color-border-subtle: var(--color-80);
+    --color-border-strong: var(--color-65);
+
+    --color-accent:        var(--color-40);
+    --color-accent-subtle: oklch(from var(--color-40) l c h / 0.12);
+    --color-accent-text:   var(--color-95);
+
+    --color-focus:         oklch(from var(--color-40) l c h / 0.45);
+
+    --color-glyph-bg:      oklch(from var(--color-15) l c h / 0.07);
+    --color-glyph-bg-selected: oklch(from var(--color-15) l c h / 0.10);
 
     color-scheme: light;
   }
