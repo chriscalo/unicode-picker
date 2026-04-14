@@ -36,6 +36,10 @@
     --color-glyph-bg:      oklch(0.93 0.02 162 / 0.12);
     --color-glyph-bg-selected: oklch(0.93 0.02 162 / 0.15);
 
+    --color-toggle-track:  oklch(0.22 0.02 162);
+    --color-toggle-thumb:  oklch(0.50 0.06 162);
+    --color-toggle-icon:   oklch(0.15 0.02 162);
+
     color-scheme: dark;
     
     /* — Typography — */
@@ -107,6 +111,10 @@
 
     --color-glyph-bg:      oklch(0.18 0.02 162 / 0.07);
     --color-glyph-bg-selected: oklch(0.18 0.02 162 / 0.10);
+
+    --color-toggle-track:  oklch(0.82 0.02 162);
+    --color-toggle-thumb:  oklch(0.52 0.06 162);
+    --color-toggle-icon:   oklch(0.95 0.01 162);
 
     color-scheme: light;
   }
