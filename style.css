@@ -11,8 +11,8 @@
 @layer tokens {
   :root {
     /* Seed color and chroma easing power */
-    --color-seed: oklch(0.50 0.17 162);
-    --chroma-power: 0.8;
+    --color-seed: oklch(0.50 0.07 162);
+    --chroma-power: 0.5;
 
     /*
      * Color scale — 21 steps from 00 (black) to 99 (white).
