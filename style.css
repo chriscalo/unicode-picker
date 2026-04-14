@@ -15,7 +15,8 @@
     --chroma-power: 0.5;
 
     /*
-     * Color scale — 21 steps from 00 (black) to 99 (white).
+     * Color scale — 21 tokens: steps of 5 from 00 (black)
+     * to 95, plus a final 99 (near-white) endpoint.
      * Each step sets lightness and eases chroma via:
      *   oklch(from seed <L> calc(c * pow(<base>, power)) h)
      * where base is 0 at extremes, 1 at step 50.
@@ -108,42 +109,42 @@
     /* — Semantic tokens (dark theme, default) — */
 
     /* Backgrounds */
-    --color-bg-base:       var(--color-10);
-    --color-bg-raised:     var(--color-15);
-    --color-bg-surface:    var(--color-20);
-    --color-bg-hover:      var(--color-25);
-    --color-bg-selected:   var(--color-25);
+    --color-bg-base:            var(--color-10);
+    --color-bg-raised:          var(--color-15);
+    --color-bg-surface:         var(--color-20);
+    --color-bg-hover:           var(--color-25);
+    --color-bg-selected:        var(--color-25);
 
     /* Component backgrounds */
-    --color-input-bg:      var(--color-25);
-    --color-toggle-track:  var(--color-25);
-    --color-toggle-thumb:  var(--color-55);
-    --color-toggle-icon:   var(--color-15);
+    --color-input-bg:           var(--color-25);
+    --color-toggle-track:       var(--color-25);
+    --color-toggle-thumb:       var(--color-55);
+    --color-toggle-icon:        var(--color-15);
 
     /* Text */
-    --color-text-primary:  var(--color-90);
-    --color-text-secondary: var(--color-70);
-    --color-text-tertiary: var(--color-55);
+    --color-text-primary:       var(--color-90);
+    --color-text-secondary:     var(--color-70);
+    --color-text-tertiary:      var(--color-55);
 
     /* Borders */
-    --color-border-subtle: var(--color-30);
-    --color-border-strong: var(--color-40);
+    --color-border-subtle:      var(--color-30);
+    --color-border-strong:      var(--color-40);
 
     /* Accent */
-    --color-accent:        var(--color-65);
-    --color-accent-subtle: oklch(from var(--color-65) l c h / 0.15);
-    --color-accent-text:   var(--color-10);
+    --color-accent:             var(--color-65);
+    --color-accent-subtle:      oklch(from var(--color-65) l c h / 0.15);
+    --color-accent-text:        var(--color-10);
 
     /* Focus */
-    --color-focus:         oklch(from var(--color-65) l c h / 0.5);
+    --color-focus:              oklch(from var(--color-65) l c h / 0.5);
 
     /* Success (aliases accent) */
-    --color-success:       var(--color-accent);
-    --color-success-text:  var(--color-accent-text);
+    --color-success:            var(--color-accent);
+    --color-success-text:       var(--color-accent-text);
 
     /* Glyph */
-    --color-glyph-bg:      oklch(from var(--color-90) l c h / 0.12);
-    --color-glyph-bg-selected: oklch(from var(--color-90) l c h / 0.15);
+    --color-glyph-bg:           oklch(from var(--color-90) l c h / 0.12);
+    --color-glyph-bg-selected:  oklch(from var(--color-90) l c h / 0.15);
 
     color-scheme: dark;
 
@@ -199,32 +200,32 @@
 
   /* — Semantic tokens (light theme) — */
   [data-theme="light"] {
-    --color-bg-base:       var(--color-99);
-    --color-bg-raised:     var(--color-95);
-    --color-bg-surface:    var(--color-90);
-    --color-bg-hover:      var(--color-85);
-    --color-bg-selected:   var(--color-85);
+    --color-bg-base:            var(--color-99);
+    --color-bg-raised:          var(--color-95);
+    --color-bg-surface:         var(--color-90);
+    --color-bg-hover:           var(--color-85);
+    --color-bg-selected:        var(--color-85);
 
-    --color-input-bg:      var(--color-85);
-    --color-toggle-track:  var(--color-85);
-    --color-toggle-thumb:  var(--color-55);
-    --color-toggle-icon:   var(--color-95);
+    --color-input-bg:           var(--color-85);
+    --color-toggle-track:       var(--color-85);
+    --color-toggle-thumb:       var(--color-55);
+    --color-toggle-icon:        var(--color-95);
 
-    --color-text-primary:  var(--color-10);
-    --color-text-secondary: var(--color-35);
-    --color-text-tertiary: var(--color-50);
+    --color-text-primary:       var(--color-10);
+    --color-text-secondary:     var(--color-35);
+    --color-text-tertiary:      var(--color-50);
 
-    --color-border-subtle: var(--color-80);
-    --color-border-strong: var(--color-65);
+    --color-border-subtle:      var(--color-80);
+    --color-border-strong:      var(--color-65);
 
-    --color-accent:        var(--color-40);
-    --color-accent-subtle: oklch(from var(--color-40) l c h / 0.12);
-    --color-accent-text:   var(--color-95);
+    --color-accent:             var(--color-40);
+    --color-accent-subtle:      oklch(from var(--color-40) l c h / 0.12);
+    --color-accent-text:        var(--color-95);
 
-    --color-focus:         oklch(from var(--color-40) l c h / 0.45);
+    --color-focus:              oklch(from var(--color-40) l c h / 0.45);
 
-    --color-glyph-bg:      oklch(from var(--color-15) l c h / 0.07);
-    --color-glyph-bg-selected: oklch(from var(--color-15) l c h / 0.10);
+    --color-glyph-bg:           oklch(from var(--color-15) l c h / 0.07);
+    --color-glyph-bg-selected:  oklch(from var(--color-15) l c h / 0.10);
 
     color-scheme: light;
   }
