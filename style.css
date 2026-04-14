@@ -15,37 +15,30 @@
      *
      * 21 steps from 00 (black) to 99 (near-white).
      * Lightness = step / 100.
-     * Chroma follows a sine bell curve: peak × sin(π × step / 99).
-     * Peak chroma: 0.17.  Hue: 162 throughout.
-     *
-     *  max ·          ██
-     *      ·        ██  ██
-     *      ·      ██      ██
-     *      ·    ██          ██
-     *      ·  ██              ██
-     *    0 ·██                  ██
-     *      00       50         99
+     * Chroma = peak × base^gamma, where base is a
+     * triangle (0 at extremes, 1 at step 50).
+     * Peak chroma: 0.17.  Gamma: 2.0.  Hue: 162.
      */
     --color-00: oklch(0.00 0.000 162);
-    --color-05: oklch(0.05 0.027 162);
-    --color-10: oklch(0.10 0.053 162);
-    --color-15: oklch(0.15 0.078 162);
-    --color-20: oklch(0.20 0.101 162);
-    --color-25: oklch(0.25 0.121 162);
-    --color-30: oklch(0.30 0.138 162);
-    --color-35: oklch(0.35 0.152 162);
-    --color-40: oklch(0.40 0.162 162);
-    --color-45: oklch(0.45 0.168 162);
-    --color-50: oklch(0.50 0.170 162);
-    --color-55: oklch(0.55 0.167 162);
-    --color-60: oklch(0.60 0.161 162);
-    --color-65: oklch(0.65 0.150 162);
-    --color-70: oklch(0.70 0.135 162);
-    --color-75: oklch(0.75 0.117 162);
-    --color-80: oklch(0.80 0.096 162);
-    --color-85: oklch(0.85 0.073 162);
-    --color-90: oklch(0.90 0.048 162);
-    --color-95: oklch(0.95 0.022 162);
+    --color-05: oklch(0.05 0.002 162);
+    --color-10: oklch(0.10 0.007 162);
+    --color-15: oklch(0.15 0.016 162);
+    --color-20: oklch(0.20 0.028 162);
+    --color-25: oklch(0.25 0.043 162);
+    --color-30: oklch(0.30 0.062 162);
+    --color-35: oklch(0.35 0.085 162);
+    --color-40: oklch(0.40 0.111 162);
+    --color-45: oklch(0.45 0.140 162);
+    --color-50: oklch(0.50 0.167 162);
+    --color-55: oklch(0.55 0.134 162);
+    --color-60: oklch(0.60 0.106 162);
+    --color-65: oklch(0.65 0.080 162);
+    --color-70: oklch(0.70 0.058 162);
+    --color-75: oklch(0.75 0.040 162);
+    --color-80: oklch(0.80 0.025 162);
+    --color-85: oklch(0.85 0.014 162);
+    --color-90: oklch(0.90 0.006 162);
+    --color-95: oklch(0.95 0.001 162);
     --color-99: oklch(0.99 0.000 162);
 
     /* — Semantic tokens (dark theme, default) — */
