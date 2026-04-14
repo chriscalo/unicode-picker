@@ -19,16 +19,35 @@ unicode-picker .search-bar {
   background: var(--color-bg-raised);
 }
 
+unicode-picker .search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
 unicode-picker .input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+unicode-picker .search-icon {
+  position: absolute;
+  left: var(--space-3);
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
 }
 
 unicode-picker .search-bar input {
   flex: 1;
   min-width: 0;
   padding: var(--space-3) var(--space-4);
+  padding-left:
+    calc(var(--space-3) + 18px + var(--space-2));
   padding-right:
     calc(var(--space-4) + 20px + var(--space-2));
   border:
@@ -78,8 +97,108 @@ unicode-picker .clear-btn:hover {
 }
 
 unicode-picker .clear-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+}
+
+unicode-picker .theme-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+unicode-picker .theme-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+unicode-picker .toggle-track {
+  position: relative;
+  width: 62px;
+  height: 38px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 19px;
+  background: var(--color-bg-hover);
+  transition:
+    background var(--duration-fast)
+      var(--ease-out),
+    border-color var(--duration-fast)
+      var(--ease-out);
+}
+
+unicode-picker .toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: oklch(0.58 0.09 162);
+  transition:
+    transform var(--duration-normal)
+      var(--ease-out);
+}
+
+unicode-picker .theme-toggle input:checked
+  ~ .toggle-track .toggle-thumb {
+  transform: translateX(24px);
+}
+
+unicode-picker .theme-toggle
+  input:focus-visible ~ .toggle-track {
+  outline: solid 3px var(--color-focus);
+  outline-offset: 2px;
+}
+
+unicode-picker .toggle-track:hover {
+  border-color: var(--color-border-subtle);
+}
+
+unicode-picker .toggle-thumb svg {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  color: var(--color-bg-raised);
+  transition:
+    opacity var(--duration-normal)
+      var(--ease-out),
+    transform var(--duration-normal)
+      var(--ease-out);
+}
+
+/* Light mode: sun visible, moon hidden */
+unicode-picker .toggle-thumb .icon-sun {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+unicode-picker .toggle-thumb .icon-moon {
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+
+/* Dark mode: moon visible, sun hidden */
+unicode-picker .theme-toggle input:checked
+  ~ .toggle-track .toggle-thumb .icon-sun {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+unicode-picker .theme-toggle input:checked
+  ~ .toggle-track .toggle-thumb .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg);
 }
 
 unicode-picker .status {

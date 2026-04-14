@@ -4,6 +4,7 @@ import "./unicode-picker.css";
 
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
+const THEME_KEY = "unicode-picker-theme";
 
 export class UnicodePicker extends HTMLElement {
   #allChars = [];
@@ -18,6 +19,7 @@ export class UnicodePicker extends HTMLElement {
   #grid;
   #toast;
   #blocksNav;
+  #themeToggle;
 
   constructor() {
     super();
@@ -40,7 +42,16 @@ export class UnicodePicker extends HTMLElement {
       this.querySelector("copy-toast");
     this.#blocksNav =
       this.querySelector(".blocks-nav");
+    this.#themeToggle =
+      this.querySelector(
+        ".theme-toggle input",
+      );
 
+    this.#initTheme();
+    this.#themeToggle.addEventListener(
+      "change",
+      () => this.#onThemeToggle(),
+    );
     this.#input.addEventListener(
       "input",
       () => {
@@ -129,6 +140,33 @@ export class UnicodePicker extends HTMLElement {
     this.#input.focus();
     this.#render();
     this.#scrollBlockIntoView();
+  }
+
+  #initTheme() {
+    let saved;
+    try {
+      saved = localStorage.getItem(THEME_KEY);
+    } catch {}
+    const prefersDark =
+      window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+    const theme = saved
+      ?? (prefersDark ? "dark" : "light");
+    document.documentElement.dataset.theme =
+      theme;
+    this.#themeToggle.checked =
+      theme === "dark";
+  }
+
+  #onThemeToggle() {
+    const next = this.#themeToggle.checked
+      ? "dark" : "light";
+    document.documentElement.dataset.theme =
+      next;
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {}
   }
 
   #buildBlocksNav() {
