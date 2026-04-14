@@ -103,7 +103,7 @@ export class UnicodePicker extends HTMLElement {
       .keydown(KEY.Home, () => this.#focusNavStart())
       .keydown(KEY.End, () => this.#focusNavEnd());
     new KeyListener(this)
-      .keydown(KEY.Mod.f, () => {
+      .keydown(KEY.Mod.F, () => {
         this.#input.focus();
         this.#input.select();
       });
