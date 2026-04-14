@@ -10,36 +10,100 @@
 
 @layer tokens {
   :root {
+    /* Seed color and chroma easing power */
+    --color-seed: oklch(0.50 0.17 162);
+    --chroma-power: 0.8;
+
     /*
-     * Color scale — oklch, hue 162 (teal-green)
-     *
-     * 21 steps from 00 (black) to 99 (near-white).
-     * Lightness = step / 100.
-     * Chroma = peak × base^gamma, where base is a
-     * triangle (0 at extremes, 1 at step 50).
-     * Peak chroma: 0.17.  Gamma: 2.0.  Hue: 162.
+     * Color scale — 21 steps from 00 (black) to 99 (white).
+     * Each step sets lightness and eases chroma via:
+     *   oklch(from seed <L> calc(c * pow(<base>, power)) h)
+     * where base is 0 at extremes, 1 at step 50.
      */
-    --color-00: oklch(0.00 0.000 162);
-    --color-05: oklch(0.05 0.002 162);
-    --color-10: oklch(0.10 0.007 162);
-    --color-15: oklch(0.15 0.016 162);
-    --color-20: oklch(0.20 0.028 162);
-    --color-25: oklch(0.25 0.043 162);
-    --color-30: oklch(0.30 0.062 162);
-    --color-35: oklch(0.35 0.085 162);
-    --color-40: oklch(0.40 0.111 162);
-    --color-45: oklch(0.45 0.140 162);
-    --color-50: oklch(0.50 0.167 162);
-    --color-55: oklch(0.55 0.134 162);
-    --color-60: oklch(0.60 0.106 162);
-    --color-65: oklch(0.65 0.080 162);
-    --color-70: oklch(0.70 0.058 162);
-    --color-75: oklch(0.75 0.040 162);
-    --color-80: oklch(0.80 0.025 162);
-    --color-85: oklch(0.85 0.014 162);
-    --color-90: oklch(0.90 0.006 162);
-    --color-95: oklch(0.95 0.001 162);
-    --color-99: oklch(0.99 0.000 162);
+    --color-00: oklch(
+      from var(--color-seed) 0%
+      calc(c * pow(0.00, var(--chroma-power))) h
+    );
+    --color-05: oklch(
+      from var(--color-seed) 5%
+      calc(c * pow(0.10, var(--chroma-power))) h
+    );
+    --color-10: oklch(
+      from var(--color-seed) 10%
+      calc(c * pow(0.20, var(--chroma-power))) h
+    );
+    --color-15: oklch(
+      from var(--color-seed) 15%
+      calc(c * pow(0.30, var(--chroma-power))) h
+    );
+    --color-20: oklch(
+      from var(--color-seed) 20%
+      calc(c * pow(0.40, var(--chroma-power))) h
+    );
+    --color-25: oklch(
+      from var(--color-seed) 25%
+      calc(c * pow(0.50, var(--chroma-power))) h
+    );
+    --color-30: oklch(
+      from var(--color-seed) 30%
+      calc(c * pow(0.60, var(--chroma-power))) h
+    );
+    --color-35: oklch(
+      from var(--color-seed) 35%
+      calc(c * pow(0.70, var(--chroma-power))) h
+    );
+    --color-40: oklch(
+      from var(--color-seed) 40%
+      calc(c * pow(0.80, var(--chroma-power))) h
+    );
+    --color-45: oklch(
+      from var(--color-seed) 45%
+      calc(c * pow(0.90, var(--chroma-power))) h
+    );
+    --color-50: oklch(
+      from var(--color-seed) 50%
+      calc(c * pow(1.00, var(--chroma-power))) h
+    );
+    --color-55: oklch(
+      from var(--color-seed) 55%
+      calc(c * pow(0.90, var(--chroma-power))) h
+    );
+    --color-60: oklch(
+      from var(--color-seed) 60%
+      calc(c * pow(0.80, var(--chroma-power))) h
+    );
+    --color-65: oklch(
+      from var(--color-seed) 65%
+      calc(c * pow(0.70, var(--chroma-power))) h
+    );
+    --color-70: oklch(
+      from var(--color-seed) 70%
+      calc(c * pow(0.60, var(--chroma-power))) h
+    );
+    --color-75: oklch(
+      from var(--color-seed) 75%
+      calc(c * pow(0.50, var(--chroma-power))) h
+    );
+    --color-80: oklch(
+      from var(--color-seed) 80%
+      calc(c * pow(0.40, var(--chroma-power))) h
+    );
+    --color-85: oklch(
+      from var(--color-seed) 85%
+      calc(c * pow(0.30, var(--chroma-power))) h
+    );
+    --color-90: oklch(
+      from var(--color-seed) 90%
+      calc(c * pow(0.20, var(--chroma-power))) h
+    );
+    --color-95: oklch(
+      from var(--color-seed) 95%
+      calc(c * pow(0.10, var(--chroma-power))) h
+    );
+    --color-99: oklch(
+      from var(--color-seed) 99%
+      calc(c * pow(0.00, var(--chroma-power))) h
+    );
 
     /* — Semantic tokens (dark theme, default) — */
 
