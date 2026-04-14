@@ -22,7 +22,7 @@ export class CharGrid extends HTMLElement {
   #cellTemplate;
   #emptyTemplate;
   #resizeObserver;
-
+  
   constructor() {
     super();
     this.#cellTemplate = document.getElementById(
@@ -37,7 +37,7 @@ export class CharGrid extends HTMLElement {
     this.appendChild(
       template.content.cloneNode(true),
     );
-
+    
     this.#scrollContainer =
       this.querySelector(
         ".scroll-container",
@@ -58,12 +58,12 @@ export class CharGrid extends HTMLElement {
     );
     this.#content = element("div");
     this.appendChild(this.#content);
-
+    
     this.#scrollContainer.addEventListener(
       "scroll",
       () => this.#onScroll(),
     );
-
+    
     this.addEventListener(
       "click",
       event => {
@@ -82,7 +82,7 @@ export class CharGrid extends HTMLElement {
         }
       },
     );
-
+    
     this.addEventListener(
       "mousemove",
       event => {
@@ -97,7 +97,7 @@ export class CharGrid extends HTMLElement {
         ));
       },
     );
-
+    
     this.#resizeObserver = new ResizeObserver(
       () => {
         this.#measureLayout();
@@ -113,21 +113,21 @@ export class CharGrid extends HTMLElement {
       },
     );
   }
-
+  
   connectedCallback() {
     this.#resizeObserver.observe(
       this.#scrollContainer,
     );
   }
-
+  
   disconnectedCallback() {
     this.#resizeObserver.disconnect();
   }
-
+  
   get gridCols() {
     return this.#cols;
   }
-
+  
   moveDown(index) {
     if (!this.#blockLayout.length) {
       const target = index + this.#cols;
@@ -142,7 +142,7 @@ export class CharGrid extends HTMLElement {
     const row =
       Math.floor(local / this.#cols);
     const col = local % this.#cols;
-
+    
     if (row + 1 < block.charRows) {
       return Math.min(
         block.startIndex
@@ -151,7 +151,7 @@ export class CharGrid extends HTMLElement {
           + block.charCount - 1,
       );
     }
-
+    
     const next =
       this.#blockLayout[blockIndex + 1];
     if (!next) return index;
@@ -160,7 +160,7 @@ export class CharGrid extends HTMLElement {
       next.startIndex + next.charCount - 1,
     );
   }
-
+  
   moveUp(index) {
     if (!this.#blockLayout.length) {
       const target = index - this.#cols;
@@ -174,12 +174,12 @@ export class CharGrid extends HTMLElement {
     const row =
       Math.floor(local / this.#cols);
     const col = local % this.#cols;
-
+    
     if (row > 0) {
       return block.startIndex
         + (row - 1) * this.#cols + col;
     }
-
+    
     const prev =
       this.#blockLayout[blockIndex - 1];
     if (!prev) return index;
@@ -190,7 +190,7 @@ export class CharGrid extends HTMLElement {
       prev.startIndex + prev.charCount - 1,
     );
   }
-
+  
   set selectedIndex(idx) {
     if (idx === this.#selectedIndex) return;
     this.#selectedIndex = idx;
@@ -208,7 +208,7 @@ export class CharGrid extends HTMLElement {
       "aria-selected", "true",
     );
   }
-
+  
   showCopied(index) {
     const cell = this.querySelector(
       `.char-cell[data-index="${index}"]`,
@@ -223,7 +223,7 @@ export class CharGrid extends HTMLElement {
       { once: true },
     );
   }
-
+  
   update(items, { blocks = [] } = {}) {
     this.#items = items;
     this.#blocks = blocks;
@@ -243,7 +243,7 @@ export class CharGrid extends HTMLElement {
       this.#stickyHeader.hidden = true;
     }
   }
-
+  
   showEmpty(message) {
     this.#items = [];
     this.#blockLayout = [];
@@ -257,7 +257,7 @@ export class CharGrid extends HTMLElement {
     empty.textContent = message;
     this.#content.appendChild(empty);
   }
-
+  
   scrollToIndex(index) {
     if (this.#blockLayout.length) {
       this.#scrollToIndexWithBlocks(index);
@@ -265,24 +265,24 @@ export class CharGrid extends HTMLElement {
       this.#scrollToIndexFlat(index);
     }
   }
-
+  
   #onScroll() {
     this.#renderVisible();
     if (this.#blockLayout.length) {
       this.#updateStickyHeader();
     }
   }
-
+  
   #computeBlockLayout() {
     if (!this.#blocks.length) {
       this.#blockLayout = [];
       this.#totalHeight = 0;
       return;
     }
-
+    
     const layout = [];
     let offset = 0;
-
+    
     for (
       const [blockIdx, block] of
       this.#blocks.entries()
@@ -296,7 +296,7 @@ export class CharGrid extends HTMLElement {
       if (charCount <= 0) continue;
       const charRows =
         Math.ceil(charCount / this.#cols);
-
+      
       layout.push({
         name: block.name,
         startIndex: block.startIndex,
@@ -305,15 +305,15 @@ export class CharGrid extends HTMLElement {
         pixelTop: offset,
         charsPixelTop: offset + this.#headerHeight,
       });
-
+      
       offset +=
         this.#headerHeight + charRows * this.#rowHeight;
     }
-
+    
     this.#blockLayout = layout;
     this.#totalHeight = offset;
   }
-
+  
   #updateLayout() {
     if (this.#blockLayout.length) {
       this.#spacer.style.setProperty(
@@ -330,19 +330,19 @@ export class CharGrid extends HTMLElement {
       );
     }
   }
-
+  
   #updateStickyHeader() {
     const scrollTop =
       this.#scrollContainer.scrollTop;
     const blockIdx =
       this.#blockIndexAtPixel(scrollTop);
     const block = this.#blockLayout[blockIdx];
-
+    
     if (!block) {
       this.#stickyHeader.textContent = "";
       return;
     }
-
+    
     if (blockIdx !== this.#currentBlockIdx) {
       this.#currentBlockIdx = blockIdx;
       this.#stickyHeader.textContent = block.name;
@@ -357,7 +357,7 @@ export class CharGrid extends HTMLElement {
         },
       ));
     }
-
+    
     // Push effect: next header pushes current up
     const nextBlock =
       this.#blockLayout[blockIdx + 1];
@@ -381,13 +381,13 @@ export class CharGrid extends HTMLElement {
       );
     }
   }
-
+  
   #blockForIndex(index) {
     return this.#blockLayout[
       this.#blockLayoutIndex(index)
     ] || null;
   }
-
+  
   #blockLayoutIndex(index) {
     let low = 0;
     let high = this.#blockLayout.length - 1;
@@ -404,7 +404,7 @@ export class CharGrid extends HTMLElement {
     }
     return low;
   }
-
+  
   #blockIndexAtPixel(pixel) {
     let low = 0;
     let high = this.#blockLayout.length - 1;
@@ -420,7 +420,7 @@ export class CharGrid extends HTMLElement {
     }
     return low;
   }
-
+  
   #scrollToIndexFlat(index) {
     const row = Math.floor(index / this.#cols);
     const rowTop = row * this.#rowHeight;
@@ -430,7 +430,7 @@ export class CharGrid extends HTMLElement {
     const viewBottom =
       viewTop
       + this.#scrollContainer.clientHeight;
-
+    
     if (rowTop < viewTop) {
       this.#scrollContainer.scrollTop = rowTop;
     } else if (rowBottom > viewBottom) {
@@ -439,7 +439,7 @@ export class CharGrid extends HTMLElement {
         - this.#scrollContainer.clientHeight;
     }
   }
-
+  
   #scrollToIndexWithBlocks(index) {
     const block = this.#blockForIndex(index);
     if (!block) return;
@@ -457,7 +457,7 @@ export class CharGrid extends HTMLElement {
     const viewBottom =
       scrollTop
       + this.#scrollContainer.clientHeight;
-
+    
     if (rowTop < effectiveTop) {
       this.#scrollContainer.scrollTop =
         rowInBlock === 0 ?
@@ -474,19 +474,19 @@ export class CharGrid extends HTMLElement {
       }
     }
   }
-
+  
   #measureLayout() {
     const gridCS = getComputedStyle(this.#grid);
     const cellHeight =
       parseFloat(gridCS.gridAutoRows);
     const gap = parseFloat(gridCS.gap);
     this.#rowHeight = cellHeight + gap;
-
+    
     const headerCS =
       getComputedStyle(this.#stickyHeader);
     this.#headerHeight =
       parseFloat(headerCS.height) + gap;
-
+    
     const colMin = parseFloat(
       gridCS.getPropertyValue("--_col-min"),
     );
@@ -504,26 +504,26 @@ export class CharGrid extends HTMLElement {
       ),
     );
   }
-
+  
   #renderVisible() {
     if (this.#items.length === 0) return;
-
+    
     if (this.#blockLayout.length) {
       this.#renderVisibleWithBlocks();
     } else {
       this.#renderVisibleFlat();
     }
   }
-
+  
   #renderVisibleFlat() {
     this.#grid.hidden = false;
     this.#blocksContainer.replaceChildren();
-
+    
     const scrollTop =
       this.#scrollContainer.scrollTop;
     const viewHeight =
       this.#scrollContainer.clientHeight;
-
+    
     const firstRow = Math.max(
       0,
       Math.floor(scrollTop / this.#rowHeight)
@@ -537,37 +537,37 @@ export class CharGrid extends HTMLElement {
         / this.#rowHeight,
       ) + BUFFER_ROWS,
     );
-
+    
     const startIndex = firstRow * this.#cols;
     const endIndex = Math.min(
       (lastRow + 1) * this.#cols,
       this.#items.length,
     );
-
+    
     this.#grid.style.setProperty(
       "--grid-top",
       (firstRow * this.#rowHeight) + "px",
     );
     this.#grid.replaceChildren();
-
-    const frag = fragment();
+    
+    const cells = fragment();
     for (
       const [offset, entry] of
       this.#items.slice(startIndex, endIndex)
         .entries()
     ) {
-      frag.appendChild(
+      cells.appendChild(
         this.#createCell(
           entry, startIndex + offset,
         ),
       );
     }
-    this.#grid.appendChild(frag);
+    this.#grid.appendChild(cells);
   }
-
+  
   #renderVisibleWithBlocks() {
     this.#grid.hidden = true;
-
+    
     const scrollTop =
       this.#scrollContainer.scrollTop;
     const viewHeight =
@@ -577,17 +577,17 @@ export class CharGrid extends HTMLElement {
     const viewTop = scrollTop - bufferPx;
     const viewBottom =
       scrollTop + viewHeight + bufferPx;
-
+    
     this.#blocksContainer.replaceChildren();
-    const containerFrag = fragment();
-
+    const containerFragment = fragment();
+    
     for (const block of this.#blockLayout) {
       const blockBottom =
         block.charsPixelTop
         + block.charRows * this.#rowHeight;
       if (blockBottom < viewTop) continue;
       if (block.pixelTop > viewBottom) break;
-
+      
       const section = element("div", {
         className: "block-section",
       });
@@ -595,13 +595,13 @@ export class CharGrid extends HTMLElement {
         "--section-top",
         block.pixelTop + "px",
       );
-
+      
       const label = element("div", {
         className: "section-label",
         textContent: block.name,
       });
       section.appendChild(label);
-
+      
       const firstCharRow = Math.max(
         0,
         Math.floor(
@@ -616,7 +616,7 @@ export class CharGrid extends HTMLElement {
           / this.#rowHeight,
         ),
       );
-
+      
       if (lastCharRow >= firstCharRow) {
         const grid = element("div", {
           className: "block-grid",
@@ -627,7 +627,7 @@ export class CharGrid extends HTMLElement {
             + firstCharRow * this.#rowHeight)
           + "px",
         );
-
+        
         const startIdx =
           block.startIndex
           + firstCharRow * this.#cols;
@@ -636,12 +636,12 @@ export class CharGrid extends HTMLElement {
             + (lastCharRow + 1) * this.#cols,
           block.startIndex + block.charCount,
         );
-
-        const cellFrag = fragment();
+        
+        const cellFragment = fragment();
         let idx = startIdx;
         while (idx < endIdx) {
           if (this.#items[idx]) {
-            cellFrag.appendChild(
+            cellFragment.appendChild(
               this.#createCell(
                 this.#items[idx], idx,
               ),
@@ -649,18 +649,18 @@ export class CharGrid extends HTMLElement {
           }
           idx++;
         }
-        grid.appendChild(cellFrag);
+        grid.appendChild(cellFragment);
         section.appendChild(grid);
       }
-
-      containerFrag.appendChild(section);
+      
+      containerFragment.appendChild(section);
     }
-
+    
     this.#blocksContainer.appendChild(
-      containerFrag,
+      containerFragment,
     );
   }
-
+  
   #createCell(entry, index) {
     const cell = this.#cellTemplate.content
       .cloneNode(true)

@@ -65,7 +65,7 @@ unicode-picker .search-bar input::placeholder {
   color: var(--color-text-secondary);
 }
 
-unicode-picker .clear-btn {
+unicode-picker .clear-button {
   position: absolute;
   right: var(--space-3);
   display: flex;
@@ -87,16 +87,16 @@ unicode-picker .clear-btn {
       var(--ease-out);
 }
 
-unicode-picker .clear-btn:disabled {
+unicode-picker .clear-button:disabled {
   opacity: 0;
   pointer-events: none;
 }
 
-unicode-picker .clear-btn:hover {
+unicode-picker .clear-button:hover {
   color: var(--color-text-primary);
 }
 
-unicode-picker .clear-btn svg {
+unicode-picker .clear-button svg {
   width: var(--icon-sm);
   height: var(--icon-sm);
 }

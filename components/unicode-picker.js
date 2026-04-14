@@ -15,7 +15,7 @@ export class UnicodePicker extends HTMLElement {
   #indexMap = new Map();
   #selectedIndex = -1;
   #input;
-  #clearBtn;
+  #clearButton;
   #status;
   #grid;
   #toast;
@@ -33,8 +33,8 @@ export class UnicodePicker extends HTMLElement {
     
     this.#input =
       this.querySelector("input");
-    this.#clearBtn =
-      this.querySelector(".clear-btn");
+    this.#clearButton =
+      this.querySelector(".clear-button");
     this.#status =
       this.querySelector(".status");
     this.#grid =
@@ -57,15 +57,15 @@ export class UnicodePicker extends HTMLElement {
       "input",
       () => {
         this.#search(this.#input.value);
-        this.#updateClearBtn();
+        this.#updateClearButton();
       },
     );
-    this.#clearBtn.addEventListener(
+    this.#clearButton.addEventListener(
       "click",
       () => {
         this.#input.value = "";
         this.#search("");
-        this.#updateClearBtn();
+        this.#updateClearButton();
         this.#input.focus();
       },
     );
@@ -87,12 +87,12 @@ export class UnicodePicker extends HTMLElement {
     this.#blocksNav.addEventListener(
       "click",
       event => {
-        const btn =
+        const button =
           event.target.closest("button");
-        if (!btn || btn.disabled) {
+        if (!button || button.disabled) {
           return;
         }
-        this.#activateBlock(btn);
+        this.#activateBlock(button);
       },
     );
     new KeyListener(this.#blocksNav)
@@ -111,20 +111,20 @@ export class UnicodePicker extends HTMLElement {
       "block-change",
       event => {
         const { startIndex } = event.detail;
-        for (const btn of
+        for (const button of
           this.#blocksNav.querySelectorAll(
             "button",
           )
         ) {
           const isCurrent =
-            parseInt(btn.dataset.index)
+            parseInt(button.dataset.index)
               === startIndex;
-          btn.setAttribute(
+          button.setAttribute(
             "aria-current",
             String(isCurrent),
           );
           if (isCurrent) {
-            this.#setRovingTab(btn);
+            this.#setRovingTab(button);
           }
         }
         this.#scrollBlockIntoView();
@@ -147,7 +147,7 @@ export class UnicodePicker extends HTMLElement {
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
       `${count} characters`;
-    this.#updateClearBtn();
+    this.#updateClearButton();
     this.#input.focus();
     this.#render();
     this.#scrollBlockIntoView();
@@ -181,19 +181,19 @@ export class UnicodePicker extends HTMLElement {
   }
   
   #buildBlocksNav() {
-    const frag = document.createDocumentFragment();
+    const fragment = document.createDocumentFragment();
     for (
       const [index, block] of
       this.#blocks.entries()
     ) {
-      const btn = document.createElement("button");
-      btn.textContent = block.name;
-      btn.dataset.index = block.startIndex;
-      btn.setAttribute("role", "option");
-      btn.tabIndex = index === 0 ? 0 : -1;
-      frag.appendChild(btn);
+      const button = document.createElement("button");
+      button.textContent = block.name;
+      button.dataset.index = block.startIndex;
+      button.setAttribute("role", "option");
+      button.tabIndex = index === 0 ? 0 : -1;
+      fragment.appendChild(button);
     }
-    this.#blocksNav.appendChild(frag);
+    this.#blocksNav.appendChild(fragment);
   }
   
   #updateBlocksDimming() {
@@ -202,8 +202,8 @@ export class UnicodePicker extends HTMLElement {
       this.#blocksNav.querySelectorAll("button");
     
     if (!query) {
-      for (const btn of buttons) {
-        btn.disabled = false;
+      for (const button of buttons) {
+        button.disabled = false;
       }
       return;
     }
@@ -215,7 +215,7 @@ export class UnicodePicker extends HTMLElement {
     );
     
     for (
-      const [blockIdx, btn] of
+      const [blockIdx, button] of
       buttons.entries()
     ) {
       const blockStart =
@@ -234,12 +234,12 @@ export class UnicodePicker extends HTMLElement {
           break;
         }
       }
-      btn.disabled = !hasMatch;
+      button.disabled = !hasMatch;
     }
   }
   
-  #updateClearBtn() {
-    this.#clearBtn.disabled =
+  #updateClearButton() {
+    this.#clearButton.disabled =
       this.#input.value.length === 0;
   }
   
@@ -402,12 +402,12 @@ export class UnicodePicker extends HTMLElement {
   }
   
   #clearActiveBlock() {
-    for (const btn of
+    for (const button of
       this.#blocksNav.querySelectorAll(
         "[aria-current='true']",
       )
     ) {
-      btn.removeAttribute("aria-current");
+      button.removeAttribute("aria-current");
     }
   }
   
@@ -421,23 +421,23 @@ export class UnicodePicker extends HTMLElement {
     }
   }
   
-  #activateBlock(btn) {
+  #activateBlock(button) {
     const index =
       this.#resolveBlockIndex(
-        parseInt(btn.dataset.index),
+        parseInt(button.dataset.index),
       );
     this.#grid.scrollToIndex(index);
     this.#select(index);
-    this.#setRovingTab(btn);
+    this.#setRovingTab(button);
   }
   
-  #setRovingTab(btn) {
+  #setRovingTab(button) {
     for (const other of
       this.#blocksNav.querySelectorAll("button")
     ) {
       other.tabIndex = -1;
     }
-    btn.tabIndex = 0;
+    button.tabIndex = 0;
   }
   
   #visibleNavButtons() {
@@ -457,24 +457,24 @@ export class UnicodePicker extends HTMLElement {
     const next =
       (idx + delta + buttons.length)
       % buttons.length;
-    const btn = buttons[next];
-    this.#activateBlock(btn);
-    btn.focus();
+    const button = buttons[next];
+    this.#activateBlock(button);
+    button.focus();
   }
   
   #focusNavStart() {
-    const btn = this.#visibleNavButtons()[0];
-    if (!btn) return;
-    this.#activateBlock(btn);
-    btn.focus();
+    const button = this.#visibleNavButtons()[0];
+    if (!button) return;
+    this.#activateBlock(button);
+    button.focus();
   }
   
   #focusNavEnd() {
-    const btn =
+    const button =
       this.#visibleNavButtons().at(-1);
-    if (!btn) return;
-    this.#activateBlock(btn);
-    btn.focus();
+    if (!button) return;
+    this.#activateBlock(button);
+    button.focus();
   }
   
   async #copyChar(entry) {
@@ -530,7 +530,7 @@ export class UnicodePicker extends HTMLElement {
     if (this.#input.value) {
       this.#input.value = "";
       this.#search("");
-      this.#updateClearBtn();
+      this.#updateClearButton();
     }
   }
 }
