@@ -233,7 +233,7 @@
 
 @layer base {
   body {
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     font-family: var(--font-ui);
     font-size: var(--text-sm);
