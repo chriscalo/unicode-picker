@@ -8,7 +8,9 @@ char-grid {
 
 char-grid .scroll-container {
   flex: 1;
-  padding: 0 var(--space-3) var(--space-3);
+  padding:
+    0 var(--space-3)
+    calc(var(--space-3) + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 

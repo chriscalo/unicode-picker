@@ -1,7 +1,9 @@
 unicode-picker {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   overflow: hidden;
   container-type: inline-size;
 }
@@ -12,7 +14,8 @@ unicode-picker .search-bar {
   flex-direction: column;
   gap: var(--space-2);
   padding:
-    var(--space-4) var(--space-4)
+    calc(var(--space-4) + env(safe-area-inset-top))
+    var(--space-4)
     var(--space-2);
   border-bottom:
     1px solid var(--color-border-subtle);
