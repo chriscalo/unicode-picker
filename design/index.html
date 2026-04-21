@@ -219,7 +219,20 @@
         left: 50%;
         transform: translate(-50%, -50%);
         margin: 0;
-        border: 2px solid var(--hc-bg);
+        border: 0;
+        width: 8px; height: 8px;
+      }
+      /* Dot color = whichever of near-white / near-black is
+         perceptually furthest from the swatch's L. Because paper
+         swatches render at step-3 and accent swatches at step-9,
+         and those step L values flip with theme, the dot color
+         follows the active theme's ink (step-12) for paper and
+         the active theme's bg (step-1) for accent. */
+      .swatch[data-role="paper"].is-preferred::before {
+        background: oklch(var(--step-12) 0 0);
+      }
+      .swatch[data-role="accent"].is-preferred::before {
+        background: oklch(var(--step-1) 0 0);
       }
       .seg button.is-preferred[aria-pressed="true"]::before,
       .swatch.is-preferred[aria-pressed="true"]::before {
@@ -295,6 +308,16 @@
         padding: 0;
         cursor: pointer;
         position: relative;
+      }
+      /* Theme-aware swatch backgrounds. --step-3 is tile surface,
+         --step-9 is solid accent; both flip L between themes, so
+         the preview matches how the chosen hue/chroma actually
+         renders in the current theme. */
+      .swatch[data-role="paper"] {
+        background: oklch(var(--step-3) var(--sw-c) var(--sw-h));
+      }
+      .swatch[data-role="accent"] {
+        background: oklch(var(--step-9) var(--sw-c) var(--sw-h));
       }
       .swatch[aria-pressed="true"]::after {
         content: "";
@@ -1144,45 +1167,45 @@
           help: "Paper / ink scale hue.",
           kind: "swatch-palette",
           options: [
-            ["warm",  "Warm",  "oklch(92% 0.018 30)"],
-            ["cream", "Cream", "oklch(92% 0.018 80)"],
-            ["sage",  "Sage",  "oklch(92% 0.015 140)"],
-            ["cool",  "Cool",  "oklch(92% 0.012 200)"],
-            ["blue",  "Blue",  "oklch(92% 0.012 260)"],
-            ["rose",  "Rose",  "oklch(92% 0.015 340)"],
+            ["warm",  "Warm",  { role: "paper", h:  30, c: 0.015 }],
+            ["cream", "Cream", { role: "paper", h:  80, c: 0.015 }],
+            ["sage",  "Sage",  { role: "paper", h: 140, c: 0.012 }],
+            ["cool",  "Cool",  { role: "paper", h: 200, c: 0.012 }],
+            ["blue",  "Blue",  { role: "paper", h: 260, c: 0.012 }],
+            ["rose",  "Rose",  { role: "paper", h: 340, c: 0.015 }],
           ],
           default: "cream" },
         { id: "primary-chroma", step: "surface", label: "Primary chroma",
           help: "How tinted the paper reads.",
           kind: "swatch-palette",
           options: [
-            ["none",     "None",     "oklch(92% 0 80)"],
-            ["subtle",   "Subtle",   "oklch(92% 0.008 80)", { preferred: true }],
-            ["moderate", "Moderate", "oklch(92% 0.018 80)"],
+            ["none",     "None",     { role: "paper", h: 80, c: 0 }],
+            ["subtle",   "Subtle",   { role: "paper", h: 80, c: 0.008 }, { preferred: true }],
+            ["moderate", "Moderate", { role: "paper", h: 80, c: 0.018 }],
           ],
           default: "subtle" },
         { id: "secondary-hue", step: "surface", label: "Secondary hue",
           help: "Accent scale hue.",
           kind: "swatch-palette",
           options: [
-            ["red",     "Red",     "oklch(60% 0.15 20)"],
-            ["orange",  "Orange",  "oklch(62% 0.14 45)"],
-            ["yellow",  "Yellow",  "oklch(70% 0.13 90)"],
-            ["green",   "Green",   "oklch(58% 0.13 150)"],
-            ["teal",    "Teal",    "oklch(58% 0.10 195)"],
-            ["blue",    "Blue",    "oklch(55% 0.16 250)"],
-            ["violet",  "Violet",  "oklch(55% 0.16 285)"],
-            ["magenta", "Magenta", "oklch(58% 0.15 340)"],
+            ["red",     "Red",     { role: "accent", h:  20, c: 0.13 }],
+            ["orange",  "Orange",  { role: "accent", h:  45, c: 0.13 }],
+            ["yellow",  "Yellow",  { role: "accent", h:  90, c: 0.12 }],
+            ["green",   "Green",   { role: "accent", h: 150, c: 0.12 }],
+            ["teal",    "Teal",    { role: "accent", h: 195, c: 0.10 }],
+            ["blue",    "Blue",    { role: "accent", h: 250, c: 0.14 }],
+            ["violet",  "Violet",  { role: "accent", h: 285, c: 0.14 }],
+            ["magenta", "Magenta", { role: "accent", h: 340, c: 0.13 }],
           ],
           default: "green" },
         { id: "secondary-chroma", step: "surface", label: "Secondary chroma",
           help: "How saturated the accent reads.",
           kind: "swatch-palette",
           options: [
-            ["none",   "None",   "oklch(58% 0 160)"],
-            ["low",    "Low",    "oklch(58% 0.050 160)"],
-            ["medium", "Medium", "oklch(58% 0.100 160)", { preferred: true }],
-            ["high",   "High",   "oklch(58% 0.150 160)"],
+            ["none",   "None",   { role: "accent", h: 160, c: 0 }],
+            ["low",    "Low",    { role: "accent", h: 160, c: 0.050 }],
+            ["medium", "Medium", { role: "accent", h: 160, c: 0.100 }, { preferred: true }],
+            ["high",   "High",   { role: "accent", h: 160, c: 0.150 }],
           ],
           default: "medium" },
       ];
@@ -1274,7 +1297,7 @@
               <span class="control__label">${d.label}</span>
               <div class="swatches">
                 ${d.options.map(opt => {
-                  const [val, lbl, color] = opt;
+                  const [val, lbl, spec] = opt;
                   const meta = opt[3] || {};
                   const pressed = state[d.id] === val;
                   const cls = [
@@ -1289,14 +1312,24 @@
                       ? `(rejected${meta.reason ? ": " + meta.reason : ""})`
                       : "",
                   ].filter(Boolean).join(" ");
-                  const style = color
-                    ? `background:${color};`
-                    : "background:repeating-linear-gradient(45deg,#ddd 0 4px,#fff 4px 8px);";
+                  /* spec is either { role, h, c } (theme-aware,
+                     uses --step-3 or --step-9 for L) or a raw
+                     color string (fallback for legacy options). */
+                  let dataRole = "";
+                  let style = "";
+                  if (spec && typeof spec === "object") {
+                    dataRole = ` data-role="${spec.role}"`;
+                    style = `--sw-h:${spec.h};--sw-c:${spec.c};`;
+                  } else if (spec) {
+                    style = `background:${spec};`;
+                  } else {
+                    style = "background:repeating-linear-gradient(45deg,#ddd 0 4px,#fff 4px 8px);";
+                  }
                   return `
                     <button class="${cls}"
                             data-value="${val}"
                             aria-pressed="${pressed}"
-                            title="${title}"
+                            title="${title}"${dataRole}
                             style="${style}"></button>
                   `;
                 }).join("")}
