@@ -327,18 +327,12 @@
       }
 
       /* ═══════════════════════════════════════════════════════════
-         Grayscale mode — single toggle strips color + distinctive fonts
-         so Structure and Form can be judged cleanly.
+         Grayscale — desaturate color only. Doesn't touch fonts or
+         any other decision: the whole stage renders through a CSS
+         filter so picks stay intact and the toggle is reversible.
          ═══════════════════════════════════════════════════════════ */
       html[data-grayscale="on"] .stage {
         filter: grayscale(1);
-      }
-      html[data-grayscale="on"] .stage unicode-picker,
-      html[data-grayscale="on"] .stage char-grid {
-        --font-ui:
-          "IBM Plex Sans", -apple-system, system-ui, sans-serif !important;
-        --font-glyph:
-          "Iowan Old Style", "Palatino", "Georgia", serif !important;
       }
 
       /* ═══════════════════════════════════════════════════════════
