@@ -976,10 +976,6 @@
         <button data-width="768">768</button>
         <button data-width="375">375</button>
       </div>
-      <div class="seg" role="group" aria-label="Theme">
-        <button data-theme="light" aria-pressed="true">Light</button>
-        <button data-theme="dark">Dark</button>
-      </div>
       <button class="viewer-bar__btn" id="reset-btn"
               title="Reset every decision to defaults">
         Reset
@@ -1392,32 +1388,6 @@
             ),
           );
         });
-      });
-
-      document.querySelectorAll('.seg [data-theme]').forEach(btn => {
-        btn.addEventListener("click", () => {
-          const t = btn.dataset.theme;
-          html.setAttribute("data-theme", t);
-          try { localStorage.setItem("unicode-picker-theme", t); }
-          catch (e) {}
-          document.querySelectorAll('[data-theme]').forEach(b => {
-            if (b.hasAttribute("data-theme") && b.tagName === "BUTTON") {
-              b.setAttribute(
-                "aria-pressed", b === btn ? "true" : "false",
-              );
-            }
-          });
-        });
-      });
-      // Sync theme buttons to current
-      const curTheme = html.getAttribute("data-theme") || "light";
-      document.querySelectorAll('.seg [data-theme]').forEach(b => {
-        if (b.tagName === "BUTTON") {
-          b.setAttribute(
-            "aria-pressed",
-            b.dataset.theme === curTheme ? "true" : "false",
-          );
-        }
       });
 
       document.getElementById("reset-btn").addEventListener("click", () => {
