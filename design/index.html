@@ -726,162 +726,143 @@
         --font-glyph: "Space Mono", ui-monospace, monospace;
       }
 
-      /* 3. Palette presets — perceptually uniform in OKLCH.
-         Every palette shares the same role-level Lightness values
-         (--L-*) and only declares neutral hue+chroma and accent
-         hue+chroma. Because all palettes agree on L per role, the
-         grayscale filter collapses them to identical grays —
-         meaning the perceived contrast between backgrounds, text,
-         borders, and accents is consistent no matter which palette
-         is active, and grayscale mode honors that contrast. */
+      /* 3. Palettes — each palette is just four numbers:
+              primary-hue,  primary-chroma   (paper/ink scale)
+              secondary-hue, secondary-chroma (accent scale)
+
+         The 12 step lightnesses and every semantic mapping live
+         in style.css. Changing palette swaps colors; nothing
+         else shifts. Because step L values are fixed across all
+         palettes, grayscale mode collapses every palette to the
+         same greys — the contrast hierarchy stays constant.
+
+         NOTE: CSS custom properties with var() references
+         resolve at the DECLARING element's context, not the
+         consumer's. The scales at :root read :root's default
+         hue/chroma, so palette overrides on unicode-picker
+         wouldn't propagate. To fix: re-declare the 24 scale
+         tokens on unicode-picker here so they substitute against
+         the palette-aware hue/chroma, and the downstream
+         semantic tokens (still declared at :root, but inherited
+         to unicode-picker) resolve against these overrides. */
       unicode-picker {
-        /* Light-mode L for each role */
-        --L-bg-base:        97%;
-        --L-bg-raised:      94%;
-        --L-bg-surface:     88%;
-        --L-bg-hover:       84%;
-        --L-bg-selected:    84%;
-        --L-input-bg:       97%;
-        --L-text-primary:   18%;
-        --L-text-secondary: 45%;
-        --L-text-tertiary:  62%;
-        --L-border-subtle:  82%;
-        --L-border-strong:  50%;
-        --L-accent:         48%;
-        --L-accent-subtle:  91%;
-        --L-accent-text:    98%;
-        --glyph-bg-alpha:   0.05;
+        /* Phase 1 — re-derive scales from palette-overridden
+           hue/chroma. */
+        --primary-1:   oklch(var(--step-1)  var(--primary-chroma) var(--primary-hue));
+        --primary-2:   oklch(var(--step-2)  var(--primary-chroma) var(--primary-hue));
+        --primary-3:   oklch(var(--step-3)  var(--primary-chroma) var(--primary-hue));
+        --primary-4:   oklch(var(--step-4)  var(--primary-chroma) var(--primary-hue));
+        --primary-5:   oklch(var(--step-5)  var(--primary-chroma) var(--primary-hue));
+        --primary-6:   oklch(var(--step-6)  var(--primary-chroma) var(--primary-hue));
+        --primary-7:   oklch(var(--step-7)  var(--primary-chroma) var(--primary-hue));
+        --primary-8:   oklch(var(--step-8)  var(--primary-chroma) var(--primary-hue));
+        --primary-9:   oklch(var(--step-9)  var(--primary-chroma) var(--primary-hue));
+        --primary-10:  oklch(var(--step-10) var(--primary-chroma) var(--primary-hue));
+        --primary-11:  oklch(var(--step-11) var(--primary-chroma) var(--primary-hue));
+        --primary-12:  oklch(var(--step-12) var(--primary-chroma) var(--primary-hue));
 
-        /* Default palette hue + chroma (teal-green). Each palette
-           overrides these four numbers; nothing else. */
-        --neutral-hue:    162;
-        --neutral-chroma: 0.010;
-        --accent-hue:     162;
-        --accent-chroma:  0.06;
-      }
-      html[data-theme="dark"] unicode-picker {
-        --L-bg-base:        11%;
-        --L-bg-raised:      16%;
-        --L-bg-surface:     22%;
-        --L-bg-hover:       27%;
-        --L-bg-selected:    27%;
-        --L-input-bg:       14%;
-        --L-text-primary:   92%;
-        --L-text-secondary: 65%;
-        --L-text-tertiary:  50%;
-        --L-border-subtle:  22%;
-        --L-border-strong:  50%;
-        --L-accent:         72%;
-        --L-accent-subtle:  30%;
-        --L-accent-text:    12%;
+        --secondary-1:  oklch(var(--step-1)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-2:  oklch(var(--step-2)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-3:  oklch(var(--step-3)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-4:  oklch(var(--step-4)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-5:  oklch(var(--step-5)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-6:  oklch(var(--step-6)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-7:  oklch(var(--step-7)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-8:  oklch(var(--step-8)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-9:  oklch(var(--step-9)  var(--secondary-chroma) var(--secondary-hue));
+        --secondary-10: oklch(var(--step-10) var(--secondary-chroma) var(--secondary-hue));
+        --secondary-11: oklch(var(--step-11) var(--secondary-chroma) var(--secondary-hue));
+        --secondary-12: oklch(var(--step-12) var(--secondary-chroma) var(--secondary-hue));
+
+        /* Phase 2 — re-map semantic tokens to the re-derived
+           scales. Duplicated from style.css so palette overrides
+           cascade (semantic tokens declared at :root would have
+           been computed against :root's default scales and then
+           inherited as fixed values). */
+        --color-bg-base:        var(--primary-1);
+        --color-bg-raised:      var(--primary-2);
+        --color-bg-surface:     var(--primary-3);
+        --color-bg-hover:       var(--primary-4);
+        --color-input-bg:       var(--primary-3);
+        --color-text-primary:   var(--primary-12);
+        --color-text-secondary: var(--primary-11);
+        --color-text-tertiary:  var(--primary-9);
+        --color-border-subtle:  var(--primary-5);
+        --color-border-strong:  var(--primary-7);
+        --color-accent:         var(--secondary-9);
+        --color-accent-subtle:  var(--secondary-3);
+        --color-accent-text:    var(--primary-1);
+        --color-focus:
+          color-mix(in oklab,
+            var(--color-accent),
+            transparent 55%);
+        --color-success:        var(--color-accent);
+        --color-success-text:   var(--color-accent-text);
+        --color-glyph-bg:
+          color-mix(in oklab,
+            var(--color-text-primary) 12%,
+            transparent);
+        --color-toggle-track:   var(--primary-3);
+        --color-toggle-thumb:   var(--primary-9);
+        --color-toggle-icon:    var(--primary-1);
       }
 
-      /* Per-palette parameters. Chroma is kept low so paper + ink
-         read as refined rather than saturated; accents top out at
-         ~0.14 for the boldest palettes, most land 0.07–0.10.
-         Neutrals stay ≤ 0.015 so the paper tint is perceptible but
-         never reads as a color wash. */
       html[data-palette="typewriter"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.012;
-        --accent-hue:   30; --accent-chroma:  0.08;
+        --primary-hue: 75;   --primary-chroma:   0.012;
+        --secondary-hue: 30; --secondary-chroma: 0.08;
       }
       html[data-palette="classical"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.015;
-        --accent-hue:   28; --accent-chroma:  0.08;
+        --primary-hue: 80;   --primary-chroma:   0.015;
+        --secondary-hue: 28; --secondary-chroma: 0.08;
       }
       html[data-palette="specimen"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.010;
-        --accent-hue:   35; --accent-chroma:  0.10;
+        --primary-hue: 80;   --primary-chroma:   0.010;
+        --secondary-hue: 35; --secondary-chroma: 0.10;
       }
       html[data-palette="scientific"] unicode-picker {
-        --neutral-hue: 105; --neutral-chroma: 0.008;
-        --accent-hue:  180; --accent-chroma:  0.07;
+        --primary-hue: 105;   --primary-chroma:   0.008;
+        --secondary-hue: 180; --secondary-chroma: 0.07;
       }
       html[data-palette="museum"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.010;
-        --accent-hue:   32; --accent-chroma:  0.09;
+        --primary-hue: 75;   --primary-chroma:   0.010;
+        --secondary-hue: 32; --secondary-chroma: 0.09;
       }
       html[data-palette="swiss"] unicode-picker {
-        --neutral-hue: 260; --neutral-chroma: 0.003;
-        --accent-hue:  263; --accent-chroma:  0.14;
+        --primary-hue: 260;   --primary-chroma:   0.003;
+        --secondary-hue: 263; --secondary-chroma: 0.14;
       }
       html[data-palette="poster"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.010;
-        --accent-hue:   30; --accent-chroma:  0.13;
+        --primary-hue: 80;   --primary-chroma:   0.010;
+        --secondary-hue: 30; --secondary-chroma: 0.13;
       }
       html[data-palette="art-object"] unicode-picker {
-        --neutral-hue: 110; --neutral-chroma: 0.012;
-        --accent-hue:    0; --accent-chroma:  0.13;
+        --primary-hue: 110; --primary-chroma:   0.012;
+        --secondary-hue: 0; --secondary-chroma: 0.13;
       }
       html[data-palette="digital"] unicode-picker {
-        --neutral-hue: 260; --neutral-chroma: 0.005;
-        --accent-hue:  290; --accent-chroma:  0.15;
+        --primary-hue: 260;   --primary-chroma:   0.005;
+        --secondary-hue: 290; --secondary-chroma: 0.15;
       }
       html[data-palette="archive"] unicode-picker {
-        --neutral-hue:  85; --neutral-chroma: 0.015;
-        --accent-hue:   32; --accent-chroma:  0.08;
+        --primary-hue: 85;   --primary-chroma:   0.015;
+        --secondary-hue: 32; --secondary-chroma: 0.08;
       }
       html[data-palette="global"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.012;
-        --accent-hue:   25; --accent-chroma:  0.09;
+        --primary-hue: 75;   --primary-chroma:   0.012;
+        --secondary-hue: 25; --secondary-chroma: 0.09;
       }
 
-      /* Accent overrides — hue + chroma only; L stays fixed at
-         --L-accent so the override can never break the contrast
-         hierarchy the palette already established. Capped at ~0.14. */
-      html[data-accent="cobalt"][data-accent]     unicode-picker { --accent-hue: 263; --accent-chroma: 0.13; }
-      html[data-accent="forest"][data-accent]     unicode-picker { --accent-hue: 145; --accent-chroma: 0.08; }
-      html[data-accent="oxblood"][data-accent]    unicode-picker { --accent-hue:  20; --accent-chroma: 0.09; }
-      html[data-accent="ochre"][data-accent]      unicode-picker { --accent-hue:  65; --accent-chroma: 0.08; }
-      html[data-accent="plum"][data-accent]       unicode-picker { --accent-hue: 340; --accent-chroma: 0.10; }
-      html[data-accent="teal"][data-accent]       unicode-picker { --accent-hue: 195; --accent-chroma: 0.07; }
-      html[data-accent="graphite"][data-accent]   unicode-picker { --accent-hue: 260; --accent-chroma: 0.003; }
-      html[data-accent="vermillion"][data-accent] unicode-picker { --accent-hue:  30; --accent-chroma: 0.14; }
-
-      /* Semantic tokens — resolved at use time from the current L,
-         hue, and chroma cascade. This block is what actually drives
-         every visual token in the picker. */
-      unicode-picker {
-        --color-bg-base:
-          oklch(var(--L-bg-base) var(--neutral-chroma) var(--neutral-hue));
-        --color-bg-raised:
-          oklch(var(--L-bg-raised) var(--neutral-chroma) var(--neutral-hue));
-        --color-bg-surface:
-          oklch(var(--L-bg-surface) var(--neutral-chroma) var(--neutral-hue));
-        --color-bg-hover:
-          oklch(var(--L-bg-hover) var(--neutral-chroma) var(--neutral-hue));
-        --color-input-bg:
-          oklch(var(--L-input-bg) var(--neutral-chroma) var(--neutral-hue));
-        --color-text-primary:
-          oklch(var(--L-text-primary) var(--neutral-chroma) var(--neutral-hue));
-        --color-text-secondary:
-          oklch(var(--L-text-secondary) var(--neutral-chroma) var(--neutral-hue));
-        --color-text-tertiary:
-          oklch(var(--L-text-tertiary) var(--neutral-chroma) var(--neutral-hue));
-        --color-border-subtle:
-          oklch(var(--L-border-subtle) var(--neutral-chroma) var(--neutral-hue));
-        --color-border-strong:
-          oklch(var(--L-border-strong) var(--neutral-chroma) var(--neutral-hue));
-        --color-accent:
-          oklch(var(--L-accent) var(--accent-chroma) var(--accent-hue));
-        --color-accent-text:
-          oklch(var(--L-accent-text) 0 0);
-        --color-accent-subtle:
-          color-mix(in oklab,
-            var(--color-accent) 32%,
-            var(--color-bg-base));
-        --color-glyph-bg:
-          oklch(var(--L-text-primary) 0 0 / var(--glyph-bg-alpha));
-
-        /* Chrome tokens derive from the semantic palette — so the
-           theme toggle and focus ring always follow the active
-           palette and accent, never the original seed scale. */
-        --color-toggle-track: var(--color-bg-surface);
-        --color-toggle-thumb: var(--color-accent);
-        --color-toggle-icon:  var(--color-accent-text);
-        --color-focus:
-          color-mix(in oklab, var(--color-accent), transparent 55%);
-      }
+      /* Accent override — replaces secondary hue + chroma only.
+         Step L values stay fixed, so swapping the accent can
+         never break the contrast hierarchy the palette set up. */
+      html[data-accent="cobalt"][data-accent]     unicode-picker { --secondary-hue: 263; --secondary-chroma: 0.13; }
+      html[data-accent="forest"][data-accent]     unicode-picker { --secondary-hue: 145; --secondary-chroma: 0.08; }
+      html[data-accent="oxblood"][data-accent]    unicode-picker { --secondary-hue:  20; --secondary-chroma: 0.09; }
+      html[data-accent="ochre"][data-accent]      unicode-picker { --secondary-hue:  65; --secondary-chroma: 0.08; }
+      html[data-accent="plum"][data-accent]       unicode-picker { --secondary-hue: 340; --secondary-chroma: 0.10; }
+      html[data-accent="teal"][data-accent]       unicode-picker { --secondary-hue: 195; --secondary-chroma: 0.07; }
+      html[data-accent="graphite"][data-accent]   unicode-picker { --secondary-hue: 260; --secondary-chroma: 0.003; }
+      html[data-accent="vermillion"][data-accent] unicode-picker { --secondary-hue:  30; --secondary-chroma: 0.14; }
     </style>
   </head>
 

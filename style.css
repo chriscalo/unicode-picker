@@ -10,139 +10,118 @@
 
 @layer tokens {
   :root {
-    /* Seed color and chroma easing power */
-    --color-seed: oklch(0.50 0.07 162);
-    --chroma-power: 0.5;
+    /*
+     * ═══ Phase 1: Scales ════════════════════════════════════
+     *
+     * Two scales — primary (neutral paper/ink) and secondary
+     * (accent). Each scale is defined by (hue, chroma) plus
+     * 12 fixed lightness steps shared across both scales.
+     *
+     * To rebrand: change the four scale parameters below.
+     * Nothing else. Steps, semantics, and theme inversion are
+     * scale-agnostic.
+     *
+     * Steps are ordered 1 = farthest from content, 12 = closest.
+     * Step L values invert in [data-theme="light"] so step 1 is
+     * always "app background" and step 12 is always "highest
+     * contrast text" regardless of theme.
+     */
+
+    --primary-hue:      162;
+    --primary-chroma:   0.010;
+    --secondary-hue:    162;
+    --secondary-chroma: 0.070;
+
+    /* Step lightnesses — dark theme (default). Light theme
+       re-sets these by inverting step indices. */
+    --step-1:   10%;  /* app bg */
+    --step-2:   14%;  /* raised panel */
+    --step-3:   20%;  /* surface / input bg */
+    --step-4:   26%;  /* hover */
+    --step-5:   32%;  /* subtle border */
+    --step-6:   40%;
+    --step-7:   50%;  /* strong border */
+    --step-8:   62%;
+    --step-9:   72%;  /* solid accent / tertiary text */
+    --step-10:  80%;
+    --step-11:  88%;  /* secondary text */
+    --step-12:  95%;  /* primary text */
+
+    --primary-1:   oklch(var(--step-1)  var(--primary-chroma) var(--primary-hue));
+    --primary-2:   oklch(var(--step-2)  var(--primary-chroma) var(--primary-hue));
+    --primary-3:   oklch(var(--step-3)  var(--primary-chroma) var(--primary-hue));
+    --primary-4:   oklch(var(--step-4)  var(--primary-chroma) var(--primary-hue));
+    --primary-5:   oklch(var(--step-5)  var(--primary-chroma) var(--primary-hue));
+    --primary-6:   oklch(var(--step-6)  var(--primary-chroma) var(--primary-hue));
+    --primary-7:   oklch(var(--step-7)  var(--primary-chroma) var(--primary-hue));
+    --primary-8:   oklch(var(--step-8)  var(--primary-chroma) var(--primary-hue));
+    --primary-9:   oklch(var(--step-9)  var(--primary-chroma) var(--primary-hue));
+    --primary-10:  oklch(var(--step-10) var(--primary-chroma) var(--primary-hue));
+    --primary-11:  oklch(var(--step-11) var(--primary-chroma) var(--primary-hue));
+    --primary-12:  oklch(var(--step-12) var(--primary-chroma) var(--primary-hue));
+
+    --secondary-1:  oklch(var(--step-1)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-2:  oklch(var(--step-2)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-3:  oklch(var(--step-3)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-4:  oklch(var(--step-4)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-5:  oklch(var(--step-5)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-6:  oklch(var(--step-6)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-7:  oklch(var(--step-7)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-8:  oklch(var(--step-8)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-9:  oklch(var(--step-9)  var(--secondary-chroma) var(--secondary-hue));
+    --secondary-10: oklch(var(--step-10) var(--secondary-chroma) var(--secondary-hue));
+    --secondary-11: oklch(var(--step-11) var(--secondary-chroma) var(--secondary-hue));
+    --secondary-12: oklch(var(--step-12) var(--secondary-chroma) var(--secondary-hue));
 
     /*
-     * Color scale — 21 tokens: steps of 5 from 00 (black)
-     * to 95, plus a final 99 (near-white) endpoint.
-     * Each step sets lightness and eases chroma via:
-     *   oklch(from seed <L> calc(c * pow(<base>, power)) h)
-     * where base is 0 at extremes, 1 at step 50.
+     * ═══ Phase 2: Semantic mapping ══════════════════════════
+     *
+     * Each UI role chooses primary-or-secondary + a step.
+     * Changing scales changes the rendered colors; the semantic
+     * mapping stays constant.
      */
-    --color-00: oklch(
-      from var(--color-seed) 0%
-      calc(c * pow(0.00, var(--chroma-power))) h
-    );
-    --color-05: oklch(
-      from var(--color-seed) 5%
-      calc(c * pow(0.10, var(--chroma-power))) h
-    );
-    --color-10: oklch(
-      from var(--color-seed) 10%
-      calc(c * pow(0.20, var(--chroma-power))) h
-    );
-    --color-15: oklch(
-      from var(--color-seed) 15%
-      calc(c * pow(0.30, var(--chroma-power))) h
-    );
-    --color-20: oklch(
-      from var(--color-seed) 20%
-      calc(c * pow(0.40, var(--chroma-power))) h
-    );
-    --color-25: oklch(
-      from var(--color-seed) 25%
-      calc(c * pow(0.50, var(--chroma-power))) h
-    );
-    --color-30: oklch(
-      from var(--color-seed) 30%
-      calc(c * pow(0.60, var(--chroma-power))) h
-    );
-    --color-35: oklch(
-      from var(--color-seed) 35%
-      calc(c * pow(0.70, var(--chroma-power))) h
-    );
-    --color-40: oklch(
-      from var(--color-seed) 40%
-      calc(c * pow(0.80, var(--chroma-power))) h
-    );
-    --color-45: oklch(
-      from var(--color-seed) 45%
-      calc(c * pow(0.90, var(--chroma-power))) h
-    );
-    --color-50: oklch(
-      from var(--color-seed) 50%
-      calc(c * pow(1.00, var(--chroma-power))) h
-    );
-    --color-55: oklch(
-      from var(--color-seed) 55%
-      calc(c * pow(0.90, var(--chroma-power))) h
-    );
-    --color-60: oklch(
-      from var(--color-seed) 60%
-      calc(c * pow(0.80, var(--chroma-power))) h
-    );
-    --color-65: oklch(
-      from var(--color-seed) 65%
-      calc(c * pow(0.70, var(--chroma-power))) h
-    );
-    --color-70: oklch(
-      from var(--color-seed) 70%
-      calc(c * pow(0.60, var(--chroma-power))) h
-    );
-    --color-75: oklch(
-      from var(--color-seed) 75%
-      calc(c * pow(0.50, var(--chroma-power))) h
-    );
-    --color-80: oklch(
-      from var(--color-seed) 80%
-      calc(c * pow(0.40, var(--chroma-power))) h
-    );
-    --color-85: oklch(
-      from var(--color-seed) 85%
-      calc(c * pow(0.30, var(--chroma-power))) h
-    );
-    --color-90: oklch(
-      from var(--color-seed) 90%
-      calc(c * pow(0.20, var(--chroma-power))) h
-    );
-    --color-95: oklch(
-      from var(--color-seed) 95%
-      calc(c * pow(0.10, var(--chroma-power))) h
-    );
-    --color-99: oklch(
-      from var(--color-seed) 99%
-      calc(c * pow(0.00, var(--chroma-power))) h
-    );
-
-    /* — Semantic tokens (dark theme, default) — */
 
     /* Backgrounds */
-    --color-bg-base:            var(--color-10);
-    --color-bg-raised:          var(--color-15);
-    --color-bg-surface:         var(--color-20);
-    --color-bg-hover:           var(--color-25);
-
-    /* Component backgrounds */
-    --color-input-bg:           var(--color-25);
-    --color-toggle-track:       var(--color-25);
-    --color-toggle-thumb:       var(--color-55);
-    --color-toggle-icon:        var(--color-15);
+    --color-bg-base:        var(--primary-1);
+    --color-bg-raised:      var(--primary-2);
+    --color-bg-surface:     var(--primary-3);
+    --color-bg-hover:       var(--primary-4);
+    --color-input-bg:       var(--primary-3);
 
     /* Text */
-    --color-text-primary:       var(--color-90);
-    --color-text-secondary:     var(--color-70);
-    --color-text-tertiary:      var(--color-55);
+    --color-text-primary:   var(--primary-12);
+    --color-text-secondary: var(--primary-11);
+    --color-text-tertiary:  var(--primary-9);
 
     /* Borders */
-    --color-border-subtle:      var(--color-30);
-    --color-border-strong:      var(--color-40);
+    --color-border-subtle:  var(--primary-5);
+    --color-border-strong:  var(--primary-7);
 
     /* Accent */
-    --color-accent:             var(--color-65);
-    --color-accent-subtle:      oklch(from var(--color-65) l c h / 0.15);
-    --color-accent-text:        var(--color-10);
+    --color-accent:         var(--secondary-9);
+    --color-accent-subtle:  var(--secondary-3);
+    --color-accent-text:    var(--primary-1);
 
-    /* Focus */
-    --color-focus:              oklch(from var(--color-65) l c h / 0.5);
+    /* Focus ring — accent at reduced opacity */
+    --color-focus:
+      color-mix(in oklab,
+        var(--color-accent),
+        transparent 55%);
 
     /* Success (aliases accent) */
-    --color-success:            var(--color-accent);
-    --color-success-text:       var(--color-accent-text);
+    --color-success:        var(--color-accent);
+    --color-success-text:   var(--color-accent-text);
 
-    /* Glyph */
-    --color-glyph-bg:           oklch(from var(--color-90) l c h / 0.12);
+    /* Glyph panel — subtle contrast layer over any bg */
+    --color-glyph-bg:
+      color-mix(in oklab,
+        var(--color-text-primary) 12%,
+        transparent);
+
+    /* Component-specific */
+    --color-toggle-track:   var(--primary-3);
+    --color-toggle-thumb:   var(--primary-9);
+    --color-toggle-icon:    var(--primary-1);
 
     color-scheme: dark;
 
@@ -196,32 +175,22 @@
       cubic-bezier(0.77, 0, 0.175, 1);
   }
 
-  /* — Semantic tokens (light theme) — */
+  /* Light theme — invert step indices so step 1 is still
+     "app background" (just now a light color) and step 12 is
+     still "highest contrast text". Semantic tokens don't move. */
   [data-theme="light"] {
-    --color-bg-base:            var(--color-99);
-    --color-bg-raised:          var(--color-95);
-    --color-bg-surface:         var(--color-90);
-    --color-bg-hover:           var(--color-85);
-
-    --color-input-bg:           var(--color-85);
-    --color-toggle-track:       var(--color-85);
-    --color-toggle-thumb:       var(--color-55);
-    --color-toggle-icon:        var(--color-95);
-
-    --color-text-primary:       var(--color-10);
-    --color-text-secondary:     var(--color-35);
-    --color-text-tertiary:      var(--color-50);
-
-    --color-border-subtle:      var(--color-80);
-    --color-border-strong:      var(--color-65);
-
-    --color-accent:             var(--color-40);
-    --color-accent-subtle:      oklch(from var(--color-40) l c h / 0.12);
-    --color-accent-text:        var(--color-95);
-
-    --color-focus:              oklch(from var(--color-40) l c h / 0.45);
-
-    --color-glyph-bg:           oklch(from var(--color-15) l c h / 0.07);
+    --step-1:   99%;
+    --step-2:   96%;
+    --step-3:   92%;
+    --step-4:   88%;
+    --step-5:   82%;
+    --step-6:   72%;
+    --step-7:   58%;
+    --step-8:   46%;
+    --step-9:   38%;
+    --step-10:  28%;
+    --step-11:  20%;
+    --step-12:  12%;
 
     color-scheme: light;
   }
