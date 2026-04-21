@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1,
+                   viewport-fit=cover" />
+    <title>Unicode Picker — Design Prototype</title>
+
+    <!-- Google Fonts for the Surface-phase typeface options -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,700;1,6..72,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" />
+
+    <!-- Real application stylesheets & theme bootstrap (unchanged) -->
+    <link rel="stylesheet" href="./noto-fonts.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <script>
+      (function () {
+        let saved;
+        try {
+          saved = localStorage.getItem("unicode-picker-theme");
+        } catch (e) {}
+        const theme = saved ||
+          (matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark" : "light");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+
+    <style>
+      /* ═══════════════════════════════════════════════════════════
+         Design harness chrome
+         ═══════════════════════════════════════════════════════════ */
+      :root {
+        --hc-bg:    #fff;
+        --hc-bg-2:  #fafaf7;
+        --hc-ink:   #1a1a1a;
+        --hc-ink-60: rgba(26, 26, 26, 0.60);
+        --hc-ink-40: rgba(26, 26, 26, 0.40);
+        --hc-ink-12: rgba(26, 26, 26, 0.12);
+        --hc-ink-06: rgba(26, 26, 26, 0.06);
+        --hc-sans:
+          "IBM Plex Sans", -apple-system, system-ui, sans-serif;
+        --hc-mono:
+          "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      html[data-theme="dark"] .harness {
+        --hc-bg:    #181818;
+        --hc-bg-2:  #111;
+        --hc-ink:   #eee;
+        --hc-ink-60: rgba(238, 238, 238, 0.60);
+        --hc-ink-40: rgba(238, 238, 238, 0.40);
+        --hc-ink-12: rgba(238, 238, 238, 0.12);
+        --hc-ink-06: rgba(238, 238, 238, 0.06);
+      }
+
+      /* Harness layout. The picker lives in a stage below. */
+      body {
+        height: 100dvh;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto auto auto 1fr;
+      }
+      .harness {
+        font-family: var(--hc-sans);
+        font-size: 13px;
+        color: var(--hc-ink);
+        background: var(--hc-bg);
+        border-bottom: 1px solid var(--hc-ink-12);
+      }
+      .harness + .harness { border-top: 0; }
+
+      /* Viewer bar */
+      .viewer-bar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 18px;
+        flex-wrap: wrap;
+      }
+      .viewer-bar__title {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .viewer-bar__sub {
+        font-size: 11px;
+        color: var(--hc-ink-60);
+        flex: 1;
+      }
+      .viewer-bar__btn {
+        appearance: none;
+        font: inherit;
+        font-size: 11px;
+        padding: 5px 10px;
+        border: 1px solid var(--hc-ink-12);
+        border-radius: 4px;
+        color: var(--hc-ink-60);
+        background: var(--hc-bg);
+        cursor: pointer;
+      }
+      .viewer-bar__btn:hover {
+        color: var(--hc-ink);
+        background: var(--hc-ink-06);
+      }
+      .viewer-bar__btn[aria-pressed="true"] {
+        background: var(--hc-ink);
+        color: var(--hc-bg);
+        border-color: var(--hc-ink);
+      }
+
+      /* Step tabs */
+      .step-tabs {
+        display: flex;
+        padding: 0 18px;
+        background: var(--hc-bg);
+        border-bottom: 1px solid var(--hc-ink-12);
+      }
+      .step-tab {
+        appearance: none;
+        font: inherit;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        padding: 12px 16px;
+        background: none;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        color: var(--hc-ink-60);
+        cursor: pointer;
+      }
+      .step-tab:hover { color: var(--hc-ink); }
+      .step-tab[aria-current="true"] {
+        color: var(--hc-ink);
+        border-bottom-color: var(--hc-ink);
+      }
+      .step-tab__num {
+        font-family: var(--hc-mono);
+        font-size: 11px;
+        color: var(--hc-ink-40);
+        font-variant-numeric: tabular-nums;
+      }
+      .step-tab[aria-current="true"] .step-tab__num {
+        color: var(--hc-ink);
+      }
+      .step-tab__label { font-weight: 500; font-size: 13px; }
+      .step-tab__sub {
+        font-size: 11px;
+        color: var(--hc-ink-40);
+        margin-left: 2px;
+      }
+
+      /* Control bar */
+      .control-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 20px;
+        padding: 14px 18px;
+        background: var(--hc-bg-2);
+      }
+      html[data-theme="dark"] .control-bar { background: #0e0e0e; }
+
+      .control {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+      .control__label {
+        font-size: 9.5px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--hc-ink-60);
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--hc-ink-12);
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--hc-bg);
+      }
+      .seg button {
+        appearance: none;
+        font: inherit;
+        font-size: 11px;
+        padding: 5px 10px;
+        background: transparent;
+        border: 0;
+        border-right: 1px solid var(--hc-ink-12);
+        color: var(--hc-ink-60);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .seg button:last-child { border-right: 0; }
+      .seg button:hover {
+        color: var(--hc-ink);
+        background: var(--hc-ink-06);
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--hc-ink);
+        color: var(--hc-bg);
+      }
+      /* Preferred marker — filled dot next to the option label */
+      .seg button.is-preferred::before,
+      .swatch.is-preferred::before {
+        content: "";
+        display: inline-block;
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--hc-ink);
+        margin-right: 6px;
+        vertical-align: baseline;
+      }
+      .swatch.is-preferred::before {
+        position: absolute;
+        top: -4px; right: -4px;
+        margin: 0;
+        border: 2px solid var(--hc-bg);
+      }
+      .seg button.is-preferred[aria-pressed="true"]::before,
+      .swatch.is-preferred[aria-pressed="true"]::before {
+        background: var(--hc-bg);
+      }
+
+      /* Swatch selector (for palette + accent) */
+      .swatches {
+        display: inline-flex;
+        gap: 4px;
+      }
+      .swatch {
+        appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        border: 1px solid var(--hc-ink-12);
+        padding: 0;
+        cursor: pointer;
+        position: relative;
+      }
+      .swatch[aria-pressed="true"]::after {
+        content: "";
+        position: absolute;
+        inset: -3px;
+        border: 2px solid var(--hc-ink);
+        border-radius: 6px;
+      }
+
+      /* The stage that contains the real picker */
+      .stage {
+        overflow: hidden;
+        background: var(--color-bg-base);
+        display: grid;
+        place-items: stretch;
+        min-height: 0;
+      }
+      .stage__frame {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        margin: 0 auto;
+        background: var(--color-bg-base);
+      }
+      html[data-preview-width="375"] .stage__frame { max-width: 375px; }
+      html[data-preview-width="768"] .stage__frame { max-width: 768px; }
+      html[data-preview-width="1200"] .stage__frame { max-width: 1200px; }
+
+      /* Ensure the real picker fills the stage frame (it expects 100dvh) */
+      .stage__frame unicode-picker {
+        height: 100% !important;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         Grayscale mode — single toggle strips color + distinctive fonts
+         so Structure and Form can be judged cleanly.
+         ═══════════════════════════════════════════════════════════ */
+      html[data-grayscale="on"] .stage {
+        filter: grayscale(1);
+      }
+      html[data-grayscale="on"] .stage unicode-picker,
+      html[data-grayscale="on"] .stage char-grid {
+        --font-ui:
+          "IBM Plex Sans", -apple-system, system-ui, sans-serif !important;
+        --font-glyph:
+          "Iowan Old Style", "Palatino", "Georgia", serif !important;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         STRUCTURE phase — layout, density, content sizing.
+         Targets: real .main, .blocks-nav, char-grid via attrs on html.
+         ═══════════════════════════════════════════════════════════ */
+
+      /* 1. Block nav — wide */
+      html[data-nav-wide="sidebar-right"] unicode-picker .main {
+        flex-direction: row-reverse;
+      }
+      html[data-nav-wide="sidebar-right"] unicode-picker .blocks-nav {
+        border-right: 0;
+        border-left: 1px solid var(--color-border-subtle);
+      }
+      html[data-nav-wide="top-tabs"] unicode-picker .main {
+        flex-direction: column;
+      }
+      html[data-nav-wide="top-tabs"] unicode-picker .blocks-nav {
+        display: flex;
+        width: auto;
+        max-height: 44px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-right: 0;
+        border-bottom: 1px solid var(--color-border-subtle);
+        scrollbar-width: thin;
+      }
+      html[data-nav-wide="top-tabs"] unicode-picker .blocks-nav button {
+        flex-shrink: 0;
+        width: auto;
+        white-space: nowrap;
+        padding: var(--space-2) var(--space-3);
+      }
+
+      /* 2. Cell min width */
+      html[data-cell-min="80"]  char-grid { --_col-min: 80px; }
+      html[data-cell-min="92"]  char-grid { --_col-min: 92px; }
+      html[data-cell-min="104"] char-grid { --_col-min: 104px; }
+      html[data-cell-min="118"] char-grid { --_col-min: 118px; }
+      html[data-cell-min="140"] char-grid { --_col-min: 140px; }
+
+      /* 3. Name lines (clamp) */
+      html[data-name-lines="1"] char-grid .char-name {
+        -webkit-line-clamp: 1;
+      }
+      html[data-name-lines="2"] char-grid .char-name {
+        -webkit-line-clamp: 2;
+      }
+      html[data-name-lines="3"] char-grid .char-name {
+        -webkit-line-clamp: 3;
+      }
+
+      /* 4. Density — adjusts cell padding + glyph size */
+      html[data-density="compact"] char-grid .char-cell {
+        padding: var(--space-2) var(--space-1);
+        gap: 2px;
+      }
+      html[data-density="compact"] char-grid {
+        --text-glyph: 2.25rem;
+      }
+      html[data-density="airy"] char-grid .char-cell {
+        padding: var(--space-4) var(--space-3);
+        gap: var(--space-2);
+      }
+      html[data-density="airy"] char-grid {
+        --text-glyph: 3.25rem;
+      }
+
+      /* 5. Section label scale */
+      html[data-section-scale="micro"] char-grid .sticky-header,
+      html[data-section-scale="micro"] char-grid .section-label {
+        font-size: 0.625rem;
+        letter-spacing: 0.14em;
+      }
+      html[data-section-scale="large"] char-grid .sticky-header,
+      html[data-section-scale="large"] char-grid .section-label {
+        font-size: 1.05rem;
+        letter-spacing: 0;
+        text-transform: none;
+        font-weight: 500;
+        height: 40px;
+        margin-bottom: -40px;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         FORM phase — surface treatment, grayscale, hierarchy.
+         ═══════════════════════════════════════════════════════════ */
+
+      /* 1. Cell border style */
+      html[data-cell-border="none"]   char-grid .char-cell { border: 0; }
+      html[data-cell-border="dashed"] char-grid .char-cell {
+        border-style: dashed;
+      }
+      html[data-cell-border="double"] char-grid .char-cell {
+        border-style: double;
+        border-width: 3px;
+      }
+      html[data-cell-border="heavy"]  char-grid .char-cell {
+        border-width: 2px;
+        border-color: var(--color-border-strong);
+      }
+
+      /* 2. Cell fill at rest */
+      html[data-cell-fill="soft-tint"] char-grid .char-cell {
+        background: var(--color-bg-surface);
+      }
+      html[data-cell-fill="glyph-box-only"] char-grid .char-cell {
+        background: transparent;
+        border: 0;
+      }
+
+      /* 3. Glyph background treatment */
+      html[data-glyph-bg="none"] char-grid .char-glyph {
+        background: transparent;
+      }
+      html[data-glyph-bg="outlined"] char-grid .char-glyph {
+        background: transparent;
+        border: 1px solid var(--color-border-subtle);
+      }
+
+      /* 4. Selected cell treatment */
+      html[data-cell-selected="outlined"]
+        char-grid .char-cell[aria-selected="true"] {
+        background: transparent;
+        outline: 2px solid var(--color-accent);
+        outline-offset: -2px;
+      }
+      html[data-cell-selected="outlined"]
+        char-grid .char-cell[aria-selected="true"] .char-glyph {
+        background: var(--color-glyph-bg);
+      }
+      html[data-cell-selected="tinted"]
+        char-grid .char-cell[aria-selected="true"] {
+        background: var(--color-accent-subtle);
+      }
+      html[data-cell-selected="underline"]
+        char-grid .char-cell[aria-selected="true"] {
+        background: transparent;
+        box-shadow: inset 0 -3px 0 var(--color-accent);
+      }
+      html[data-cell-selected="inverted"]
+        char-grid .char-cell[aria-selected="true"] {
+        background: var(--color-accent);
+      }
+      html[data-cell-selected="inverted"]
+        char-grid .char-cell[aria-selected="true"] .char-glyph {
+        color: var(--color-accent-text);
+        background: transparent;
+      }
+      html[data-cell-selected="inverted"]
+        char-grid .char-cell[aria-selected="true"] .char-name {
+        color: var(--color-accent-text);
+      }
+
+      /* 5. Hover cell treatment */
+      html[data-cell-hover="none"] char-grid .char-cell:hover {
+        background: transparent;
+      }
+      html[data-cell-hover="outline"] char-grid .char-cell:hover {
+        background: transparent;
+        outline: 1px solid var(--color-border-strong);
+        outline-offset: -1px;
+      }
+      html[data-cell-hover="lift"] char-grid .char-cell:hover {
+        background: var(--color-bg-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+      }
+
+      /* 6. Sidebar active treatment */
+      html[data-sidebar-active="filled"]
+        unicode-picker .blocks-nav button[aria-current="true"] {
+        background: var(--color-accent);
+        color: var(--color-accent-text);
+      }
+      html[data-sidebar-active="underline"]
+        unicode-picker .blocks-nav button[aria-current="true"] {
+        color: var(--color-accent);
+        box-shadow: inset 0 -2px 0 var(--color-accent);
+      }
+      html[data-sidebar-active="left-bar"]
+        unicode-picker .blocks-nav button[aria-current="true"] {
+        color: var(--color-accent);
+        box-shadow: inset 3px 0 0 var(--color-accent);
+      }
+      html[data-sidebar-active="inverted"]
+        unicode-picker .blocks-nav button[aria-current="true"] {
+        background: var(--color-text-primary);
+        color: var(--color-bg-base);
+      }
+
+      /* 7. Search divider */
+      html[data-search-divider="none"] unicode-picker .search-bar {
+        border-bottom: 0;
+      }
+      html[data-search-divider="double"] unicode-picker .search-bar {
+        border-bottom: 3px double var(--color-border-subtle);
+      }
+
+      /* 8. Section label role */
+      html[data-section-role="serif-title"] char-grid .sticky-header,
+      html[data-section-role="serif-title"] char-grid .section-label {
+        font-family: "Newsreader", "Fraunces", Georgia, serif;
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 500;
+        font-size: 1rem;
+      }
+      html[data-section-role="bold-bar"] char-grid .sticky-header,
+      html[data-section-role="bold-bar"] char-grid .section-label {
+        background: var(--color-text-primary);
+        color: var(--color-bg-base);
+        font-weight: 700;
+        padding: 0 var(--space-3);
+      }
+      html[data-section-role="small-caps"] char-grid .sticky-header,
+      html[data-section-role="small-caps"] char-grid .section-label {
+        text-transform: none;
+        font-variant: small-caps;
+        letter-spacing: 0.05em;
+      }
+
+      /* 9. Section underline */
+      html[data-section-underline="none"] char-grid .sticky-header,
+      html[data-section-underline="none"] char-grid .section-label {
+        border-bottom: 0;
+      }
+      html[data-section-underline="accent-bar"] char-grid .sticky-header,
+      html[data-section-underline="accent-bar"] char-grid .section-label {
+        border-bottom: 2px solid var(--color-accent);
+      }
+      html[data-section-underline="double"] char-grid .sticky-header,
+      html[data-section-underline="double"] char-grid .section-label {
+        border-bottom: 3px double var(--color-border-subtle);
+      }
+
+      /* 10. Glyph weight */
+      html[data-glyph-weight="medium"] char-grid .char-glyph {
+        font-weight: 500;
+      }
+      html[data-glyph-weight="bold"] char-grid .char-glyph {
+        font-weight: 700;
+      }
+
+      /* 11. Search shape */
+      html[data-search-shape="pill"] unicode-picker .search-bar input {
+        border-radius: 999px;
+      }
+      html[data-search-shape="square"] unicode-picker .search-bar input {
+        border-radius: 0;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         SURFACE phase — fonts + palette presets.
+         ═══════════════════════════════════════════════════════════ */
+
+      /* 1. Chrome typeface */
+      html[data-chrome-font="ibm-plex-sans"] unicode-picker {
+        --font-ui: "IBM Plex Sans", sans-serif;
+      }
+      html[data-chrome-font="inter"] unicode-picker {
+        --font-ui: "Inter", sans-serif;
+      }
+      html[data-chrome-font="geist-mono"] unicode-picker {
+        --font-ui: "Geist Mono", ui-monospace, monospace;
+      }
+      html[data-chrome-font="system"] unicode-picker {
+        --font-ui: -apple-system, system-ui, sans-serif;
+      }
+
+      /* 2. Glyph typeface */
+      html[data-glyph-font="iowan"] char-grid {
+        --font-glyph:
+          "Iowan Old Style", "Palatino", Georgia, serif;
+      }
+      html[data-glyph-font="fraunces"] char-grid {
+        --font-glyph: "Fraunces", Georgia, serif;
+      }
+      html[data-glyph-font="plex-mono"] char-grid {
+        --font-glyph: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      html[data-glyph-font="jetbrains"] char-grid {
+        --font-glyph: "JetBrains Mono", ui-monospace, monospace;
+      }
+      html[data-glyph-font="space-mono"] char-grid {
+        --font-glyph: "Space Mono", ui-monospace, monospace;
+      }
+
+      /* 3. Palette presets — override the real app's semantic tokens.
+         Each preset defines both a light and dark variant.
+         Presets are lifted from style-tiles.html. */
+
+      /* Typewriter */
+      html[data-palette="typewriter"][data-theme="light"] unicode-picker {
+        --color-bg-base: #efe7d2;
+        --color-bg-raised: #ece1c3;
+        --color-bg-surface: #f6ecd0;
+        --color-bg-hover: #e4d8b6;
+        --color-bg-selected: #e4d8b6;
+        --color-input-bg: #f6ecd0;
+        --color-text-primary: #1a1710;
+        --color-text-secondary: #7a6d4f;
+        --color-text-tertiary: #9a8d6f;
+        --color-border-subtle: rgba(26, 23, 16, 0.18);
+        --color-border-strong: rgba(26, 23, 16, 0.3);
+        --color-accent: #b8321d;
+        --color-accent-subtle: rgba(184, 50, 29, 0.12);
+        --color-accent-text: #efe7d2;
+        --color-glyph-bg: rgba(26, 23, 16, 0.04);
+      }
+      html[data-palette="typewriter"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #15130d;
+        --color-bg-raised: #1d1a12;
+        --color-bg-surface: #25221a;
+        --color-bg-hover: #2a2620;
+        --color-bg-selected: #2a2620;
+        --color-input-bg: #25221a;
+        --color-text-primary: #ebdfc0;
+        --color-text-secondary: #8a7d5e;
+        --color-text-tertiary: #6a5e48;
+        --color-border-subtle: rgba(235, 223, 192, 0.14);
+        --color-border-strong: rgba(235, 223, 192, 0.24);
+        --color-accent: #e97560;
+        --color-accent-subtle: rgba(233, 117, 96, 0.2);
+        --color-accent-text: #15130d;
+        --color-glyph-bg: rgba(235, 223, 192, 0.04);
+      }
+
+      /* Classical */
+      html[data-palette="classical"][data-theme="light"] unicode-picker {
+        --color-bg-base: #f7efdc;
+        --color-bg-raised: #f1e6cc;
+        --color-bg-surface: #ece0be;
+        --color-bg-hover: #e4d4aa;
+        --color-bg-selected: #e4d4aa;
+        --color-input-bg: #f7efdc;
+        --color-text-primary: #201912;
+        --color-text-secondary: #6f6148;
+        --color-text-tertiary: #8a7c60;
+        --color-border-subtle: #d5c28d;
+        --color-border-strong: #b39c67;
+        --color-accent: #8a2b1a;
+        --color-accent-subtle: rgba(138, 43, 26, 0.12);
+        --color-accent-text: #f7efdc;
+        --color-glyph-bg: rgba(32, 25, 18, 0.05);
+      }
+      html[data-palette="classical"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #181310;
+        --color-bg-raised: #221b15;
+        --color-bg-surface: #2c241b;
+        --color-bg-hover: #332b22;
+        --color-bg-selected: #332b22;
+        --color-input-bg: #221b15;
+        --color-text-primary: #f1e2bf;
+        --color-text-secondary: #b49e71;
+        --color-text-tertiary: #8c7a55;
+        --color-border-subtle: #4a3a21;
+        --color-border-strong: #6a5432;
+        --color-accent: #e9906f;
+        --color-accent-subtle: rgba(233, 144, 111, 0.2);
+        --color-accent-text: #181310;
+        --color-glyph-bg: rgba(241, 226, 191, 0.04);
+      }
+
+      /* Swiss */
+      html[data-palette="swiss"][data-theme="light"] unicode-picker {
+        --color-bg-base: #ffffff;
+        --color-bg-raised: #f8f8f6;
+        --color-bg-surface: #f2f2ef;
+        --color-bg-hover: #eceae4;
+        --color-bg-selected: #eceae4;
+        --color-input-bg: #ffffff;
+        --color-text-primary: #000000;
+        --color-text-secondary: #6b6963;
+        --color-text-tertiary: #8a8780;
+        --color-border-subtle: #e6e3dd;
+        --color-border-strong: #000000;
+        --color-accent: #0033ff;
+        --color-accent-subtle: rgba(0, 51, 255, 0.12);
+        --color-accent-text: #ffffff;
+        --color-glyph-bg: rgba(0, 0, 0, 0.04);
+      }
+      html[data-palette="swiss"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #000000;
+        --color-bg-raised: #0f0f0f;
+        --color-bg-surface: #1a1a1a;
+        --color-bg-hover: #242424;
+        --color-bg-selected: #242424;
+        --color-input-bg: #0a0a0a;
+        --color-text-primary: #ffffff;
+        --color-text-secondary: #9a948c;
+        --color-text-tertiary: #6a6860;
+        --color-border-subtle: #1d1b18;
+        --color-border-strong: #ffffff;
+        --color-accent: #6785ff;
+        --color-accent-subtle: rgba(103, 133, 255, 0.2);
+        --color-accent-text: #000000;
+        --color-glyph-bg: rgba(255, 255, 255, 0.05);
+      }
+
+      /* Museum */
+      html[data-palette="museum"][data-theme="light"] unicode-picker {
+        --color-bg-base: #f4efe5;
+        --color-bg-raised: #ede7d8;
+        --color-bg-surface: #e8e0cc;
+        --color-bg-hover: #ded5bd;
+        --color-bg-selected: #ded5bd;
+        --color-input-bg: #f4efe5;
+        --color-text-primary: #1c1a16;
+        --color-text-secondary: #8a8174;
+        --color-text-tertiary: #a69c8b;
+        --color-border-subtle: rgba(28, 26, 22, 0.08);
+        --color-border-strong: rgba(28, 26, 22, 0.2);
+        --color-accent: #bd4a34;
+        --color-accent-subtle: rgba(189, 74, 52, 0.12);
+        --color-accent-text: #f4efe5;
+        --color-glyph-bg: rgba(28, 26, 22, 0.05);
+      }
+      html[data-palette="museum"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #1a1815;
+        --color-bg-raised: #23201b;
+        --color-bg-surface: #2b2822;
+        --color-bg-hover: #33302a;
+        --color-bg-selected: #33302a;
+        --color-input-bg: #23201b;
+        --color-text-primary: #efe9dc;
+        --color-text-secondary: #a59c89;
+        --color-text-tertiary: #807861;
+        --color-border-subtle: rgba(239, 233, 220, 0.11);
+        --color-border-strong: rgba(239, 233, 220, 0.24);
+        --color-accent: #e88e73;
+        --color-accent-subtle: rgba(232, 142, 115, 0.2);
+        --color-accent-text: #1a1815;
+        --color-glyph-bg: rgba(239, 233, 220, 0.04);
+      }
+
+      /* Archive / library */
+      html[data-palette="archive"][data-theme="light"] unicode-picker {
+        --color-bg-base: #e8d9b5;
+        --color-bg-raised: #f1e4c3;
+        --color-bg-surface: #f5ead0;
+        --color-bg-hover: #ddcda0;
+        --color-bg-selected: #ddcda0;
+        --color-input-bg: #f5ead0;
+        --color-text-primary: #2a1e0e;
+        --color-text-secondary: #725936;
+        --color-text-tertiary: #9a7e52;
+        --color-border-subtle: #b59a6b;
+        --color-border-strong: #8a6d42;
+        --color-accent: #9c351b;
+        --color-accent-subtle: rgba(156, 53, 27, 0.12);
+        --color-accent-text: #f5ead0;
+        --color-glyph-bg: rgba(42, 30, 14, 0.04);
+      }
+      html[data-palette="archive"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #1d160a;
+        --color-bg-raised: #26201c;
+        --color-bg-surface: #2d2617;
+        --color-bg-hover: #352d1c;
+        --color-bg-selected: #352d1c;
+        --color-input-bg: #29200f;
+        --color-text-primary: #f0dfb2;
+        --color-text-secondary: #c2a573;
+        --color-text-tertiary: #8e7e4f;
+        --color-border-subtle: #5e4725;
+        --color-border-strong: #7f6436;
+        --color-accent: #e58060;
+        --color-accent-subtle: rgba(229, 128, 96, 0.2);
+        --color-accent-text: #1d160a;
+        --color-glyph-bg: rgba(240, 223, 178, 0.04);
+      }
+
+      /* Digital-native */
+      html[data-palette="digital"][data-theme="light"] unicode-picker {
+        --color-bg-base: #fafaf7;
+        --color-bg-raised: #ffffff;
+        --color-bg-surface: #f3f3ef;
+        --color-bg-hover: #ededea;
+        --color-bg-selected: #ededea;
+        --color-input-bg: #fafaf7;
+        --color-text-primary: #0b0f14;
+        --color-text-secondary: #6c7480;
+        --color-text-tertiary: #9ba3ae;
+        --color-border-subtle: rgba(11, 15, 20, 0.08);
+        --color-border-strong: rgba(11, 15, 20, 0.2);
+        --color-accent: #5c2ad9;
+        --color-accent-subtle: rgba(92, 42, 217, 0.12);
+        --color-accent-text: #ffffff;
+        --color-glyph-bg: rgba(11, 15, 20, 0.03);
+      }
+      html[data-palette="digital"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #09090b;
+        --color-bg-raised: #111114;
+        --color-bg-surface: #17171b;
+        --color-bg-hover: #1f1f24;
+        --color-bg-selected: #1f1f24;
+        --color-input-bg: #111114;
+        --color-text-primary: #eef0f2;
+        --color-text-secondary: #8590a0;
+        --color-text-tertiary: #5e6573;
+        --color-border-subtle: rgba(255, 255, 255, 0.08);
+        --color-border-strong: rgba(255, 255, 255, 0.2);
+        --color-accent: #c6ff00;
+        --color-accent-subtle: rgba(198, 255, 0, 0.2);
+        --color-accent-text: #061010;
+        --color-glyph-bg: rgba(255, 255, 255, 0.04);
+      }
+
+      /* Poster — vermillion */
+      html[data-palette="poster"][data-theme="light"] unicode-picker {
+        --color-bg-base: #f1ecdc;
+        --color-bg-raised: #e8e1c8;
+        --color-bg-surface: #dcd3b2;
+        --color-bg-hover: #d0c59f;
+        --color-bg-selected: #d0c59f;
+        --color-input-bg: #f1ecdc;
+        --color-text-primary: #0a0807;
+        --color-text-secondary: #5a5243;
+        --color-text-tertiary: #7a705a;
+        --color-border-subtle: rgba(10, 8, 7, 0.15);
+        --color-border-strong: #0a0807;
+        --color-accent: #d83321;
+        --color-accent-subtle: rgba(216, 51, 33, 0.15);
+        --color-accent-text: #ffffff;
+        --color-glyph-bg: rgba(10, 8, 7, 0.05);
+      }
+      html[data-palette="poster"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #0a0807;
+        --color-bg-raised: #14100f;
+        --color-bg-surface: #1c1716;
+        --color-bg-hover: #241e1c;
+        --color-bg-selected: #241e1c;
+        --color-input-bg: #14100f;
+        --color-text-primary: #f1ecdc;
+        --color-text-secondary: #a39880;
+        --color-text-tertiary: #7a7058;
+        --color-border-subtle: rgba(241, 236, 220, 0.15);
+        --color-border-strong: #f1ecdc;
+        --color-accent: #ff5141;
+        --color-accent-subtle: rgba(255, 81, 65, 0.2);
+        --color-accent-text: #0a0807;
+        --color-glyph-bg: rgba(241, 236, 220, 0.05);
+      }
+
+      /* Art object */
+      html[data-palette="art-object"][data-theme="light"] unicode-picker {
+        --color-bg-base: #e7e7ce;
+        --color-bg-raised: #efeed3;
+        --color-bg-surface: #f4f2d8;
+        --color-bg-hover: #d8d7bf;
+        --color-bg-selected: #d8d7bf;
+        --color-input-bg: #efeed3;
+        --color-text-primary: #17182e;
+        --color-text-secondary: #6d6884;
+        --color-text-tertiary: #8c8aa0;
+        --color-border-subtle: rgba(23, 24, 46, 0.1);
+        --color-border-strong: rgba(23, 24, 46, 0.3);
+        --color-accent: #ff2f7a;
+        --color-accent-subtle: rgba(255, 47, 122, 0.14);
+        --color-accent-text: #ffffff;
+        --color-glyph-bg: rgba(23, 24, 46, 0.05);
+      }
+      html[data-palette="art-object"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #0f0e20;
+        --color-bg-raised: #171630;
+        --color-bg-surface: #1d1c3a;
+        --color-bg-hover: #252445;
+        --color-bg-selected: #252445;
+        --color-input-bg: #171630;
+        --color-text-primary: #e7e7ce;
+        --color-text-secondary: #9d95bb;
+        --color-text-tertiary: #6f6889;
+        --color-border-subtle: rgba(231, 231, 206, 0.1);
+        --color-border-strong: rgba(231, 231, 206, 0.3);
+        --color-accent: #ff6ba8;
+        --color-accent-subtle: rgba(255, 107, 168, 0.2);
+        --color-accent-text: #0f0e20;
+        --color-glyph-bg: rgba(231, 231, 206, 0.05);
+      }
+
+      /* Scientific */
+      html[data-palette="scientific"][data-theme="light"] unicode-picker {
+        --color-bg-base: #fbf8f1;
+        --color-bg-raised: #ffffff;
+        --color-bg-surface: #f4efe1;
+        --color-bg-hover: #ebe5d0;
+        --color-bg-selected: #ebe5d0;
+        --color-input-bg: #fbf8f1;
+        --color-text-primary: #19211d;
+        --color-text-secondary: #6e7a72;
+        --color-text-tertiary: #909890;
+        --color-border-subtle: #d8d3c4;
+        --color-border-strong: #b5b09f;
+        --color-accent: #2d6d63;
+        --color-accent-subtle: rgba(45, 109, 99, 0.13);
+        --color-accent-text: #fbf8f1;
+        --color-glyph-bg: rgba(25, 33, 29, 0.04);
+      }
+      html[data-palette="scientific"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #0e1514;
+        --color-bg-raised: #162321;
+        --color-bg-surface: #1e2d2a;
+        --color-bg-hover: #253834;
+        --color-bg-selected: #253834;
+        --color-input-bg: #162321;
+        --color-text-primary: #e9efe8;
+        --color-text-secondary: #8da49d;
+        --color-text-tertiary: #5b7870;
+        --color-border-subtle: #213531;
+        --color-border-strong: #3a544e;
+        --color-accent: #80cfc1;
+        --color-accent-subtle: rgba(128, 207, 193, 0.2);
+        --color-accent-text: #0e1514;
+        --color-glyph-bg: rgba(233, 239, 232, 0.04);
+      }
+
+      /* Specimen */
+      html[data-palette="specimen"][data-theme="light"] unicode-picker {
+        --color-bg-base: #f1ede3;
+        --color-bg-raised: #e8e3d4;
+        --color-bg-surface: #ded8c6;
+        --color-bg-hover: #d3cdb8;
+        --color-bg-selected: #d3cdb8;
+        --color-input-bg: #f1ede3;
+        --color-text-primary: #0b0a08;
+        --color-text-secondary: #7a7362;
+        --color-text-tertiary: #999180;
+        --color-border-subtle: rgba(11, 10, 8, 0.15);
+        --color-border-strong: #0b0a08;
+        --color-accent: #ff4d1a;
+        --color-accent-subtle: rgba(255, 77, 26, 0.12);
+        --color-accent-text: #ffffff;
+        --color-glyph-bg: rgba(11, 10, 8, 0.04);
+      }
+      html[data-palette="specimen"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #0a0a0a;
+        --color-bg-raised: #141414;
+        --color-bg-surface: #1c1c1c;
+        --color-bg-hover: #242424;
+        --color-bg-selected: #242424;
+        --color-input-bg: #141414;
+        --color-text-primary: #eeeae0;
+        --color-text-secondary: #8a8374;
+        --color-text-tertiary: #615b50;
+        --color-border-subtle: rgba(238, 234, 224, 0.15);
+        --color-border-strong: #eeeae0;
+        --color-accent: #ff6a36;
+        --color-accent-subtle: rgba(255, 106, 54, 0.2);
+        --color-accent-text: #0a0a0a;
+        --color-glyph-bg: rgba(238, 234, 224, 0.04);
+      }
+
+      /* Global */
+      html[data-palette="global"][data-theme="light"] unicode-picker {
+        --color-bg-base: #fbf5e5;
+        --color-bg-raised: #f5ecd2;
+        --color-bg-surface: #ede0bc;
+        --color-bg-hover: #e3d4a3;
+        --color-bg-selected: #e3d4a3;
+        --color-input-bg: #fbf5e5;
+        --color-text-primary: #1e1810;
+        --color-text-secondary: #6d5d42;
+        --color-text-tertiary: #8f7e60;
+        --color-border-subtle: #d9c9a4;
+        --color-border-strong: #a89575;
+        --color-accent: #b03b25;
+        --color-accent-subtle: rgba(176, 59, 37, 0.13);
+        --color-accent-text: #fbf5e5;
+        --color-glyph-bg: rgba(30, 24, 16, 0.04);
+      }
+      html[data-palette="global"][data-theme="dark"] unicode-picker {
+        --color-bg-base: #151108;
+        --color-bg-raised: #1e1912;
+        --color-bg-surface: #25201a;
+        --color-bg-hover: #2d2820;
+        --color-bg-selected: #2d2820;
+        --color-input-bg: #1e1912;
+        --color-text-primary: #f5e9cd;
+        --color-text-secondary: #b8a37e;
+        --color-text-tertiary: #897656;
+        --color-border-subtle: #3b2e1b;
+        --color-border-strong: #5d4a2a;
+        --color-accent: #e77559;
+        --color-accent-subtle: rgba(231, 117, 89, 0.2);
+        --color-accent-text: #151108;
+        --color-glyph-bg: rgba(245, 233, 205, 0.04);
+      }
+
+      /* Palette-derived chrome tokens. Any non-default palette re-wires
+         the theme toggle, focus ring, and grid header chrome off the
+         semantic palette instead of the seeded color scale. */
+      html[data-palette]:not([data-palette="default"]) unicode-picker {
+        --color-toggle-track: var(--color-bg-surface);
+        --color-toggle-thumb: var(--color-accent);
+        --color-toggle-icon:  var(--color-accent-text);
+        --color-focus:
+          color-mix(in oklab, var(--color-accent), transparent 55%);
+      }
+
+      /* 4. Accent color override — a single CSS var that overrides
+         whatever palette set. Applied as oklch for consistent light/dark. */
+      html[data-accent="cobalt"]     unicode-picker { --color-accent: #0047ff; --color-accent-text: #ffffff; }
+      html[data-accent="forest"]     unicode-picker { --color-accent: #1b6845; --color-accent-text: #ffffff; }
+      html[data-accent="oxblood"]    unicode-picker { --color-accent: #7e1e2a; --color-accent-text: #ffffff; }
+      html[data-accent="ochre"]      unicode-picker { --color-accent: #b8721a; --color-accent-text: #ffffff; }
+      html[data-accent="plum"]       unicode-picker { --color-accent: #6b2b5b; --color-accent-text: #ffffff; }
+      html[data-accent="teal"]       unicode-picker { --color-accent: #0f6f75; --color-accent-text: #ffffff; }
+      html[data-accent="graphite"]   unicode-picker { --color-accent: #2a2a2a; --color-accent-text: #ffffff; }
+      html[data-accent="vermillion"] unicode-picker { --color-accent: #d83321; --color-accent-text: #ffffff; }
+    </style>
+  </head>
+
+  <body>
+
+    <!-- Real app templates (unchanged). char-grid, copy-toast,
+         and unicode-picker all read these. -->
+    <template id="char-cell-template">
+      <div class="char-cell">
+        <span class="char-glyph"></span>
+        <span class="char-name"></span>
+      </div>
+    </template>
+
+    <template id="char-grid-empty-template">
+      <div class="empty"></div>
+    </template>
+
+    <template id="char-grid-template">
+      <div class="scroll-container">
+        <div class="sticky-header"></div>
+        <div class="scroll-spacer">
+          <div class="grid"></div>
+        </div>
+      </div>
+    </template>
+
+    <template id="unicode-picker-template">
+      <div class="search-bar">
+        <div class="search-row">
+          <div class="input-wrapper">
+            <svg class="search-icon" aria-hidden="true"
+                 viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input type="text"
+                   placeholder="Search Unicode characters…"
+                   autofocus />
+            <button type="button" class="clear-button"
+                    aria-label="Clear search" disabled>
+              <svg aria-hidden="true" focusable="false"
+                   viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <label class="theme-toggle" title="Toggle light/dark mode">
+            <input type="checkbox" role="switch" aria-label="Dark mode" />
+            <span class="toggle-track">
+              <span class="toggle-thumb">
+                <svg class="icon-sun" aria-hidden="true"
+                     viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <line x1="12" y1="2" x2="12" y2="4" />
+                  <line x1="12" y1="20" x2="12" y2="22" />
+                  <line x1="4.93" y1="4.93" x2="6.34" y2="6.34" />
+                  <line x1="17.66" y1="17.66" x2="19.07" y2="19.07" />
+                  <line x1="2" y1="12" x2="4" y2="12" />
+                  <line x1="20" y1="12" x2="22" y2="12" />
+                  <line x1="4.93" y1="19.07" x2="6.34" y2="17.66" />
+                  <line x1="17.66" y1="6.34" x2="19.07" y2="4.93" />
+                </svg>
+                <svg class="icon-moon" aria-hidden="true"
+                     viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              </span>
+            </span>
+          </label>
+        </div>
+        <div class="status">Loading…</div>
+      </div>
+      <div class="main">
+        <nav class="blocks-nav" role="listbox"
+             aria-label="Unicode blocks"></nav>
+        <div class="results">
+          <char-grid></char-grid>
+        </div>
+      </div>
+      <copy-toast></copy-toast>
+    </template>
+
+    <!-- ════════════════════════════════════════════════════════════
+         Harness chrome
+         ════════════════════════════════════════════════════════════ -->
+    <div class="harness viewer-bar">
+      <span class="viewer-bar__title">Unicode Picker — Design</span>
+      <span class="viewer-bar__sub" id="viewer-sub"></span>
+      <button class="viewer-bar__btn" id="grayscale-btn"
+              aria-pressed="false" title="Isolate structure + form">
+        Grayscale
+      </button>
+      <div class="seg" role="group" aria-label="Preview width">
+        <button data-width="auto" aria-pressed="true">Auto</button>
+        <button data-width="1200">1200</button>
+        <button data-width="768">768</button>
+        <button data-width="375">375</button>
+      </div>
+      <div class="seg" role="group" aria-label="Theme">
+        <button data-theme="light" aria-pressed="true">Light</button>
+        <button data-theme="dark">Dark</button>
+      </div>
+      <button class="viewer-bar__btn" id="reset-btn"
+              title="Reset every decision to defaults">
+        Reset
+      </button>
+    </div>
+
+    <div class="harness step-tabs" id="step-tabs"></div>
+    <div class="harness control-bar" id="control-bar"></div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         The real application — mounted live, real data, real events.
+         ════════════════════════════════════════════════════════════ -->
+    <div class="stage">
+      <div class="stage__frame">
+        <unicode-picker></unicode-picker>
+      </div>
+    </div>
+
+    <script type="module" src="./components/unicode-picker.js"></script>
+
+    <!-- ════════════════════════════════════════════════════════════
+         Harness wiring — decisions, state, persistence, UI.
+         ════════════════════════════════════════════════════════════ -->
+    <script type="module">
+      const html = document.documentElement;
+
+      /* --- Decision model ---------------------------------------- */
+      const STEPS = [
+        { id: "structure", label: "Structure",
+          sub: "Arrangement · sizing · density" },
+        { id: "form",      label: "Form",
+          sub: "Shape · hierarchy · interactive states" },
+        { id: "surface",   label: "Surface",
+          sub: "Fonts · palette · accent" },
+      ];
+
+      const DECISIONS = [
+        /* ─ Structure ─ */
+        { id: "nav-wide", step: "structure", label: "Block nav",
+          options: [
+            ["sidebar-left",  "Sidebar L"],
+            ["sidebar-right", "Sidebar R"],
+            ["top-tabs",      "Top tabs"],
+          ],
+          default: "sidebar-left" },
+        { id: "cell-min", step: "structure", label: "Cell min width",
+          options: [
+            ["80", "80"], ["92", "92"], ["104", "104"],
+            ["118", "118"], ["140", "140"],
+          ],
+          default: "104" },
+        { id: "name-lines", step: "structure", label: "Name lines",
+          options: [["1", "1"], ["2", "2"], ["3", "3"]],
+          default: "3" },
+        { id: "density", step: "structure", label: "Density",
+          options: [
+            ["compact", "Compact"],
+            ["default", "Default"],
+            ["airy",    "Airy"],
+          ],
+          default: "default" },
+        { id: "section-scale", step: "structure",
+          label: "Section label scale",
+          options: [
+            ["micro",    "Micro"],
+            ["standard", "Standard"],
+            ["large",    "Large"],
+          ],
+          default: "standard" },
+
+        /* ─ Form ─ */
+        { id: "cell-border", step: "form", label: "Cell border",
+          options: [
+            ["solid",  "Solid"],
+            ["none",   "None"],
+            ["dashed", "Dashed"],
+            ["double", "Double"],
+            ["heavy",  "Heavy"],
+          ],
+          default: "solid" },
+        { id: "cell-fill", step: "form", label: "Cell fill",
+          options: [
+            ["transparent",     "Transparent"],
+            ["soft-tint",       "Soft tint"],
+            ["glyph-box-only",  "Glyph only"],
+          ],
+          default: "transparent" },
+        { id: "glyph-bg", step: "form", label: "Glyph background",
+          options: [
+            ["tint",     "Tint"],
+            ["none",     "None"],
+            ["outlined", "Outlined"],
+          ],
+          default: "tint" },
+        { id: "cell-selected", step: "form", label: "Selected cell",
+          options: [
+            ["filled",    "Filled"],
+            ["outlined",  "Outlined"],
+            ["tinted",    "Tinted"],
+            ["underline", "Underline"],
+            ["inverted",  "Inverted"],
+          ],
+          default: "filled" },
+        { id: "cell-hover", step: "form", label: "Hover cell",
+          options: [
+            ["tint",    "Tint"],
+            ["none",    "None"],
+            ["outline", "Outline"],
+            ["lift",    "Lift"],
+          ],
+          default: "tint" },
+        { id: "sidebar-active", step: "form", label: "Sidebar active",
+          options: [
+            ["left-bar",  "Left bar"],
+            ["filled",    "Filled"],
+            ["underline", "Underline"],
+            ["inverted",  "Inverted"],
+          ],
+          default: "left-bar" },
+        { id: "search-divider", step: "form", label: "Search divider",
+          options: [
+            ["hairline", "Hairline"],
+            ["none",     "None"],
+            ["double",   "Double"],
+          ],
+          default: "hairline" },
+        { id: "section-role", step: "form", label: "Section label type",
+          options: [
+            ["tracked-sans", "Tracked sans"],
+            ["small-caps",   "Small caps"],
+            ["serif-title",  "Serif title"],
+            ["bold-bar",     "Bold bar"],
+          ],
+          default: "tracked-sans" },
+        { id: "section-underline", step: "form", label: "Section underline",
+          options: [
+            ["hairline",    "Hairline"],
+            ["none",        "None"],
+            ["accent-bar",  "Accent bar"],
+            ["double",      "Double"],
+          ],
+          default: "hairline" },
+        { id: "glyph-weight", step: "form", label: "Glyph weight",
+          options: [
+            ["regular", "Regular"],
+            ["medium",  "Medium"],
+            ["bold",    "Bold"],
+          ],
+          default: "regular" },
+        { id: "search-shape", step: "form", label: "Search shape",
+          options: [
+            ["rounded", "Rounded"],
+            ["pill",    "Pill"],
+            ["square",  "Square"],
+          ],
+          default: "rounded" },
+
+        /* ─ Surface ─ */
+        { id: "chrome-font", step: "surface", label: "Chrome typeface",
+          options: [
+            ["plex-mono",     "Plex Mono"],
+            ["ibm-plex-sans", "Plex Sans"],
+            ["inter",         "Inter"],
+            ["geist-mono",    "Geist Mono"],
+            ["system",        "System"],
+          ],
+          default: "plex-mono" },
+        { id: "glyph-font", step: "surface", label: "Glyph typeface",
+          options: [
+            ["noto",      "Noto"],
+            ["iowan",     "Iowan"],
+            ["fraunces",  "Fraunces"],
+            ["plex-mono", "Plex Mono"],
+            ["jetbrains", "JetBrains"],
+            ["space-mono","Space Mono"],
+          ],
+          default: "noto" },
+        { id: "palette", step: "surface", label: "Palette preset",
+          kind: "swatch-palette",
+          options: [
+            ["default",    "Default",    "#16573e"],
+            ["typewriter", "Typewriter", "#b8321d"],
+            ["classical",  "Classical",  "#8a2b1a"],
+            ["specimen",   "Specimen",   "#ff4d1a"],
+            ["scientific", "Scientific", "#2d6d63"],
+            ["museum",     "Museum",     "#bd4a34"],
+            ["swiss",      "Swiss",      "#0033ff"],
+            ["poster",     "Poster",     "#d83321"],
+            ["art-object", "Art object", "#ff2f7a"],
+            ["digital",    "Digital",    "#5c2ad9"],
+            ["archive",    "Archive",    "#9c351b"],
+            ["global",     "Global",     "#b03b25"],
+          ],
+          default: "default" },
+        { id: "accent", step: "surface", label: "Accent override",
+          kind: "swatch-accent",
+          options: [
+            ["inherit",    "Inherit",    null],
+            ["cobalt",     "Cobalt",     "#0047ff"],
+            ["forest",     "Forest",     "#1b6845"],
+            ["oxblood",    "Oxblood",    "#7e1e2a"],
+            ["ochre",      "Ochre",      "#b8721a"],
+            ["plum",       "Plum",       "#6b2b5b"],
+            ["teal",       "Teal",       "#0f6f75"],
+            ["graphite",   "Graphite",   "#2a2a2a"],
+            ["vermillion", "Vermillion", "#d83321"],
+          ],
+          default: "inherit" },
+      ];
+
+      /* --- State ------------------------------------------------- */
+      const STATE_KEY = "unicode-picker:design-decisions";
+      const STEP_KEY = "unicode-picker:design-step";
+      const GRAYSCALE_KEY = "unicode-picker:design-grayscale";
+
+      const state = (() => {
+        let saved;
+        try { saved = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); }
+        catch (e) { saved = {}; }
+        const defaults = Object.fromEntries(
+          DECISIONS.map(d => [d.id, d.default]),
+        );
+        return { ...defaults, ...saved };
+      })();
+      let currentStep =
+        localStorage.getItem(STEP_KEY) || "structure";
+      let grayscale = localStorage.getItem(GRAYSCALE_KEY) === "on";
+
+      /* --- Sync state → DOM attributes --------------------------- */
+      function apply() {
+        for (const d of DECISIONS) {
+          const v = state[d.id];
+          if (v == null || v === "inherit") {
+            html.removeAttribute(`data-${d.id}`);
+          } else {
+            html.setAttribute(`data-${d.id}`, v);
+          }
+        }
+        html.setAttribute("data-step", currentStep);
+        html.setAttribute(
+          "data-grayscale", grayscale ? "on" : "off",
+        );
+      }
+
+      function save() {
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        localStorage.setItem(STEP_KEY, currentStep);
+        localStorage.setItem(GRAYSCALE_KEY, grayscale ? "on" : "off");
+      }
+
+      /* --- Render step tabs ------------------------------------- */
+      const stepTabsEl = document.getElementById("step-tabs");
+      function renderTabs() {
+        stepTabsEl.innerHTML = STEPS.map((s, i) => `
+          <button class="step-tab"
+                  data-step="${s.id}"
+                  aria-current="${s.id === currentStep}">
+            <span class="step-tab__num">
+              ${String(i + 1).padStart(2, "0")}
+            </span>
+            <span class="step-tab__label">${s.label}</span>
+            <span class="step-tab__sub">${s.sub}</span>
+          </button>
+        `).join("");
+      }
+      stepTabsEl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".step-tab");
+        if (!btn) return;
+        currentStep = btn.dataset.step;
+        save(); apply(); renderTabs(); renderControls(); renderSub();
+      });
+
+      /* --- Render controls for the active step ------------------ */
+      const controlBarEl = document.getElementById("control-bar");
+      function renderControls() {
+        const decisions = DECISIONS
+          .filter(d => d.step === currentStep);
+        controlBarEl.innerHTML = decisions.map(d => renderControl(d))
+          .join("");
+      }
+
+      function renderControl(d) {
+        if (d.kind === "swatch-palette" || d.kind === "swatch-accent") {
+          return `
+            <div class="control" data-decision="${d.id}">
+              <span class="control__label">${d.label}</span>
+              <div class="swatches">
+                ${d.options.map(([val, lbl, color]) => {
+                  const pressed = state[d.id] === val;
+                  const style = color
+                    ? `background:${color};`
+                    : "background:repeating-linear-gradient(45deg,#ddd 0 4px,#fff 4px 8px);";
+                  return `
+                    <button class="swatch"
+                            data-value="${val}"
+                            aria-pressed="${pressed}"
+                            title="${lbl}"
+                            style="${style}"></button>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="control" data-decision="${d.id}">
+            <span class="control__label">${d.label}</span>
+            <div class="seg">
+              ${d.options.map(([val, lbl]) => `
+                <button data-value="${val}"
+                        aria-pressed="${state[d.id] === val}">
+                  ${lbl}
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }
+      controlBarEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-value]");
+        if (!btn) return;
+        const decisionEl = btn.closest("[data-decision]");
+        const id = decisionEl.dataset.decision;
+        state[id] = btn.dataset.value;
+        save(); apply(); renderControls();
+      });
+
+      /* --- Viewer bar (grayscale, width, theme, reset) ---------- */
+      const grayBtn = document.getElementById("grayscale-btn");
+      grayBtn.addEventListener("click", () => {
+        grayscale = !grayscale;
+        grayBtn.setAttribute(
+          "aria-pressed", grayscale ? "true" : "false",
+        );
+        save(); apply();
+      });
+
+      document.querySelectorAll('[data-width]').forEach(btn => {
+        btn.addEventListener("click", () => {
+          const w = btn.dataset.width;
+          html.setAttribute("data-preview-width", w);
+          document.querySelectorAll('[data-width]').forEach(b =>
+            b.setAttribute(
+              "aria-pressed", b === btn ? "true" : "false",
+            ),
+          );
+        });
+      });
+
+      document.querySelectorAll('.seg [data-theme]').forEach(btn => {
+        btn.addEventListener("click", () => {
+          const t = btn.dataset.theme;
+          html.setAttribute("data-theme", t);
+          try { localStorage.setItem("unicode-picker-theme", t); }
+          catch (e) {}
+          document.querySelectorAll('[data-theme]').forEach(b => {
+            if (b.hasAttribute("data-theme") && b.tagName === "BUTTON") {
+              b.setAttribute(
+                "aria-pressed", b === btn ? "true" : "false",
+              );
+            }
+          });
+        });
+      });
+      // Sync theme buttons to current
+      const curTheme = html.getAttribute("data-theme") || "light";
+      document.querySelectorAll('.seg [data-theme]').forEach(b => {
+        if (b.tagName === "BUTTON") {
+          b.setAttribute(
+            "aria-pressed",
+            b.dataset.theme === curTheme ? "true" : "false",
+          );
+        }
+      });
+
+      document.getElementById("reset-btn").addEventListener("click", () => {
+        for (const d of DECISIONS) state[d.id] = d.default;
+        grayscale = false;
+        grayBtn.setAttribute("aria-pressed", "false");
+        save(); apply(); renderControls();
+      });
+
+      function renderSub() {
+        const s = STEPS.find(s => s.id === currentStep);
+        document.getElementById("viewer-sub").textContent =
+          s ? `Phase ${STEPS.indexOf(s) + 1} · ${s.sub}` : "";
+      }
+
+      /* --- Boot ------------------------------------------------- */
+      grayBtn.setAttribute(
+        "aria-pressed", grayscale ? "true" : "false",
+      );
+      apply();
+      renderTabs();
+      renderControls();
+      renderSub();
+    </script>
+  </body>
+</html>
