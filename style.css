@@ -114,7 +114,9 @@
     --color-bg-surface:         var(--color-20);
     --color-bg-hover:           var(--color-25);
     --color-bg-selected:
-      oklch(from var(--color-65) 30% calc(c * 2.2) h);
+      color-mix(in oklab,
+        var(--color-accent) 32%,
+        var(--color-bg-base));
 
     /* Component backgrounds */
     --color-input-bg:           var(--color-25);
@@ -206,7 +208,9 @@
     --color-bg-surface:         var(--color-90);
     --color-bg-hover:           var(--color-85);
     --color-bg-selected:
-      oklch(from var(--color-40) 91% calc(c * 2.2) h);
+      color-mix(in oklab,
+        var(--color-accent) 32%,
+        var(--color-bg-base));
 
     --color-input-bg:           var(--color-85);
     --color-toggle-track:       var(--color-85);

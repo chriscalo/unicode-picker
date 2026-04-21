@@ -839,7 +839,9 @@
         --color-bg-hover:
           oklch(var(--L-bg-hover) var(--neutral-chroma) var(--neutral-hue));
         --color-bg-selected:
-          oklch(var(--L-accent-subtle) calc(var(--accent-chroma) * 2.2) var(--accent-hue));
+          color-mix(in oklab,
+            var(--color-accent) 32%,
+            var(--color-bg-base));
         --color-input-bg:
           oklch(var(--L-input-bg) var(--neutral-chroma) var(--neutral-hue));
         --color-text-primary:
@@ -857,7 +859,9 @@
         --color-accent-text:
           oklch(var(--L-accent-text) 0 0);
         --color-accent-subtle:
-          oklch(var(--L-accent-subtle) calc(var(--accent-chroma) * 2.2) var(--accent-hue));
+          color-mix(in oklab,
+            var(--color-accent) 32%,
+            var(--color-bg-base));
         --color-glyph-bg:
           oklch(var(--L-text-primary) 0 0 / var(--glyph-bg-alpha));
 
