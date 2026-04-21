@@ -376,9 +376,17 @@
          via ::before so it sits at the top of the sidebar (when the
          nav is column-oriented) or at the start of the strip (when
          the nav is row-oriented). */
+      html[data-nav-label="jump-to"] unicode-picker .blocks-nav {
+        scroll-padding-top: 2rem;
+        scroll-padding-left: 5rem;
+      }
       html[data-nav-label="jump-to"] unicode-picker .blocks-nav::before {
         content: "Jump to";
         display: block;
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 1;
         padding: var(--space-2) var(--space-3);
         font-family: var(--font-ui);
         font-size: var(--text-xs);
@@ -386,6 +394,7 @@
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--color-text-tertiary);
+        background: var(--color-bg-raised);
         white-space: nowrap;
         flex-shrink: 0;
       }
