@@ -561,41 +561,71 @@
         color: var(--color-accent-text);
       }
 
-      /* 5. Hover cell treatment */
-      html[data-cell-hover="none"] char-grid .char-cell:hover {
-        background: transparent;
-      }
-      html[data-cell-hover="outline"] char-grid .char-cell:hover {
-        background: transparent;
-        outline: 1px solid var(--color-border-strong);
-        outline-offset: -1px;
-      }
-      html[data-cell-hover="lift"] char-grid .char-cell:hover {
-        background: var(--color-bg-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+      /* 6. Nav active treatment — split into WIDE (sidebar/top-tabs)
+         and NARROW (top-strip / dropdown) via @container queries so
+         each can be evaluated independently. */
+      @container (min-width: 900px) {
+        html[data-sidebar-active="filled"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          background: var(--color-accent);
+          color: var(--color-accent-text);
+        }
+        html[data-sidebar-active="underline"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          color: var(--color-accent);
+          box-shadow: inset 0 -2px 0 var(--color-accent);
+        }
+        html[data-sidebar-active="left-bar"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          color: var(--color-accent);
+          box-shadow: inset 3px 0 0 var(--color-accent);
+        }
+        html[data-sidebar-active="inverted"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          background: var(--color-text-primary);
+          color: var(--color-bg-base);
+        }
       }
 
-      /* 6. Sidebar active treatment */
-      html[data-sidebar-active="filled"]
-        unicode-picker .blocks-nav button[aria-current="true"] {
-        background: var(--color-accent);
-        color: var(--color-accent-text);
-      }
-      html[data-sidebar-active="underline"]
-        unicode-picker .blocks-nav button[aria-current="true"] {
-        color: var(--color-accent);
-        box-shadow: inset 0 -2px 0 var(--color-accent);
-      }
-      html[data-sidebar-active="left-bar"]
-        unicode-picker .blocks-nav button[aria-current="true"] {
-        color: var(--color-accent);
-        box-shadow: inset 3px 0 0 var(--color-accent);
-      }
-      html[data-sidebar-active="inverted"]
-        unicode-picker .blocks-nav button[aria-current="true"] {
-        background: var(--color-text-primary);
-        color: var(--color-bg-base);
+      @container (max-width: 900px) {
+        /* Top-strip variant: style the active button directly. */
+        html[data-nav-active-narrow="filled"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          background: var(--color-accent);
+          color: var(--color-accent-text);
+        }
+        html[data-nav-active-narrow="underline"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          color: var(--color-accent);
+          box-shadow: inset 0 -2px 0 var(--color-accent);
+        }
+        html[data-nav-active-narrow="accent-text"]
+          unicode-picker .blocks-nav button[aria-current="true"] {
+          color: var(--color-accent);
+        }
+        /* minimal = no treatment */
+
+        /* Dropdown variant: style the <select> so the current block
+           reads as active. */
+        html[data-nav-active-narrow="filled"]
+          unicode-picker .block-jump {
+          border: 2px solid var(--color-accent);
+          color: var(--color-accent);
+          font-weight: 500;
+        }
+        html[data-nav-active-narrow="underline"]
+          unicode-picker .block-jump {
+          border: 0;
+          border-bottom: 2px solid var(--color-accent);
+          border-radius: 0;
+          color: var(--color-accent);
+        }
+        html[data-nav-active-narrow="accent-text"]
+          unicode-picker .block-jump {
+          color: var(--color-accent);
+          font-weight: 500;
+        }
+        /* minimal = no treatment, keeps default border */
       }
 
       /* 7. Search divider */
@@ -1331,7 +1361,7 @@
         /* ─ Form ─ */
         { id: "cell-border", step: "form", label: "Tile border",
           options: [
-            ["solid",  "Solid"],
+            ["solid",  "Solid", { preferred: true }],
             ["none",   "None"],
             ["dashed", "Dashed"],
             ["double", "Double"],
@@ -1340,69 +1370,71 @@
           default: "solid" },
         { id: "cell-fill", step: "form", label: "Tile fill",
           options: [
-            ["transparent",     "Transparent"],
+            ["transparent",     "Transparent", { preferred: true }],
             ["soft-tint",       "Soft tint"],
             ["glyph-box-only",  "Glyph only"],
           ],
           default: "transparent" },
         { id: "glyph-bg", step: "form", label: "Glyph background",
           options: [
-            ["tint",     "Tint"],
+            ["tint",     "Tint", { preferred: true }],
             ["none",     "None"],
             ["outlined", "Outlined"],
           ],
           default: "tint" },
         { id: "cell-selected", step: "form", label: "Selected tile",
           options: [
-            ["filled",    "Filled"],
+            ["filled",    "Filled", { preferred: true }],
             ["outlined",  "Outlined"],
             ["tinted",    "Tinted"],
+            ["underline", "Underline"],
+            ["inverted",  "Inverted", { preferred: true }],
+          ],
+          default: "filled" },
+        { id: "sidebar-active", step: "form", label: "Nav active (wide)",
+          options: [
+            ["left-bar",  "Left bar"],
+            ["filled",    "Filled", { preferred: true }],
             ["underline", "Underline"],
             ["inverted",  "Inverted"],
           ],
           default: "filled" },
-        { id: "cell-hover", step: "form", label: "Hover tile",
+        { id: "nav-active-narrow", step: "form",
+          label: "Nav active (narrow)",
+          help: "Active-block treatment at narrow widths (top strip or dropdown).",
           options: [
-            ["tint",    "Tint"],
-            ["none",    "None"],
-            ["outline", "Outline"],
-            ["lift",    "Lift"],
+            ["filled",      "Filled"],
+            ["underline",   "Underline"],
+            ["accent-text", "Accent text"],
+            ["minimal",     "Minimal"],
           ],
-          default: "tint" },
-        { id: "sidebar-active", step: "form", label: "Sidebar active",
-          options: [
-            ["left-bar",  "Left bar"],
-            ["filled",    "Filled"],
-            ["underline", "Underline"],
-            ["inverted",  "Inverted"],
-          ],
-          default: "left-bar" },
+          default: "filled" },
         { id: "search-divider", step: "form", label: "Search divider",
           options: [
-            ["hairline", "Hairline"],
+            ["hairline", "Hairline", { preferred: true }],
             ["none",     "None"],
             ["double",   "Double"],
           ],
           default: "hairline" },
         { id: "section-role", step: "form", label: "Section label type",
           options: [
-            ["tracked-sans", "Tracked sans"],
-            ["small-caps",   "Small caps"],
+            ["tracked-sans", "Tracked sans", { preferred: true }],
+            ["small-caps",   "Small caps",   { preferred: true }],
             ["serif-title",  "Serif title"],
             ["bold-bar",     "Bold bar"],
           ],
           default: "tracked-sans" },
         { id: "section-underline", step: "form", label: "Section underline",
           options: [
-            ["hairline",    "Hairline"],
+            ["hairline",    "Hairline",   { preferred: true }],
             ["none",        "None"],
-            ["accent-bar",  "Accent bar"],
+            ["accent-bar",  "Accent bar", { preferred: true }],
             ["double",      "Double"],
           ],
           default: "hairline" },
         { id: "glyph-weight", step: "form", label: "Glyph weight",
           options: [
-            ["regular", "Regular"],
+            ["regular", "Regular", { preferred: true }],
             ["medium",  "Medium"],
             ["bold",    "Bold"],
           ],
@@ -1410,7 +1442,7 @@
         { id: "search-shape", step: "form", label: "Search shape",
           options: [
             ["rounded", "Rounded"],
-            ["pill",    "Pill"],
+            ["pill",    "Pill", { preferred: true }],
             ["square",  "Square"],
           ],
           default: "rounded" },
