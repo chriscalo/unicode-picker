@@ -224,6 +224,61 @@
         background: var(--hc-bg);
       }
 
+      /* Rejected marker — red X + strikethrough. Options flagged
+         rejected are still clickable (so you can flip back to
+         re-evaluate), but visibly deprioritized. */
+      .seg button.is-rejected {
+        color: rgba(26, 26, 26, 0.45);
+        text-decoration: line-through;
+        text-decoration-color: rgba(26, 26, 26, 0.35);
+      }
+      .seg button.is-rejected::before {
+        content: "✕";
+        color: #c0392b;
+        font-weight: 700;
+        margin-right: 5px;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .seg button.is-rejected[aria-pressed="true"] {
+        color: rgba(255, 255, 255, 0.85);
+        text-decoration-color: rgba(255, 255, 255, 0.6);
+      }
+      .seg button.is-rejected[aria-pressed="true"]::before {
+        color: #ff6b5e;
+      }
+      /* Swatch rejected state — diagonal strike + red X badge */
+      .swatch.is-rejected::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        background:
+          linear-gradient(
+            to top right,
+            transparent calc(50% - 1px),
+            #c0392b calc(50% - 1px),
+            #c0392b calc(50% + 1px),
+            transparent calc(50% + 1px)
+          );
+        border-radius: 3px;
+        pointer-events: none;
+      }
+      .swatch.is-rejected::before {
+        content: "✕";
+        position: absolute;
+        top: -6px; right: -6px;
+        margin: 0;
+        width: 14px; height: 14px;
+        background: #c0392b;
+        color: #fff;
+        border: 2px solid var(--hc-bg);
+        border-radius: 50%;
+        font-size: 8px;
+        font-weight: 700;
+        line-height: 10px;
+        text-align: center;
+      }
+
       /* Swatch selector (for palette + accent) */
       .swatches {
         display: inline-flex;
@@ -291,32 +346,62 @@
          Targets: real .main, .blocks-nav, char-grid via attrs on html.
          ═══════════════════════════════════════════════════════════ */
 
-      /* 1. Block nav — wide */
-      html[data-nav-wide="sidebar-right"] unicode-picker .main {
-        flex-direction: row-reverse;
+      /* 1. Block nav — wide. Scoped to wide container widths so these
+         overrides don't fight the picker's built-in narrow container
+         query (which converts the nav to a horizontal strip). */
+      @container (min-width: 900px) {
+        html[data-nav-wide="sidebar-right"] unicode-picker .main {
+          flex-direction: row-reverse;
+        }
+        html[data-nav-wide="sidebar-right"] unicode-picker .blocks-nav {
+          border-right: 0;
+          border-left: 1px solid var(--color-border-subtle);
+        }
+        html[data-nav-wide="top-tabs"] unicode-picker .main {
+          flex-direction: column;
+        }
+        html[data-nav-wide="top-tabs"] unicode-picker .blocks-nav {
+          display: flex;
+          width: auto;
+          max-height: 44px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          border-right: 0;
+          border-bottom: 1px solid var(--color-border-subtle);
+          scrollbar-width: thin;
+        }
+        html[data-nav-wide="top-tabs"] unicode-picker .blocks-nav button {
+          flex-shrink: 0;
+          width: auto;
+          white-space: nowrap;
+          padding: var(--space-2) var(--space-3);
+        }
       }
-      html[data-nav-wide="sidebar-right"] unicode-picker .blocks-nav {
-        border-right: 0;
-        border-left: 1px solid var(--color-border-subtle);
-      }
-      html[data-nav-wide="top-tabs"] unicode-picker .main {
-        flex-direction: column;
-      }
-      html[data-nav-wide="top-tabs"] unicode-picker .blocks-nav {
-        display: flex;
-        width: auto;
-        max-height: 44px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        border-right: 0;
-        border-bottom: 1px solid var(--color-border-subtle);
-        scrollbar-width: thin;
-      }
-      html[data-nav-wide="top-tabs"] unicode-picker .blocks-nav button {
-        flex-shrink: 0;
-        width: auto;
-        white-space: nowrap;
+
+      /* 1b. Block nav — narrow (picker container <900px). Only kicks
+         in at narrow widths; wide-mode nav-wide decision applies above. */
+      .block-jump {
+        display: none;
+        margin: 0 var(--space-4) var(--space-2);
         padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-md);
+        background: var(--color-input-bg);
+        color: var(--color-text-primary);
+        font: inherit;
+        font-family: var(--font-ui);
+        font-size: var(--text-sm);
+      }
+      @container (max-width: 900px) {
+        html[data-nav-narrow="hidden"] unicode-picker .blocks-nav {
+          display: none;
+        }
+        html[data-nav-narrow="dropdown"] unicode-picker .blocks-nav {
+          display: none;
+        }
+        html[data-nav-narrow="dropdown"] unicode-picker .block-jump {
+          display: block;
+        }
       }
 
       /* 2. Cell min width */
@@ -337,21 +422,20 @@
         -webkit-line-clamp: 3;
       }
 
-      /* 4. Density — adjusts cell padding + glyph size */
+      /* 4. Density — cell padding only. Glyph size is a separate decision. */
       html[data-density="compact"] char-grid .char-cell {
         padding: var(--space-2) var(--space-1);
         gap: 2px;
-      }
-      html[data-density="compact"] char-grid {
-        --text-glyph: 2.25rem;
       }
       html[data-density="airy"] char-grid .char-cell {
         padding: var(--space-4) var(--space-3);
         gap: var(--space-2);
       }
-      html[data-density="airy"] char-grid {
-        --text-glyph: 3.25rem;
-      }
+
+      /* 4b. Glyph size — controls --text-glyph independently of density. */
+      html[data-glyph-size="small"]  char-grid { --text-glyph: 2.25rem; }
+      html[data-glyph-size="large"]  char-grid { --text-glyph: 3.25rem; }
+      html[data-glyph-size="xlarge"] char-grid { --text-glyph: 3.75rem; }
 
       /* 5. Section label scale */
       html[data-section-scale="micro"] char-grid .sticky-header,
@@ -1144,40 +1228,60 @@
 
       const DECISIONS = [
         /* ─ Structure ─ */
-        { id: "nav-wide", step: "structure", label: "Block nav",
+        { id: "nav-wide", step: "structure", label: "Block nav (wide)",
           options: [
             ["sidebar-left",  "Sidebar L"],
-            ["sidebar-right", "Sidebar R"],
+            ["sidebar-right", "Sidebar R", { preferred: true }],
             ["top-tabs",      "Top tabs"],
           ],
           default: "sidebar-left" },
-        { id: "cell-min", step: "structure", label: "Cell min width",
+        { id: "nav-narrow", step: "structure", label: "Block nav (narrow)",
+          help: "At picker width <900px. Preview at 375 or 768 to see.",
           options: [
-            ["80", "80"], ["92", "92"], ["104", "104"],
+            ["top-strip", "Top strip", { preferred: true }],
+            ["dropdown",  "Dropdown"],
+            ["hidden",    "Hidden"],
+          ],
+          default: "top-strip" },
+        { id: "cell-min", step: "structure", label: "Char tile width",
+          options: [
+            ["80", "80"], ["92", "92"],
+            ["104", "104", { preferred: true }],
             ["118", "118"], ["140", "140"],
           ],
           default: "104" },
-        { id: "name-lines", step: "structure", label: "Name lines",
-          options: [["1", "1"], ["2", "2"], ["3", "3"]],
+        { id: "name-lines", step: "structure", label: "Char name lines",
+          options: [
+            ["1", "1"], ["2", "2"],
+            ["3", "3", { preferred: true }],
+          ],
           default: "3" },
-        { id: "density", step: "structure", label: "Density",
+        { id: "density", step: "structure", label: "Density (spacing)",
           options: [
             ["compact", "Compact"],
-            ["default", "Default"],
-            ["airy",    "Airy"],
+            ["default", "Default", { preferred: true }],
+            ["airy",    "Airy",    { preferred: true }],
+          ],
+          default: "default" },
+        { id: "glyph-size", step: "structure", label: "Glyph size",
+          options: [
+            ["small",   "Small"],
+            ["default", "Default", { preferred: true }],
+            ["large",   "Large"],
+            ["xlarge",  "X-Large"],
           ],
           default: "default" },
         { id: "section-scale", step: "structure",
           label: "Section label scale",
           options: [
             ["micro",    "Micro"],
-            ["standard", "Standard"],
+            ["standard", "Standard", { preferred: true }],
             ["large",    "Large"],
           ],
           default: "standard" },
 
         /* ─ Form ─ */
-        { id: "cell-border", step: "form", label: "Cell border",
+        { id: "cell-border", step: "form", label: "Tile border",
           options: [
             ["solid",  "Solid"],
             ["none",   "None"],
@@ -1186,7 +1290,7 @@
             ["heavy",  "Heavy"],
           ],
           default: "solid" },
-        { id: "cell-fill", step: "form", label: "Cell fill",
+        { id: "cell-fill", step: "form", label: "Tile fill",
           options: [
             ["transparent",     "Transparent"],
             ["soft-tint",       "Soft tint"],
@@ -1200,7 +1304,7 @@
             ["outlined", "Outlined"],
           ],
           default: "tint" },
-        { id: "cell-selected", step: "form", label: "Selected cell",
+        { id: "cell-selected", step: "form", label: "Selected tile",
           options: [
             ["filled",    "Filled"],
             ["outlined",  "Outlined"],
@@ -1209,7 +1313,7 @@
             ["inverted",  "Inverted"],
           ],
           default: "filled" },
-        { id: "cell-hover", step: "form", label: "Hover cell",
+        { id: "cell-hover", step: "form", label: "Hover tile",
           options: [
             ["tint",    "Tint"],
             ["none",    "None"],
@@ -1321,12 +1425,21 @@
       const STEP_KEY = "unicode-picker:design-step";
       const GRAYSCALE_KEY = "unicode-picker:design-grayscale";
 
+      /* The "preferred" value is whichever option is flagged
+         { preferred: true }. It's the default that loads on first
+         visit (and after Reset), but localStorage still wins if the
+         user has been flipping values around. */
+      function preferredValue(d) {
+        const pref = d.options.find(o => o[2]?.preferred);
+        return pref ? pref[0] : d.default;
+      }
+
       const state = (() => {
         let saved;
         try { saved = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); }
         catch (e) { saved = {}; }
         const defaults = Object.fromEntries(
-          DECISIONS.map(d => [d.id, d.default]),
+          DECISIONS.map(d => [d.id, preferredValue(d)]),
         );
         return { ...defaults, ...saved };
       })();
@@ -1393,16 +1506,30 @@
             <div class="control" data-decision="${d.id}">
               <span class="control__label">${d.label}</span>
               <div class="swatches">
-                ${d.options.map(([val, lbl, color]) => {
+                ${d.options.map(opt => {
+                  const [val, lbl, color] = opt;
+                  const meta = opt[3] || {};
                   const pressed = state[d.id] === val;
+                  const cls = [
+                    "swatch",
+                    meta.preferred ? "is-preferred" : "",
+                    meta.rejected ? "is-rejected" : "",
+                  ].filter(Boolean).join(" ");
+                  const title = [
+                    lbl,
+                    meta.preferred ? "(preferred)" : "",
+                    meta.rejected
+                      ? `(rejected${meta.reason ? ": " + meta.reason : ""})`
+                      : "",
+                  ].filter(Boolean).join(" ");
                   const style = color
                     ? `background:${color};`
                     : "background:repeating-linear-gradient(45deg,#ddd 0 4px,#fff 4px 8px);";
                   return `
-                    <button class="swatch"
+                    <button class="${cls}"
                             data-value="${val}"
                             aria-pressed="${pressed}"
-                            title="${lbl}"
+                            title="${title}"
                             style="${style}"></button>
                   `;
                 }).join("")}
@@ -1414,12 +1541,28 @@
           <div class="control" data-decision="${d.id}">
             <span class="control__label">${d.label}</span>
             <div class="seg">
-              ${d.options.map(([val, lbl]) => `
-                <button data-value="${val}"
-                        aria-pressed="${state[d.id] === val}">
-                  ${lbl}
-                </button>
-              `).join("")}
+              ${d.options.map(opt => {
+                const [val, lbl] = opt;
+                const meta = opt[2] || {};
+                const cls = [
+                  meta.preferred ? "is-preferred" : "",
+                  meta.rejected ? "is-rejected" : "",
+                ].filter(Boolean).join(" ");
+                const title = [
+                  meta.preferred ? "Preferred" : "",
+                  meta.rejected
+                    ? `Rejected${meta.reason ? ": " + meta.reason : ""}`
+                    : "",
+                ].filter(Boolean).join(" ");
+                return `
+                  <button data-value="${val}"
+                          class="${cls}"
+                          aria-pressed="${state[d.id] === val}"
+                          title="${title}">
+                    ${lbl}
+                  </button>
+                `;
+              }).join("")}
             </div>
           </div>
         `;
@@ -1482,7 +1625,7 @@
       });
 
       document.getElementById("reset-btn").addEventListener("click", () => {
-        for (const d of DECISIONS) state[d.id] = d.default;
+        for (const d of DECISIONS) state[d.id] = preferredValue(d);
         grayscale = false;
         grayBtn.setAttribute("aria-pressed", "false");
         save(); apply(); renderControls();
@@ -1494,6 +1637,62 @@
           s ? `Phase ${STEPS.indexOf(s) + 1} · ${s.sub}` : "";
       }
 
+      /* --- Block-nav dropdown (nav-narrow="dropdown") -----------
+         Injects a native <select> right before the blocks-nav,
+         populated from the same block buttons. Changing the select
+         triggers a click on the matching button so the real scroll-
+         into-view logic in the picker takes over. Kept in sync via
+         MutationObserver on the nav. */
+      function wireBlockJump() {
+        const picker = document.querySelector("unicode-picker");
+        if (!picker) return;
+        const nav = picker.querySelector(".blocks-nav");
+        if (!nav) return;
+
+        const select = document.createElement("select");
+        select.className = "block-jump";
+        select.setAttribute("aria-label", "Jump to Unicode block");
+        nav.parentNode.insertBefore(select, nav);
+
+        let syncing = false;
+        const sync = () => {
+          const buttons = Array.from(
+            nav.querySelectorAll("button")).filter(
+            b => !b.disabled && b.offsetParent !== null
+          );
+          // Rebuild options (block list may change with search filter)
+          const cur = buttons.find(
+            b => b.getAttribute("aria-current") === "true");
+          const curLabel = cur?.textContent.trim() || "";
+          const opts = buttons.map(b => {
+            const lbl = b.textContent.trim();
+            return `<option ${
+              lbl === curLabel ? "selected" : ""
+            }>${lbl}</option>`;
+          }).join("");
+          syncing = true;
+          select.innerHTML = opts;
+          syncing = false;
+        };
+
+        // Initial + on change
+        sync();
+        const mo = new MutationObserver(() => sync());
+        mo.observe(nav, {
+          childList: true, subtree: true,
+          attributes: true, attributeFilter: ["aria-current"],
+        });
+
+        select.addEventListener("change", () => {
+          if (syncing) return;
+          const wanted = select.value;
+          const buttons = Array.from(nav.querySelectorAll("button"));
+          const match = buttons.find(
+            b => b.textContent.trim() === wanted);
+          if (match) match.click();
+        });
+      }
+
       /* --- Boot ------------------------------------------------- */
       grayBtn.setAttribute(
         "aria-pressed", grayscale ? "true" : "false",
@@ -1502,6 +1701,18 @@
       renderTabs();
       renderControls();
       renderSub();
+
+      // Wait for the picker's blocks-nav to populate (it happens
+      // async after the TSV data loads), then wire the dropdown.
+      const waitForNav = () => {
+        const nav = document.querySelector("unicode-picker .blocks-nav");
+        if (nav && nav.querySelector("button")) {
+          wireBlockJump();
+        } else {
+          setTimeout(waitForNav, 80);
+        }
+      };
+      waitForNav();
     </script>
   </body>
 </html>
