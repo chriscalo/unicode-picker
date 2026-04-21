@@ -599,11 +599,6 @@
           color: var(--color-accent);
           box-shadow: inset 0 -2px 0 var(--color-accent);
         }
-        html[data-nav-active-narrow="accent-text"]
-          unicode-picker .blocks-nav button[aria-current="true"] {
-          color: var(--color-accent);
-        }
-        /* minimal = no treatment */
 
         /* Dropdown variant: style the <select> so the current block
            reads as active. */
@@ -620,12 +615,6 @@
           border-radius: 0;
           color: var(--color-accent);
         }
-        html[data-nav-active-narrow="accent-text"]
-          unicode-picker .block-jump {
-          color: var(--color-accent);
-          font-weight: 500;
-        }
-        /* minimal = no treatment, keeps default border */
       }
 
       /* 7. Search divider */
@@ -1403,10 +1392,8 @@
           label: "Nav active (narrow)",
           help: "Active-block treatment at narrow widths (top strip or dropdown).",
           options: [
-            ["filled",      "Filled"],
-            ["underline",   "Underline"],
-            ["accent-text", "Accent text"],
-            ["minimal",     "Minimal"],
+            ["filled",    "Filled"],
+            ["underline", "Underline"],
           ],
           default: "filled" },
         { id: "search-divider", step: "form", label: "Search divider",
