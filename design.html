@@ -1057,10 +1057,11 @@
         --color-glyph-bg: rgba(245, 233, 205, 0.04);
       }
 
-      /* Palette-derived chrome tokens. Any non-default palette re-wires
-         the theme toggle, focus ring, and grid header chrome off the
-         semantic palette instead of the seeded color scale. */
-      html[data-palette]:not([data-palette="default"]) unicode-picker {
+      /* Palette-derived chrome tokens. Also fires when only accent
+         is set (palette left at default) so the toggle + focus ring
+         follow the accent override. */
+      html[data-palette]:not([data-palette="default"]) unicode-picker,
+      html[data-accent] unicode-picker {
         --color-toggle-track: var(--color-bg-surface);
         --color-toggle-thumb: var(--color-accent);
         --color-toggle-icon:  var(--color-accent-text);
@@ -1068,16 +1069,19 @@
           color-mix(in oklab, var(--color-accent), transparent 55%);
       }
 
-      /* 4. Accent color override — a single CSS var that overrides
-         whatever palette set. Applied as oklch for consistent light/dark. */
-      html[data-accent="cobalt"]     unicode-picker { --color-accent: #0047ff; --color-accent-text: #ffffff; }
-      html[data-accent="forest"]     unicode-picker { --color-accent: #1b6845; --color-accent-text: #ffffff; }
-      html[data-accent="oxblood"]    unicode-picker { --color-accent: #7e1e2a; --color-accent-text: #ffffff; }
-      html[data-accent="ochre"]      unicode-picker { --color-accent: #b8721a; --color-accent-text: #ffffff; }
-      html[data-accent="plum"]       unicode-picker { --color-accent: #6b2b5b; --color-accent-text: #ffffff; }
-      html[data-accent="teal"]       unicode-picker { --color-accent: #0f6f75; --color-accent-text: #ffffff; }
-      html[data-accent="graphite"]   unicode-picker { --color-accent: #2a2a2a; --color-accent-text: #ffffff; }
-      html[data-accent="vermillion"] unicode-picker { --color-accent: #d83321; --color-accent-text: #ffffff; }
+      /* 4. Accent color override. Bumped specificity ([data-accent]
+         used twice) so it beats palette rules which specify two
+         attribute selectors of their own ([data-palette][data-theme]).
+         Also overrides the accent-subtle tint so hover/selected
+         tinted states pick up the new hue. */
+      html[data-accent="cobalt"][data-accent]     unicode-picker { --color-accent: #0047ff; --color-accent-text: #ffffff; --color-accent-subtle: rgba(0, 71, 255, 0.15); }
+      html[data-accent="forest"][data-accent]     unicode-picker { --color-accent: #1b6845; --color-accent-text: #ffffff; --color-accent-subtle: rgba(27, 104, 69, 0.15); }
+      html[data-accent="oxblood"][data-accent]    unicode-picker { --color-accent: #7e1e2a; --color-accent-text: #ffffff; --color-accent-subtle: rgba(126, 30, 42, 0.15); }
+      html[data-accent="ochre"][data-accent]      unicode-picker { --color-accent: #b8721a; --color-accent-text: #ffffff; --color-accent-subtle: rgba(184, 114, 26, 0.15); }
+      html[data-accent="plum"][data-accent]       unicode-picker { --color-accent: #6b2b5b; --color-accent-text: #ffffff; --color-accent-subtle: rgba(107, 43, 91, 0.15); }
+      html[data-accent="teal"][data-accent]       unicode-picker { --color-accent: #0f6f75; --color-accent-text: #ffffff; --color-accent-subtle: rgba(15, 111, 117, 0.15); }
+      html[data-accent="graphite"][data-accent]   unicode-picker { --color-accent: #2a2a2a; --color-accent-text: #ffffff; --color-accent-subtle: rgba(42, 42, 42, 0.15); }
+      html[data-accent="vermillion"][data-accent] unicode-picker { --color-accent: #d83321; --color-accent-text: #ffffff; --color-accent-subtle: rgba(216, 51, 33, 0.15); }
     </style>
   </head>
 
