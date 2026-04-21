@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "data": "node build-data.js",
-    "fonts": "node build-fonts.js",
+    "data": "node scripts/build-data.js",
+    "fonts": "node scripts/build-fonts.js",
     "dev": "vite",
     "build": "vite build",
     "build:watch": "vite build --watch",
