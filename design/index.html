@@ -762,63 +762,67 @@
         --L-accent-text:    12%;
       }
 
-      /* Per-palette parameters. Four numbers each. */
+      /* Per-palette parameters. Chroma is bounded by what sRGB can
+         display at the given L; accents stay ≤ 0.20 so every hue
+         is in-gamut at both L=48% (light) and L=72% (dark) — no
+         browser gamut-mapping, no hue shifts. Neutrals stay ≤ 0.03
+         so paper reads as a warm tint, not a wash. */
       html[data-palette="typewriter"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.04;
-        --accent-hue:   30; --accent-chroma:  0.17;
+        --neutral-hue:  75; --neutral-chroma: 0.025;
+        --accent-hue:   30; --accent-chroma:  0.15;
       }
       html[data-palette="classical"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.05;
-        --accent-hue:   28; --accent-chroma:  0.18;
+        --neutral-hue:  80; --neutral-chroma: 0.03;
+        --accent-hue:   28; --accent-chroma:  0.16;
       }
       html[data-palette="specimen"] unicode-picker {
         --neutral-hue:  80; --neutral-chroma: 0.02;
-        --accent-hue:   35; --accent-chroma:  0.25;
+        --accent-hue:   35; --accent-chroma:  0.18;
       }
       html[data-palette="scientific"] unicode-picker {
-        --neutral-hue: 105; --neutral-chroma: 0.025;
-        --accent-hue:  180; --accent-chroma:  0.13;
+        --neutral-hue: 105; --neutral-chroma: 0.02;
+        --accent-hue:  180; --accent-chroma:  0.12;
       }
       html[data-palette="museum"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.035;
-        --accent-hue:   32; --accent-chroma:  0.17;
+        --neutral-hue:  75; --neutral-chroma: 0.02;
+        --accent-hue:   32; --accent-chroma:  0.16;
       }
       html[data-palette="swiss"] unicode-picker {
         --neutral-hue: 260; --neutral-chroma: 0.005;
-        --accent-hue:  263; --accent-chroma:  0.30;
+        --accent-hue:  263; --accent-chroma:  0.20;
       }
       html[data-palette="poster"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.03;
-        --accent-hue:   30; --accent-chroma:  0.25;
+        --neutral-hue:  80; --neutral-chroma: 0.022;
+        --accent-hue:   30; --accent-chroma:  0.20;
       }
       html[data-palette="art-object"] unicode-picker {
-        --neutral-hue: 110; --neutral-chroma: 0.05;
-        --accent-hue:    0; --accent-chroma:  0.30;
+        --neutral-hue: 110; --neutral-chroma: 0.025;
+        --accent-hue:    0; --accent-chroma:  0.20;
       }
       html[data-palette="digital"] unicode-picker {
         --neutral-hue: 260; --neutral-chroma: 0.008;
-        --accent-hue:  290; --accent-chroma:  0.30;
+        --accent-hue:  290; --accent-chroma:  0.20;
       }
       html[data-palette="archive"] unicode-picker {
-        --neutral-hue:  85; --neutral-chroma: 0.06;
-        --accent-hue:   32; --accent-chroma:  0.18;
+        --neutral-hue:  85; --neutral-chroma: 0.03;
+        --accent-hue:   32; --accent-chroma:  0.16;
       }
       html[data-palette="global"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.04;
-        --accent-hue:   25; --accent-chroma:  0.18;
+        --neutral-hue:  75; --neutral-chroma: 0.025;
+        --accent-hue:   25; --accent-chroma:  0.16;
       }
 
       /* Accent overrides — hue + chroma only; L stays fixed at
          --L-accent so the override can never break the contrast
-         hierarchy the palette already established. */
-      html[data-accent="cobalt"][data-accent]     unicode-picker { --accent-hue: 263; --accent-chroma: 0.30; }
-      html[data-accent="forest"][data-accent]     unicode-picker { --accent-hue: 145; --accent-chroma: 0.15; }
-      html[data-accent="oxblood"][data-accent]    unicode-picker { --accent-hue:  20; --accent-chroma: 0.17; }
-      html[data-accent="ochre"][data-accent]      unicode-picker { --accent-hue:  65; --accent-chroma: 0.15; }
+         hierarchy the palette already established. Capped at 0.20. */
+      html[data-accent="cobalt"][data-accent]     unicode-picker { --accent-hue: 263; --accent-chroma: 0.20; }
+      html[data-accent="forest"][data-accent]     unicode-picker { --accent-hue: 145; --accent-chroma: 0.14; }
+      html[data-accent="oxblood"][data-accent]    unicode-picker { --accent-hue:  20; --accent-chroma: 0.15; }
+      html[data-accent="ochre"][data-accent]      unicode-picker { --accent-hue:  65; --accent-chroma: 0.14; }
       html[data-accent="plum"][data-accent]       unicode-picker { --accent-hue: 340; --accent-chroma: 0.17; }
-      html[data-accent="teal"][data-accent]       unicode-picker { --accent-hue: 195; --accent-chroma: 0.13; }
+      html[data-accent="teal"][data-accent]       unicode-picker { --accent-hue: 195; --accent-chroma: 0.12; }
       html[data-accent="graphite"][data-accent]   unicode-picker { --accent-hue: 260; --accent-chroma: 0.005; }
-      html[data-accent="vermillion"][data-accent] unicode-picker { --accent-hue:  30; --accent-chroma: 0.25; }
+      html[data-accent="vermillion"][data-accent] unicode-picker { --accent-hue:  30; --accent-chroma: 0.20; }
 
       /* Semantic tokens — resolved at use time from the current L,
          hue, and chroma cascade. This block is what actually drives
