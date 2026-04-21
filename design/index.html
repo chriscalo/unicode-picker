@@ -726,25 +726,22 @@
         --font-glyph: "Space Mono", ui-monospace, monospace;
       }
 
-      /* 3. Palettes — each palette is just four numbers:
-              primary-hue,  primary-chroma   (paper/ink scale)
-              secondary-hue, secondary-chroma (accent scale)
+      /* 3. Scale parameters — four independent axes:
+              primary-hue   + primary-chroma   (paper/ink)
+              secondary-hue + secondary-chroma (accent)
 
-         The 12 step lightnesses and every semantic mapping live
-         in style.css. Changing palette swaps colors; nothing
-         else shifts. Because step L values are fixed across all
-         palettes, grayscale mode collapses every palette to the
-         same greys — the contrast hierarchy stays constant.
+         Every other design decision (step lightnesses, semantic
+         mapping) lives in style.css. Changing an axis swaps
+         colors; nothing else moves.
 
          NOTE: CSS custom properties with var() references
          resolve at the DECLARING element's context, not the
          consumer's. The scales at :root read :root's default
-         hue/chroma, so palette overrides on unicode-picker
-         wouldn't propagate. To fix: re-declare the 24 scale
-         tokens on unicode-picker here so they substitute against
-         the palette-aware hue/chroma, and the downstream
-         semantic tokens (still declared at :root, but inherited
-         to unicode-picker) resolve against these overrides. */
+         hue/chroma, so overrides on unicode-picker wouldn't
+         propagate. To fix: re-declare the 24 scale tokens on
+         unicode-picker here so they substitute against the
+         picker-aware hue/chroma, and the semantic tokens (also
+         redeclared here) resolve against those. */
       unicode-picker {
         /* Phase 1 — re-derive scales from palette-overridden
            hue/chroma. */
@@ -807,62 +804,30 @@
         --color-toggle-icon:    var(--primary-1);
       }
 
-      html[data-palette="typewriter"] unicode-picker {
-        --primary-hue: 75;   --primary-chroma:   0.012;
-        --secondary-hue: 30; --secondary-chroma: 0.08;
-      }
-      html[data-palette="classical"] unicode-picker {
-        --primary-hue: 80;   --primary-chroma:   0.015;
-        --secondary-hue: 28; --secondary-chroma: 0.08;
-      }
-      html[data-palette="specimen"] unicode-picker {
-        --primary-hue: 80;   --primary-chroma:   0.010;
-        --secondary-hue: 35; --secondary-chroma: 0.10;
-      }
-      html[data-palette="scientific"] unicode-picker {
-        --primary-hue: 105;   --primary-chroma:   0.008;
-        --secondary-hue: 180; --secondary-chroma: 0.07;
-      }
-      html[data-palette="museum"] unicode-picker {
-        --primary-hue: 75;   --primary-chroma:   0.010;
-        --secondary-hue: 32; --secondary-chroma: 0.09;
-      }
-      html[data-palette="swiss"] unicode-picker {
-        --primary-hue: 260;   --primary-chroma:   0.003;
-        --secondary-hue: 263; --secondary-chroma: 0.14;
-      }
-      html[data-palette="poster"] unicode-picker {
-        --primary-hue: 80;   --primary-chroma:   0.010;
-        --secondary-hue: 30; --secondary-chroma: 0.13;
-      }
-      html[data-palette="art-object"] unicode-picker {
-        --primary-hue: 110; --primary-chroma:   0.012;
-        --secondary-hue: 0; --secondary-chroma: 0.13;
-      }
-      html[data-palette="digital"] unicode-picker {
-        --primary-hue: 260;   --primary-chroma:   0.005;
-        --secondary-hue: 290; --secondary-chroma: 0.15;
-      }
-      html[data-palette="archive"] unicode-picker {
-        --primary-hue: 85;   --primary-chroma:   0.015;
-        --secondary-hue: 32; --secondary-chroma: 0.08;
-      }
-      html[data-palette="global"] unicode-picker {
-        --primary-hue: 75;   --primary-chroma:   0.012;
-        --secondary-hue: 25; --secondary-chroma: 0.09;
-      }
+      html[data-primary-hue="warm"]  unicode-picker { --primary-hue:  30; }
+      html[data-primary-hue="cream"] unicode-picker { --primary-hue:  80; }
+      html[data-primary-hue="sage"]  unicode-picker { --primary-hue: 140; }
+      html[data-primary-hue="cool"]  unicode-picker { --primary-hue: 200; }
+      html[data-primary-hue="blue"]  unicode-picker { --primary-hue: 260; }
+      html[data-primary-hue="rose"]  unicode-picker { --primary-hue: 340; }
 
-      /* Accent override — replaces secondary hue + chroma only.
-         Step L values stay fixed, so swapping the accent can
-         never break the contrast hierarchy the palette set up. */
-      html[data-accent="cobalt"][data-accent]     unicode-picker { --secondary-hue: 263; --secondary-chroma: 0.13; }
-      html[data-accent="forest"][data-accent]     unicode-picker { --secondary-hue: 145; --secondary-chroma: 0.08; }
-      html[data-accent="oxblood"][data-accent]    unicode-picker { --secondary-hue:  20; --secondary-chroma: 0.09; }
-      html[data-accent="ochre"][data-accent]      unicode-picker { --secondary-hue:  65; --secondary-chroma: 0.08; }
-      html[data-accent="plum"][data-accent]       unicode-picker { --secondary-hue: 340; --secondary-chroma: 0.10; }
-      html[data-accent="teal"][data-accent]       unicode-picker { --secondary-hue: 195; --secondary-chroma: 0.07; }
-      html[data-accent="graphite"][data-accent]   unicode-picker { --secondary-hue: 260; --secondary-chroma: 0.003; }
-      html[data-accent="vermillion"][data-accent] unicode-picker { --secondary-hue:  30; --secondary-chroma: 0.14; }
+      html[data-primary-chroma="none"]     unicode-picker { --primary-chroma: 0;     }
+      html[data-primary-chroma="subtle"]   unicode-picker { --primary-chroma: 0.008; }
+      html[data-primary-chroma="moderate"] unicode-picker { --primary-chroma: 0.018; }
+
+      html[data-secondary-hue="red"]     unicode-picker { --secondary-hue:  20; }
+      html[data-secondary-hue="orange"]  unicode-picker { --secondary-hue:  45; }
+      html[data-secondary-hue="yellow"]  unicode-picker { --secondary-hue:  90; }
+      html[data-secondary-hue="green"]   unicode-picker { --secondary-hue: 150; }
+      html[data-secondary-hue="teal"]    unicode-picker { --secondary-hue: 195; }
+      html[data-secondary-hue="blue"]    unicode-picker { --secondary-hue: 250; }
+      html[data-secondary-hue="violet"]  unicode-picker { --secondary-hue: 285; }
+      html[data-secondary-hue="magenta"] unicode-picker { --secondary-hue: 340; }
+
+      html[data-secondary-chroma="none"]   unicode-picker { --secondary-chroma: 0;     }
+      html[data-secondary-chroma="low"]    unicode-picker { --secondary-chroma: 0.050; }
+      html[data-secondary-chroma="medium"] unicode-picker { --secondary-chroma: 0.100; }
+      html[data-secondary-chroma="high"]   unicode-picker { --secondary-chroma: 0.150; }
     </style>
   </head>
 
@@ -1173,37 +1138,49 @@
             ["space-mono","Space Mono"],
           ],
           default: "noto" },
-        { id: "palette", step: "surface", label: "Palette preset",
+        { id: "primary-hue", step: "surface", label: "Primary hue",
+          help: "Paper / ink scale hue.",
           kind: "swatch-palette",
           options: [
-            ["default",    "Default",    "#16573e"],
-            ["typewriter", "Typewriter", "#b8321d"],
-            ["classical",  "Classical",  "#8a2b1a"],
-            ["specimen",   "Specimen",   "#ff4d1a"],
-            ["scientific", "Scientific", "#2d6d63"],
-            ["museum",     "Museum",     "#bd4a34"],
-            ["swiss",      "Swiss",      "#0033ff"],
-            ["poster",     "Poster",     "#d83321"],
-            ["art-object", "Art object", "#ff2f7a"],
-            ["digital",    "Digital",    "#5c2ad9"],
-            ["archive",    "Archive",    "#9c351b"],
-            ["global",     "Global",     "#b03b25"],
+            ["warm",  "Warm",  "oklch(92% 0.018 30)"],
+            ["cream", "Cream", "oklch(92% 0.018 80)"],
+            ["sage",  "Sage",  "oklch(92% 0.015 140)"],
+            ["cool",  "Cool",  "oklch(92% 0.012 200)"],
+            ["blue",  "Blue",  "oklch(92% 0.012 260)"],
+            ["rose",  "Rose",  "oklch(92% 0.015 340)"],
           ],
-          default: "default" },
-        { id: "accent", step: "surface", label: "Accent override",
-          kind: "swatch-accent",
+          default: "cream" },
+        { id: "primary-chroma", step: "surface", label: "Primary chroma",
+          help: "How tinted the paper reads.",
           options: [
-            ["inherit",    "Inherit",    null],
-            ["cobalt",     "Cobalt",     "#0047ff"],
-            ["forest",     "Forest",     "#1b6845"],
-            ["oxblood",    "Oxblood",    "#7e1e2a"],
-            ["ochre",      "Ochre",      "#b8721a"],
-            ["plum",       "Plum",       "#6b2b5b"],
-            ["teal",       "Teal",       "#0f6f75"],
-            ["graphite",   "Graphite",   "#2a2a2a"],
-            ["vermillion", "Vermillion", "#d83321"],
+            ["none",     "None"],
+            ["subtle",   "Subtle",  { preferred: true }],
+            ["moderate", "Moderate"],
           ],
-          default: "inherit" },
+          default: "subtle" },
+        { id: "secondary-hue", step: "surface", label: "Secondary hue",
+          help: "Accent scale hue.",
+          kind: "swatch-palette",
+          options: [
+            ["red",     "Red",     "oklch(60% 0.15 20)"],
+            ["orange",  "Orange",  "oklch(62% 0.14 45)"],
+            ["yellow",  "Yellow",  "oklch(70% 0.13 90)"],
+            ["green",   "Green",   "oklch(58% 0.13 150)"],
+            ["teal",    "Teal",    "oklch(58% 0.10 195)"],
+            ["blue",    "Blue",    "oklch(55% 0.16 250)"],
+            ["violet",  "Violet",  "oklch(55% 0.16 285)"],
+            ["magenta", "Magenta", "oklch(58% 0.15 340)"],
+          ],
+          default: "green" },
+        { id: "secondary-chroma", step: "surface", label: "Secondary chroma",
+          help: "How saturated the accent reads.",
+          options: [
+            ["none",   "None"],
+            ["low",    "Low"],
+            ["medium", "Medium", { preferred: true }],
+            ["high",   "High"],
+          ],
+          default: "medium" },
       ];
 
       /* --- State ------------------------------------------------- */
