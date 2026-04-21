@@ -13,9 +13,9 @@
     /*
      * ═══ Phase 1: Scales ════════════════════════════════════
      *
-     * Two scales — primary (neutral paper/ink) and secondary
-     * (accent). Each scale is defined by (hue, chroma) plus
-     * 12 fixed lightness steps shared across both scales.
+     * Two scales — neutral (paper/ink) and accent. Each scale is
+     * defined by (hue, chroma) plus 12 fixed lightness steps
+     * shared across both scales.
      *
      * To rebrand: change the four scale parameters below.
      * Nothing else. Steps, semantics, and theme inversion are
@@ -25,12 +25,18 @@
      * Step L values invert in [data-theme="light"] so step 1 is
      * always "app background" and step 12 is always "highest
      * contrast text" regardless of theme.
+     *
+     * Chroma moves with lightness: each step multiplies the
+     * scale's base chroma by a per-step factor (--step-N-c) so
+     * near-paper and near-ink steps read calmer than the peak
+     * at step 9. This is theme- and scale-agnostic — changing
+     * the scale's base chroma rescales the whole curve.
      */
 
-    --primary-hue:      162;
-    --primary-chroma:   0.010;
-    --secondary-hue:    162;
-    --secondary-chroma: 0.070;
+    --neutral-hue:    162;
+    --neutral-chroma: 0.010;
+    --accent-hue:     162;
+    --accent-chroma:  0.070;
 
     /* Step lightnesses — dark theme (default). Light theme
        re-sets these by inverting step indices. */
@@ -47,60 +53,81 @@
     --step-11:  88%;  /* secondary text */
     --step-12:  95%;  /* primary text */
 
-    --primary-1:   oklch(var(--step-1)  var(--primary-chroma) var(--primary-hue));
-    --primary-2:   oklch(var(--step-2)  var(--primary-chroma) var(--primary-hue));
-    --primary-3:   oklch(var(--step-3)  var(--primary-chroma) var(--primary-hue));
-    --primary-4:   oklch(var(--step-4)  var(--primary-chroma) var(--primary-hue));
-    --primary-5:   oklch(var(--step-5)  var(--primary-chroma) var(--primary-hue));
-    --primary-6:   oklch(var(--step-6)  var(--primary-chroma) var(--primary-hue));
-    --primary-7:   oklch(var(--step-7)  var(--primary-chroma) var(--primary-hue));
-    --primary-8:   oklch(var(--step-8)  var(--primary-chroma) var(--primary-hue));
-    --primary-9:   oklch(var(--step-9)  var(--primary-chroma) var(--primary-hue));
-    --primary-10:  oklch(var(--step-10) var(--primary-chroma) var(--primary-hue));
-    --primary-11:  oklch(var(--step-11) var(--primary-chroma) var(--primary-hue));
-    --primary-12:  oklch(var(--step-12) var(--primary-chroma) var(--primary-hue));
+    /* Per-step chroma multipliers. Peak at step 9 (solid accent),
+       tapering toward 1 (near-paper) and 12 (near-ink) where
+       high chroma reads as muddy or clipped. Applied uniformly
+       to both scales so the same brand hue expresses
+       consistently everywhere. */
+    --step-1-c:   0.30;
+    --step-2-c:   0.40;
+    --step-3-c:   0.55;
+    --step-4-c:   0.70;
+    --step-5-c:   0.80;
+    --step-6-c:   0.90;
+    --step-7-c:   0.95;
+    --step-8-c:   1.00;
+    --step-9-c:   1.00;
+    --step-10-c:  0.90;
+    --step-11-c:  0.70;
+    --step-12-c:  0.50;
 
-    --secondary-1:  oklch(var(--step-1)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-2:  oklch(var(--step-2)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-3:  oklch(var(--step-3)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-4:  oklch(var(--step-4)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-5:  oklch(var(--step-5)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-6:  oklch(var(--step-6)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-7:  oklch(var(--step-7)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-8:  oklch(var(--step-8)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-9:  oklch(var(--step-9)  var(--secondary-chroma) var(--secondary-hue));
-    --secondary-10: oklch(var(--step-10) var(--secondary-chroma) var(--secondary-hue));
-    --secondary-11: oklch(var(--step-11) var(--secondary-chroma) var(--secondary-hue));
-    --secondary-12: oklch(var(--step-12) var(--secondary-chroma) var(--secondary-hue));
+    --neutral-1:   oklch(var(--step-1)  calc(var(--neutral-chroma) * var(--step-1-c))  var(--neutral-hue));
+    --neutral-2:   oklch(var(--step-2)  calc(var(--neutral-chroma) * var(--step-2-c))  var(--neutral-hue));
+    --neutral-3:   oklch(var(--step-3)  calc(var(--neutral-chroma) * var(--step-3-c))  var(--neutral-hue));
+    --neutral-4:   oklch(var(--step-4)  calc(var(--neutral-chroma) * var(--step-4-c))  var(--neutral-hue));
+    --neutral-5:   oklch(var(--step-5)  calc(var(--neutral-chroma) * var(--step-5-c))  var(--neutral-hue));
+    --neutral-6:   oklch(var(--step-6)  calc(var(--neutral-chroma) * var(--step-6-c))  var(--neutral-hue));
+    --neutral-7:   oklch(var(--step-7)  calc(var(--neutral-chroma) * var(--step-7-c))  var(--neutral-hue));
+    --neutral-8:   oklch(var(--step-8)  calc(var(--neutral-chroma) * var(--step-8-c))  var(--neutral-hue));
+    --neutral-9:   oklch(var(--step-9)  calc(var(--neutral-chroma) * var(--step-9-c))  var(--neutral-hue));
+    --neutral-10:  oklch(var(--step-10) calc(var(--neutral-chroma) * var(--step-10-c)) var(--neutral-hue));
+    --neutral-11:  oklch(var(--step-11) calc(var(--neutral-chroma) * var(--step-11-c)) var(--neutral-hue));
+    --neutral-12:  oklch(var(--step-12) calc(var(--neutral-chroma) * var(--step-12-c)) var(--neutral-hue));
+
+    --accent-1:   oklch(var(--step-1)  calc(var(--accent-chroma) * var(--step-1-c))  var(--accent-hue));
+    --accent-2:   oklch(var(--step-2)  calc(var(--accent-chroma) * var(--step-2-c))  var(--accent-hue));
+    --accent-3:   oklch(var(--step-3)  calc(var(--accent-chroma) * var(--step-3-c))  var(--accent-hue));
+    --accent-4:   oklch(var(--step-4)  calc(var(--accent-chroma) * var(--step-4-c))  var(--accent-hue));
+    --accent-5:   oklch(var(--step-5)  calc(var(--accent-chroma) * var(--step-5-c))  var(--accent-hue));
+    --accent-6:   oklch(var(--step-6)  calc(var(--accent-chroma) * var(--step-6-c))  var(--accent-hue));
+    --accent-7:   oklch(var(--step-7)  calc(var(--accent-chroma) * var(--step-7-c))  var(--accent-hue));
+    --accent-8:   oklch(var(--step-8)  calc(var(--accent-chroma) * var(--step-8-c))  var(--accent-hue));
+    --accent-9:   oklch(var(--step-9)  calc(var(--accent-chroma) * var(--step-9-c))  var(--accent-hue));
+    --accent-10:  oklch(var(--step-10) calc(var(--accent-chroma) * var(--step-10-c)) var(--accent-hue));
+    --accent-11:  oklch(var(--step-11) calc(var(--accent-chroma) * var(--step-11-c)) var(--accent-hue));
+    --accent-12:  oklch(var(--step-12) calc(var(--accent-chroma) * var(--step-12-c)) var(--accent-hue));
 
     /*
      * ═══ Phase 2: Semantic mapping ══════════════════════════
      *
-     * Each UI role chooses primary-or-secondary + a step.
-     * Changing scales changes the rendered colors; the semantic
-     * mapping stays constant.
+     * Each UI role chooses (scale, step). Changing scales
+     * changes the rendered colors; the semantic mapping stays
+     * constant. The `--role-*-scale` / `--role-*-step` pair for
+     * each element is the mental model: "which scale, which
+     * step (contrast level on that scale)". Semantic tokens
+     * below are just `var(--{scale}-{step})` lookups.
      */
 
     /* Backgrounds */
-    --color-bg-base:        var(--primary-1);
-    --color-bg-raised:      var(--primary-2);
-    --color-bg-surface:     var(--primary-3);
-    --color-bg-hover:       var(--primary-4);
-    --color-input-bg:       var(--primary-3);
+    --color-bg-base:        var(--neutral-1);
+    --color-bg-raised:      var(--neutral-2);
+    --color-bg-surface:     var(--neutral-3);
+    --color-bg-hover:       var(--neutral-4);
+    --color-input-bg:       var(--neutral-3);
 
     /* Text */
-    --color-text-primary:   var(--primary-12);
-    --color-text-secondary: var(--primary-11);
-    --color-text-tertiary:  var(--primary-9);
+    --color-text-primary:   var(--neutral-12);
+    --color-text-secondary: var(--neutral-11);
+    --color-text-tertiary:  var(--neutral-9);
 
     /* Borders */
-    --color-border-subtle:  var(--primary-5);
-    --color-border-strong:  var(--primary-7);
+    --color-border-subtle:  var(--neutral-5);
+    --color-border-strong:  var(--neutral-7);
 
     /* Accent */
-    --color-accent:         var(--secondary-9);
-    --color-accent-subtle:  var(--secondary-3);
-    --color-accent-text:    var(--primary-1);
+    --color-accent:         var(--accent-9);
+    --color-accent-subtle:  var(--accent-3);
+    --color-accent-text:    var(--neutral-1);
 
     /* Focus ring — accent at reduced opacity */
     --color-focus:
@@ -119,9 +146,9 @@
         transparent);
 
     /* Component-specific */
-    --color-toggle-track:   var(--primary-3);
-    --color-toggle-thumb:   var(--primary-9);
-    --color-toggle-icon:    var(--primary-1);
+    --color-toggle-track:   var(--neutral-3);
+    --color-toggle-thumb:   var(--neutral-9);
+    --color-toggle-icon:    var(--neutral-1);
 
     color-scheme: dark;
 

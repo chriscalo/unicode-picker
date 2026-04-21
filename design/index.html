@@ -223,12 +223,12 @@
         width: 8px; height: 8px;
       }
       /* Dot color = whichever of near-white / near-black is
-         perceptually furthest from the swatch's L. Because paper
+         perceptually furthest from the swatch's L. Neutral
          swatches render at step-3 and accent swatches at step-9,
-         and those step L values flip with theme, the dot color
-         follows the active theme's ink (step-12) for paper and
-         the active theme's bg (step-1) for accent. */
-      .swatch[data-role="paper"].is-preferred::before {
+         and those step L values flip with theme, so the dot
+         color follows the active theme's ink (step-12) for
+         neutral and the active theme's bg (step-1) for accent. */
+      .swatch[data-role="neutral"].is-preferred::before {
         background: oklch(var(--step-12) 0 0);
       }
       .swatch[data-role="accent"].is-preferred::before {
@@ -313,7 +313,7 @@
          --step-9 is solid accent; both flip L between themes, so
          the preview matches how the chosen hue/chroma actually
          renders in the current theme. */
-      .swatch[data-role="paper"] {
+      .swatch[data-role="neutral"] {
         background: oklch(var(--step-3) var(--sw-c) var(--sw-h));
       }
       .swatch[data-role="accent"] {
@@ -752,12 +752,12 @@
       }
 
       /* 3. Scale parameters — four independent axes:
-              primary-hue   + primary-chroma   (paper/ink)
-              secondary-hue + secondary-chroma (accent)
+              neutral-hue + neutral-chroma (paper/ink)
+              accent-hue  + accent-chroma  (brand accent)
 
-         Every other design decision (step lightnesses, semantic
-         mapping) lives in style.css. Changing an axis swaps
-         colors; nothing else moves.
+         Every other design decision (step lightnesses, per-step
+         chroma, semantic mapping) lives in style.css. Changing
+         an axis swaps colors; nothing else moves.
 
          NOTE: CSS custom properties with var() references
          resolve at the DECLARING element's context, not the
@@ -769,51 +769,53 @@
          redeclared here) resolve against those. */
       unicode-picker {
         /* Phase 1 — re-derive scales from palette-overridden
-           hue/chroma. */
-        --primary-1:   oklch(var(--step-1)  var(--primary-chroma) var(--primary-hue));
-        --primary-2:   oklch(var(--step-2)  var(--primary-chroma) var(--primary-hue));
-        --primary-3:   oklch(var(--step-3)  var(--primary-chroma) var(--primary-hue));
-        --primary-4:   oklch(var(--step-4)  var(--primary-chroma) var(--primary-hue));
-        --primary-5:   oklch(var(--step-5)  var(--primary-chroma) var(--primary-hue));
-        --primary-6:   oklch(var(--step-6)  var(--primary-chroma) var(--primary-hue));
-        --primary-7:   oklch(var(--step-7)  var(--primary-chroma) var(--primary-hue));
-        --primary-8:   oklch(var(--step-8)  var(--primary-chroma) var(--primary-hue));
-        --primary-9:   oklch(var(--step-9)  var(--primary-chroma) var(--primary-hue));
-        --primary-10:  oklch(var(--step-10) var(--primary-chroma) var(--primary-hue));
-        --primary-11:  oklch(var(--step-11) var(--primary-chroma) var(--primary-hue));
-        --primary-12:  oklch(var(--step-12) var(--primary-chroma) var(--primary-hue));
+           hue/chroma. Per-step chroma multiplier (--step-N-c)
+           comes from style.css and doesn't need redeclaring. */
+        --neutral-1:   oklch(var(--step-1)  calc(var(--neutral-chroma) * var(--step-1-c))  var(--neutral-hue));
+        --neutral-2:   oklch(var(--step-2)  calc(var(--neutral-chroma) * var(--step-2-c))  var(--neutral-hue));
+        --neutral-3:   oklch(var(--step-3)  calc(var(--neutral-chroma) * var(--step-3-c))  var(--neutral-hue));
+        --neutral-4:   oklch(var(--step-4)  calc(var(--neutral-chroma) * var(--step-4-c))  var(--neutral-hue));
+        --neutral-5:   oklch(var(--step-5)  calc(var(--neutral-chroma) * var(--step-5-c))  var(--neutral-hue));
+        --neutral-6:   oklch(var(--step-6)  calc(var(--neutral-chroma) * var(--step-6-c))  var(--neutral-hue));
+        --neutral-7:   oklch(var(--step-7)  calc(var(--neutral-chroma) * var(--step-7-c))  var(--neutral-hue));
+        --neutral-8:   oklch(var(--step-8)  calc(var(--neutral-chroma) * var(--step-8-c))  var(--neutral-hue));
+        --neutral-9:   oklch(var(--step-9)  calc(var(--neutral-chroma) * var(--step-9-c))  var(--neutral-hue));
+        --neutral-10:  oklch(var(--step-10) calc(var(--neutral-chroma) * var(--step-10-c)) var(--neutral-hue));
+        --neutral-11:  oklch(var(--step-11) calc(var(--neutral-chroma) * var(--step-11-c)) var(--neutral-hue));
+        --neutral-12:  oklch(var(--step-12) calc(var(--neutral-chroma) * var(--step-12-c)) var(--neutral-hue));
 
-        --secondary-1:  oklch(var(--step-1)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-2:  oklch(var(--step-2)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-3:  oklch(var(--step-3)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-4:  oklch(var(--step-4)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-5:  oklch(var(--step-5)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-6:  oklch(var(--step-6)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-7:  oklch(var(--step-7)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-8:  oklch(var(--step-8)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-9:  oklch(var(--step-9)  var(--secondary-chroma) var(--secondary-hue));
-        --secondary-10: oklch(var(--step-10) var(--secondary-chroma) var(--secondary-hue));
-        --secondary-11: oklch(var(--step-11) var(--secondary-chroma) var(--secondary-hue));
-        --secondary-12: oklch(var(--step-12) var(--secondary-chroma) var(--secondary-hue));
+        --accent-1:   oklch(var(--step-1)  calc(var(--accent-chroma) * var(--step-1-c))  var(--accent-hue));
+        --accent-2:   oklch(var(--step-2)  calc(var(--accent-chroma) * var(--step-2-c))  var(--accent-hue));
+        --accent-3:   oklch(var(--step-3)  calc(var(--accent-chroma) * var(--step-3-c))  var(--accent-hue));
+        --accent-4:   oklch(var(--step-4)  calc(var(--accent-chroma) * var(--step-4-c))  var(--accent-hue));
+        --accent-5:   oklch(var(--step-5)  calc(var(--accent-chroma) * var(--step-5-c))  var(--accent-hue));
+        --accent-6:   oklch(var(--step-6)  calc(var(--accent-chroma) * var(--step-6-c))  var(--accent-hue));
+        --accent-7:   oklch(var(--step-7)  calc(var(--accent-chroma) * var(--step-7-c))  var(--accent-hue));
+        --accent-8:   oklch(var(--step-8)  calc(var(--accent-chroma) * var(--step-8-c))  var(--accent-hue));
+        --accent-9:   oklch(var(--step-9)  calc(var(--accent-chroma) * var(--step-9-c))  var(--accent-hue));
+        --accent-10:  oklch(var(--step-10) calc(var(--accent-chroma) * var(--step-10-c)) var(--accent-hue));
+        --accent-11:  oklch(var(--step-11) calc(var(--accent-chroma) * var(--step-11-c)) var(--accent-hue));
+        --accent-12:  oklch(var(--step-12) calc(var(--accent-chroma) * var(--step-12-c)) var(--accent-hue));
 
-        /* Phase 2 — re-map semantic tokens to the re-derived
-           scales. Duplicated from style.css so palette overrides
-           cascade (semantic tokens declared at :root would have
-           been computed against :root's default scales and then
-           inherited as fixed values). */
-        --color-bg-base:        var(--primary-1);
-        --color-bg-raised:      var(--primary-2);
-        --color-bg-surface:     var(--primary-3);
-        --color-bg-hover:       var(--primary-4);
-        --color-input-bg:       var(--primary-3);
-        --color-text-primary:   var(--primary-12);
-        --color-text-secondary: var(--primary-11);
-        --color-text-tertiary:  var(--primary-9);
-        --color-border-subtle:  var(--primary-5);
-        --color-border-strong:  var(--primary-7);
-        --color-accent:         var(--secondary-9);
-        --color-accent-subtle:  var(--secondary-3);
-        --color-accent-text:    var(--primary-1);
+        /* Phase 2 — per-element (scale, step) mapping.
+           Each semantic token is `var(--{scale}-{step})`: the
+           scale is "which of neutral / accent", the step is
+           "contrast level on that scale". Role-* decisions
+           below let the harness tweak individual steps at
+           runtime. */
+        --color-bg-base:        var(--neutral-1);
+        --color-bg-raised:      var(--neutral-2);
+        --color-bg-surface:     var(--neutral-3);
+        --color-bg-hover:       var(--neutral-4);
+        --color-input-bg:       var(--neutral-3);
+        --color-text-primary:   var(--neutral-12);
+        --color-text-secondary: var(--neutral-11);
+        --color-text-tertiary:  var(--neutral-9);
+        --color-border-subtle:  var(--neutral-5);
+        --color-border-strong:  var(--neutral-7);
+        --color-accent:         var(--accent-9);
+        --color-accent-subtle:  var(--accent-3);
+        --color-accent-text:    var(--neutral-1);
         --color-focus:
           color-mix(in oklab,
             var(--color-accent),
@@ -824,35 +826,64 @@
           color-mix(in oklab,
             var(--color-text-primary) 12%,
             transparent);
-        --color-toggle-track:   var(--primary-3);
-        --color-toggle-thumb:   var(--primary-9);
-        --color-toggle-icon:    var(--primary-1);
+        --color-toggle-track:   var(--neutral-3);
+        --color-toggle-thumb:   var(--neutral-9);
+        --color-toggle-icon:    var(--neutral-1);
       }
 
-      html[data-primary-hue="warm"]  unicode-picker { --primary-hue:  30; }
-      html[data-primary-hue="cream"] unicode-picker { --primary-hue:  80; }
-      html[data-primary-hue="sage"]  unicode-picker { --primary-hue: 140; }
-      html[data-primary-hue="cool"]  unicode-picker { --primary-hue: 200; }
-      html[data-primary-hue="blue"]  unicode-picker { --primary-hue: 260; }
-      html[data-primary-hue="rose"]  unicode-picker { --primary-hue: 340; }
+      html[data-neutral-hue="warm"]  unicode-picker { --neutral-hue:  30; }
+      html[data-neutral-hue="cream"] unicode-picker { --neutral-hue:  80; }
+      html[data-neutral-hue="sage"]  unicode-picker { --neutral-hue: 140; }
+      html[data-neutral-hue="cool"]  unicode-picker { --neutral-hue: 200; }
+      html[data-neutral-hue="blue"]  unicode-picker { --neutral-hue: 260; }
+      html[data-neutral-hue="rose"]  unicode-picker { --neutral-hue: 340; }
 
-      html[data-primary-chroma="none"]     unicode-picker { --primary-chroma: 0;     }
-      html[data-primary-chroma="subtle"]   unicode-picker { --primary-chroma: 0.008; }
-      html[data-primary-chroma="moderate"] unicode-picker { --primary-chroma: 0.018; }
+      html[data-neutral-chroma="none"]     unicode-picker { --neutral-chroma: 0;     }
+      html[data-neutral-chroma="subtle"]   unicode-picker { --neutral-chroma: 0.008; }
+      html[data-neutral-chroma="moderate"] unicode-picker { --neutral-chroma: 0.018; }
 
-      html[data-secondary-hue="red"]     unicode-picker { --secondary-hue:  20; }
-      html[data-secondary-hue="orange"]  unicode-picker { --secondary-hue:  45; }
-      html[data-secondary-hue="yellow"]  unicode-picker { --secondary-hue:  90; }
-      html[data-secondary-hue="green"]   unicode-picker { --secondary-hue: 150; }
-      html[data-secondary-hue="teal"]    unicode-picker { --secondary-hue: 195; }
-      html[data-secondary-hue="blue"]    unicode-picker { --secondary-hue: 250; }
-      html[data-secondary-hue="violet"]  unicode-picker { --secondary-hue: 285; }
-      html[data-secondary-hue="magenta"] unicode-picker { --secondary-hue: 340; }
+      html[data-accent-hue="red"]     unicode-picker { --accent-hue:  20; }
+      html[data-accent-hue="orange"]  unicode-picker { --accent-hue:  45; }
+      html[data-accent-hue="yellow"]  unicode-picker { --accent-hue:  90; }
+      html[data-accent-hue="green"]   unicode-picker { --accent-hue: 150; }
+      html[data-accent-hue="teal"]    unicode-picker { --accent-hue: 195; }
+      html[data-accent-hue="blue"]    unicode-picker { --accent-hue: 250; }
+      html[data-accent-hue="violet"]  unicode-picker { --accent-hue: 285; }
+      html[data-accent-hue="magenta"] unicode-picker { --accent-hue: 340; }
 
-      html[data-secondary-chroma="none"]   unicode-picker { --secondary-chroma: 0;     }
-      html[data-secondary-chroma="low"]    unicode-picker { --secondary-chroma: 0.050; }
-      html[data-secondary-chroma="medium"] unicode-picker { --secondary-chroma: 0.100; }
-      html[data-secondary-chroma="high"]   unicode-picker { --secondary-chroma: 0.150; }
+      html[data-accent-chroma="none"]   unicode-picker { --accent-chroma: 0;     }
+      html[data-accent-chroma="low"]    unicode-picker { --accent-chroma: 0.050; }
+      html[data-accent-chroma="medium"] unicode-picker { --accent-chroma: 0.100; }
+      html[data-accent-chroma="high"]   unicode-picker { --accent-chroma: 0.150; }
+
+      /* Phase 2 — per-element contrast controls.
+         Each role-* decision re-points one semantic token at a
+         different step on its scale. The underlying scale
+         (neutral vs accent) is fixed per role to keep the
+         surface small; stepping is what expresses "contrast
+         level" in the mental model. */
+      html[data-role-text-primary="10"]   unicode-picker { --color-text-primary:   var(--neutral-10); }
+      html[data-role-text-primary="11"]   unicode-picker { --color-text-primary:   var(--neutral-11); }
+      html[data-role-text-primary="12"]   unicode-picker { --color-text-primary:   var(--neutral-12); }
+
+      html[data-role-text-secondary="9"]  unicode-picker { --color-text-secondary: var(--neutral-9);  }
+      html[data-role-text-secondary="10"] unicode-picker { --color-text-secondary: var(--neutral-10); }
+      html[data-role-text-secondary="11"] unicode-picker { --color-text-secondary: var(--neutral-11); }
+
+      html[data-role-border-subtle="4"]   unicode-picker { --color-border-subtle:  var(--neutral-4);  }
+      html[data-role-border-subtle="5"]   unicode-picker { --color-border-subtle:  var(--neutral-5);  }
+      html[data-role-border-subtle="6"]   unicode-picker { --color-border-subtle:  var(--neutral-6);  }
+
+      html[data-role-accent="8"]          unicode-picker { --color-accent:         var(--accent-8);   }
+      html[data-role-accent="9"]          unicode-picker { --color-accent:         var(--accent-9);   }
+      html[data-role-accent="10"]         unicode-picker { --color-accent:         var(--accent-10);  }
+
+      html[data-role-surface="2"]         unicode-picker { --color-bg-surface:     var(--neutral-2);
+                                                           --color-input-bg:       var(--neutral-2); }
+      html[data-role-surface="3"]         unicode-picker { --color-bg-surface:     var(--neutral-3);
+                                                           --color-input-bg:       var(--neutral-3); }
+      html[data-role-surface="4"]         unicode-picker { --color-bg-surface:     var(--neutral-4);
+                                                           --color-input-bg:       var(--neutral-4); }
     </style>
   </head>
 
@@ -1163,29 +1194,29 @@
             ["space-mono","Space Mono"],
           ],
           default: "noto" },
-        { id: "primary-hue", step: "surface", label: "Primary hue",
+        { id: "neutral-hue", step: "surface", label: "Neutral hue",
           help: "Paper / ink scale hue.",
           kind: "swatch-palette",
           options: [
-            ["warm",  "Warm",  { role: "paper", h:  30, c: 0.015 }],
-            ["cream", "Cream", { role: "paper", h:  80, c: 0.015 }],
-            ["sage",  "Sage",  { role: "paper", h: 140, c: 0.012 }],
-            ["cool",  "Cool",  { role: "paper", h: 200, c: 0.012 }],
-            ["blue",  "Blue",  { role: "paper", h: 260, c: 0.012 }],
-            ["rose",  "Rose",  { role: "paper", h: 340, c: 0.015 }],
+            ["warm",  "Warm",  { role: "neutral", h:  30, c: 0.015 }],
+            ["cream", "Cream", { role: "neutral", h:  80, c: 0.015 }],
+            ["sage",  "Sage",  { role: "neutral", h: 140, c: 0.012 }],
+            ["cool",  "Cool",  { role: "neutral", h: 200, c: 0.012 }],
+            ["blue",  "Blue",  { role: "neutral", h: 260, c: 0.012 }],
+            ["rose",  "Rose",  { role: "neutral", h: 340, c: 0.015 }],
           ],
           default: "cream" },
-        { id: "primary-chroma", step: "surface", label: "Primary chroma",
+        { id: "neutral-chroma", step: "surface", label: "Neutral chroma",
           help: "How tinted the paper reads.",
           kind: "swatch-palette",
           options: [
-            ["none",     "None",     { role: "paper", h: 80, c: 0 }],
-            ["subtle",   "Subtle",   { role: "paper", h: 80, c: 0.008 }, { preferred: true }],
-            ["moderate", "Moderate", { role: "paper", h: 80, c: 0.018 }],
+            ["none",     "None",     { role: "neutral", h: 80, c: 0 }],
+            ["subtle",   "Subtle",   { role: "neutral", h: 80, c: 0.008 }, { preferred: true }],
+            ["moderate", "Moderate", { role: "neutral", h: 80, c: 0.018 }],
           ],
           default: "subtle" },
-        { id: "secondary-hue", step: "surface", label: "Secondary hue",
-          help: "Accent scale hue.",
+        { id: "accent-hue", step: "surface", label: "Accent hue",
+          help: "Brand accent scale hue.",
           kind: "swatch-palette",
           options: [
             ["red",     "Red",     { role: "accent", h:  20, c: 0.13 }],
@@ -1198,7 +1229,7 @@
             ["magenta", "Magenta", { role: "accent", h: 340, c: 0.13 }],
           ],
           default: "green" },
-        { id: "secondary-chroma", step: "surface", label: "Secondary chroma",
+        { id: "accent-chroma", step: "surface", label: "Accent chroma",
           help: "How saturated the accent reads.",
           kind: "swatch-palette",
           options: [
@@ -1208,6 +1239,54 @@
             ["high",   "High",   { role: "accent", h: 160, c: 0.150 }],
           ],
           default: "medium" },
+
+        /* ─ Roles (per-element contrast on chosen scale) ─
+           Each decision re-points one semantic token at a
+           different step of its scale. "Step" IS the contrast
+           level — how far from step 1 (surface) the element
+           sits. Chroma follows lightness automatically via the
+           per-step multiplier in style.css, so lower-contrast
+           steps read calmer. */
+        { id: "role-surface", step: "surface", label: "Surface contrast",
+          help: "Step of neutral scale used for cards/inputs (bg-surface / input-bg).",
+          options: [
+            ["2", "2"],
+            ["3", "3", { preferred: true }],
+            ["4", "4"],
+          ],
+          default: "3" },
+        { id: "role-border-subtle", step: "surface", label: "Subtle border",
+          help: "Step of neutral scale used for hairline dividers.",
+          options: [
+            ["4", "4"],
+            ["5", "5", { preferred: true }],
+            ["6", "6"],
+          ],
+          default: "5" },
+        { id: "role-text-primary", step: "surface", label: "Primary text",
+          help: "Step of neutral scale used for body text.",
+          options: [
+            ["10", "10"],
+            ["11", "11"],
+            ["12", "12", { preferred: true }],
+          ],
+          default: "12" },
+        { id: "role-text-secondary", step: "surface", label: "Secondary text",
+          help: "Step of neutral scale used for labels / meta.",
+          options: [
+            ["9",  "9"],
+            ["10", "10"],
+            ["11", "11", { preferred: true }],
+          ],
+          default: "11" },
+        { id: "role-accent", step: "surface", label: "Accent strength",
+          help: "Step of accent scale used for solid accent surfaces.",
+          options: [
+            ["8",  "8"],
+            ["9",  "9", { preferred: true }],
+            ["10", "10"],
+          ],
+          default: "9" },
       ];
 
       /* --- State ------------------------------------------------- */
