@@ -245,8 +245,8 @@
   }
 
   :focus-visible {
-    outline: solid 3px var(--color-focus);
-    outline-offset: 2px;
+    outline: solid 5px var(--color-focus);
+    outline-offset: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {

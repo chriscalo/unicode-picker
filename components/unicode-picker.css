@@ -160,8 +160,8 @@ unicode-picker .theme-toggle input:checked
 
 unicode-picker .theme-toggle
   input:focus-visible ~ .toggle-track {
-  outline: solid 3px var(--color-focus);
-  outline-offset: 2px;
+  outline: solid 5px var(--color-focus);
+  outline-offset: 0;
 }
 
 unicode-picker .toggle-track:hover {
