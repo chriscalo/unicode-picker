@@ -1,12 +1,12 @@
-// UnicodeData.txt is the canonical source for character data.
-// Blocks.txt defines Unicode block ranges.
+// data/UnicodeData.txt is the canonical source for character data.
+// data/Blocks.txt defines Unicode block ranges.
 // Source: https://www.unicode.org/Public/UCD/latest/ucd/
 //
 // To check for updates:
-//   curl -O https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
-//   curl -O https://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt
-//   diff UnicodeData.txt <(git show HEAD:UnicodeData.txt)
-//   diff Blocks.txt <(git show HEAD:Blocks.txt)
+//   curl -o data/UnicodeData.txt https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
+//   curl -o data/Blocks.txt       https://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt
+//   diff data/UnicodeData.txt <(git show HEAD:data/UnicodeData.txt)
+//   diff data/Blocks.txt       <(git show HEAD:data/Blocks.txt)
 //
 // To rebuild after updating:
 //   npm run data
@@ -21,7 +21,7 @@ const SKIP_CATEGORIES = new Set([
 
 // Parse blocks
 const blocks = [];
-for (const line of readFileSync("Blocks.txt", "utf8").split("\n")) {
+for (const line of readFileSync("data/Blocks.txt", "utf8").split("\n")) {
   if (line.startsWith("#") || !line.trim()) continue;
   const match = line.match(
     /^([0-9A-F]+)\.\.([0-9A-F]+);\s*(.+)$/,
@@ -38,7 +38,7 @@ for (const line of readFileSync("Blocks.txt", "utf8").split("\n")) {
 const entries = [];
 const blockIndices = new Map();
 
-const source = readFileSync("UnicodeData.txt", "utf8");
+const source = readFileSync("data/UnicodeData.txt", "utf8");
 for (const line of source.trim().split("\n")) {
   const fields = line.split(";");
   const codepoint = parseInt(fields[0], 16);
@@ -60,7 +60,7 @@ for (const line of source.trim().split("\n")) {
 }
 
 writeFileSync(
-  "unicode-data.tsv",
+  "data/unicode-data.tsv",
   entries.join("\n") + "\n",
 );
 
@@ -69,7 +69,7 @@ for (const [name, index] of blockIndices) {
   blockLines.push(index + "\t" + name);
 }
 writeFileSync(
-  "unicode-blocks.tsv",
+  "data/unicode-blocks.tsv",
   blockLines.join("\n") + "\n",
 );
 

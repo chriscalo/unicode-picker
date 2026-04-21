@@ -24,8 +24,8 @@ export default defineConfig({
 });
 
 function inlineUnicodeData() {
-  const dataFile = resolve("unicode-data.tsv");
-  const blocksFile = resolve("unicode-blocks.tsv");
+  const dataFile = resolve("data/unicode-data.tsv");
+  const blocksFile = resolve("data/unicode-blocks.tsv");
 
   return {
     name: "inline-unicode-data",
