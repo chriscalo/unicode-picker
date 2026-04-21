@@ -714,431 +714,156 @@
         --font-glyph: "Space Mono", ui-monospace, monospace;
       }
 
-      /* 3. Palette presets — override the real app's semantic tokens.
-         Each preset defines both a light and dark variant.
-         Presets are lifted from style-tiles.html. */
+      /* 3. Palette presets — perceptually uniform in OKLCH.
+         Every palette shares the same role-level Lightness values
+         (--L-*) and only declares neutral hue+chroma and accent
+         hue+chroma. Because all palettes agree on L per role, the
+         grayscale filter collapses them to identical grays —
+         meaning the perceived contrast between backgrounds, text,
+         borders, and accents is consistent no matter which palette
+         is active, and grayscale mode honors that contrast. */
+      unicode-picker {
+        /* Light-mode L for each role */
+        --L-bg-base:        97%;
+        --L-bg-raised:      94%;
+        --L-bg-surface:     88%;
+        --L-bg-hover:       84%;
+        --L-bg-selected:    84%;
+        --L-input-bg:       97%;
+        --L-text-primary:   18%;
+        --L-text-secondary: 45%;
+        --L-text-tertiary:  62%;
+        --L-border-subtle:  82%;
+        --L-border-strong:  50%;
+        --L-accent:         48%;
+        --L-accent-text:    98%;
+        --glyph-bg-alpha:   0.05;
 
-      /* Typewriter */
-      html[data-palette="typewriter"][data-theme="light"] unicode-picker {
-        --color-bg-base: #efe7d2;
-        --color-bg-raised: #ece1c3;
-        --color-bg-surface: #f6ecd0;
-        --color-bg-hover: #e4d8b6;
-        --color-bg-selected: #e4d8b6;
-        --color-input-bg: #f6ecd0;
-        --color-text-primary: #1a1710;
-        --color-text-secondary: #7a6d4f;
-        --color-text-tertiary: #9a8d6f;
-        --color-border-subtle: rgba(26, 23, 16, 0.18);
-        --color-border-strong: rgba(26, 23, 16, 0.3);
-        --color-accent: #b8321d;
-        --color-accent-subtle: rgba(184, 50, 29, 0.12);
-        --color-accent-text: #efe7d2;
-        --color-glyph-bg: rgba(26, 23, 16, 0.04);
+        /* Default palette hue + chroma (teal-green). Each palette
+           overrides these four numbers; nothing else. */
+        --neutral-hue:    162;
+        --neutral-chroma: 0.025;
+        --accent-hue:     162;
+        --accent-chroma:  0.09;
       }
-      html[data-palette="typewriter"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #15130d;
-        --color-bg-raised: #1d1a12;
-        --color-bg-surface: #25221a;
-        --color-bg-hover: #2a2620;
-        --color-bg-selected: #2a2620;
-        --color-input-bg: #25221a;
-        --color-text-primary: #ebdfc0;
-        --color-text-secondary: #8a7d5e;
-        --color-text-tertiary: #6a5e48;
-        --color-border-subtle: rgba(235, 223, 192, 0.14);
-        --color-border-strong: rgba(235, 223, 192, 0.24);
-        --color-accent: #e97560;
-        --color-accent-subtle: rgba(233, 117, 96, 0.2);
-        --color-accent-text: #15130d;
-        --color-glyph-bg: rgba(235, 223, 192, 0.04);
-      }
-
-      /* Classical */
-      html[data-palette="classical"][data-theme="light"] unicode-picker {
-        --color-bg-base: #f7efdc;
-        --color-bg-raised: #f1e6cc;
-        --color-bg-surface: #ece0be;
-        --color-bg-hover: #e4d4aa;
-        --color-bg-selected: #e4d4aa;
-        --color-input-bg: #f7efdc;
-        --color-text-primary: #201912;
-        --color-text-secondary: #6f6148;
-        --color-text-tertiary: #8a7c60;
-        --color-border-subtle: #d5c28d;
-        --color-border-strong: #b39c67;
-        --color-accent: #8a2b1a;
-        --color-accent-subtle: rgba(138, 43, 26, 0.12);
-        --color-accent-text: #f7efdc;
-        --color-glyph-bg: rgba(32, 25, 18, 0.05);
-      }
-      html[data-palette="classical"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #181310;
-        --color-bg-raised: #221b15;
-        --color-bg-surface: #2c241b;
-        --color-bg-hover: #332b22;
-        --color-bg-selected: #332b22;
-        --color-input-bg: #221b15;
-        --color-text-primary: #f1e2bf;
-        --color-text-secondary: #b49e71;
-        --color-text-tertiary: #8c7a55;
-        --color-border-subtle: #4a3a21;
-        --color-border-strong: #6a5432;
-        --color-accent: #e9906f;
-        --color-accent-subtle: rgba(233, 144, 111, 0.2);
-        --color-accent-text: #181310;
-        --color-glyph-bg: rgba(241, 226, 191, 0.04);
+      html[data-theme="dark"] unicode-picker {
+        --L-bg-base:        11%;
+        --L-bg-raised:      16%;
+        --L-bg-surface:     22%;
+        --L-bg-hover:       27%;
+        --L-bg-selected:    27%;
+        --L-input-bg:       14%;
+        --L-text-primary:   92%;
+        --L-text-secondary: 65%;
+        --L-text-tertiary:  50%;
+        --L-border-subtle:  22%;
+        --L-border-strong:  50%;
+        --L-accent:         72%;
+        --L-accent-text:    12%;
       }
 
-      /* Swiss */
-      html[data-palette="swiss"][data-theme="light"] unicode-picker {
-        --color-bg-base: #ffffff;
-        --color-bg-raised: #f8f8f6;
-        --color-bg-surface: #f2f2ef;
-        --color-bg-hover: #eceae4;
-        --color-bg-selected: #eceae4;
-        --color-input-bg: #ffffff;
-        --color-text-primary: #000000;
-        --color-text-secondary: #6b6963;
-        --color-text-tertiary: #8a8780;
-        --color-border-subtle: #e6e3dd;
-        --color-border-strong: #000000;
-        --color-accent: #0033ff;
-        --color-accent-subtle: rgba(0, 51, 255, 0.12);
-        --color-accent-text: #ffffff;
-        --color-glyph-bg: rgba(0, 0, 0, 0.04);
+      /* Per-palette parameters. Four numbers each. */
+      html[data-palette="typewriter"] unicode-picker {
+        --neutral-hue:  75; --neutral-chroma: 0.04;
+        --accent-hue:   30; --accent-chroma:  0.17;
       }
-      html[data-palette="swiss"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #000000;
-        --color-bg-raised: #0f0f0f;
-        --color-bg-surface: #1a1a1a;
-        --color-bg-hover: #242424;
-        --color-bg-selected: #242424;
-        --color-input-bg: #0a0a0a;
-        --color-text-primary: #ffffff;
-        --color-text-secondary: #9a948c;
-        --color-text-tertiary: #6a6860;
-        --color-border-subtle: #1d1b18;
-        --color-border-strong: #ffffff;
-        --color-accent: #6785ff;
-        --color-accent-subtle: rgba(103, 133, 255, 0.2);
-        --color-accent-text: #000000;
-        --color-glyph-bg: rgba(255, 255, 255, 0.05);
+      html[data-palette="classical"] unicode-picker {
+        --neutral-hue:  80; --neutral-chroma: 0.05;
+        --accent-hue:   28; --accent-chroma:  0.18;
       }
-
-      /* Museum */
-      html[data-palette="museum"][data-theme="light"] unicode-picker {
-        --color-bg-base: #f4efe5;
-        --color-bg-raised: #ede7d8;
-        --color-bg-surface: #e8e0cc;
-        --color-bg-hover: #ded5bd;
-        --color-bg-selected: #ded5bd;
-        --color-input-bg: #f4efe5;
-        --color-text-primary: #1c1a16;
-        --color-text-secondary: #8a8174;
-        --color-text-tertiary: #a69c8b;
-        --color-border-subtle: rgba(28, 26, 22, 0.08);
-        --color-border-strong: rgba(28, 26, 22, 0.2);
-        --color-accent: #bd4a34;
-        --color-accent-subtle: rgba(189, 74, 52, 0.12);
-        --color-accent-text: #f4efe5;
-        --color-glyph-bg: rgba(28, 26, 22, 0.05);
+      html[data-palette="specimen"] unicode-picker {
+        --neutral-hue:  80; --neutral-chroma: 0.02;
+        --accent-hue:   35; --accent-chroma:  0.25;
       }
-      html[data-palette="museum"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #1a1815;
-        --color-bg-raised: #23201b;
-        --color-bg-surface: #2b2822;
-        --color-bg-hover: #33302a;
-        --color-bg-selected: #33302a;
-        --color-input-bg: #23201b;
-        --color-text-primary: #efe9dc;
-        --color-text-secondary: #a59c89;
-        --color-text-tertiary: #807861;
-        --color-border-subtle: rgba(239, 233, 220, 0.11);
-        --color-border-strong: rgba(239, 233, 220, 0.24);
-        --color-accent: #e88e73;
-        --color-accent-subtle: rgba(232, 142, 115, 0.2);
-        --color-accent-text: #1a1815;
-        --color-glyph-bg: rgba(239, 233, 220, 0.04);
+      html[data-palette="scientific"] unicode-picker {
+        --neutral-hue: 105; --neutral-chroma: 0.025;
+        --accent-hue:  180; --accent-chroma:  0.13;
+      }
+      html[data-palette="museum"] unicode-picker {
+        --neutral-hue:  75; --neutral-chroma: 0.035;
+        --accent-hue:   32; --accent-chroma:  0.17;
+      }
+      html[data-palette="swiss"] unicode-picker {
+        --neutral-hue: 260; --neutral-chroma: 0.005;
+        --accent-hue:  263; --accent-chroma:  0.30;
+      }
+      html[data-palette="poster"] unicode-picker {
+        --neutral-hue:  80; --neutral-chroma: 0.03;
+        --accent-hue:   30; --accent-chroma:  0.25;
+      }
+      html[data-palette="art-object"] unicode-picker {
+        --neutral-hue: 110; --neutral-chroma: 0.05;
+        --accent-hue:    0; --accent-chroma:  0.30;
+      }
+      html[data-palette="digital"] unicode-picker {
+        --neutral-hue: 260; --neutral-chroma: 0.008;
+        --accent-hue:  290; --accent-chroma:  0.30;
+      }
+      html[data-palette="archive"] unicode-picker {
+        --neutral-hue:  85; --neutral-chroma: 0.06;
+        --accent-hue:   32; --accent-chroma:  0.18;
+      }
+      html[data-palette="global"] unicode-picker {
+        --neutral-hue:  75; --neutral-chroma: 0.04;
+        --accent-hue:   25; --accent-chroma:  0.18;
       }
 
-      /* Archive / library */
-      html[data-palette="archive"][data-theme="light"] unicode-picker {
-        --color-bg-base: #e8d9b5;
-        --color-bg-raised: #f1e4c3;
-        --color-bg-surface: #f5ead0;
-        --color-bg-hover: #ddcda0;
-        --color-bg-selected: #ddcda0;
-        --color-input-bg: #f5ead0;
-        --color-text-primary: #2a1e0e;
-        --color-text-secondary: #725936;
-        --color-text-tertiary: #9a7e52;
-        --color-border-subtle: #b59a6b;
-        --color-border-strong: #8a6d42;
-        --color-accent: #9c351b;
-        --color-accent-subtle: rgba(156, 53, 27, 0.12);
-        --color-accent-text: #f5ead0;
-        --color-glyph-bg: rgba(42, 30, 14, 0.04);
-      }
-      html[data-palette="archive"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #1d160a;
-        --color-bg-raised: #26201c;
-        --color-bg-surface: #2d2617;
-        --color-bg-hover: #352d1c;
-        --color-bg-selected: #352d1c;
-        --color-input-bg: #29200f;
-        --color-text-primary: #f0dfb2;
-        --color-text-secondary: #c2a573;
-        --color-text-tertiary: #8e7e4f;
-        --color-border-subtle: #5e4725;
-        --color-border-strong: #7f6436;
-        --color-accent: #e58060;
-        --color-accent-subtle: rgba(229, 128, 96, 0.2);
-        --color-accent-text: #1d160a;
-        --color-glyph-bg: rgba(240, 223, 178, 0.04);
-      }
+      /* Accent overrides — hue + chroma only; L stays fixed at
+         --L-accent so the override can never break the contrast
+         hierarchy the palette already established. */
+      html[data-accent="cobalt"][data-accent]     unicode-picker { --accent-hue: 263; --accent-chroma: 0.30; }
+      html[data-accent="forest"][data-accent]     unicode-picker { --accent-hue: 145; --accent-chroma: 0.15; }
+      html[data-accent="oxblood"][data-accent]    unicode-picker { --accent-hue:  20; --accent-chroma: 0.17; }
+      html[data-accent="ochre"][data-accent]      unicode-picker { --accent-hue:  65; --accent-chroma: 0.15; }
+      html[data-accent="plum"][data-accent]       unicode-picker { --accent-hue: 340; --accent-chroma: 0.17; }
+      html[data-accent="teal"][data-accent]       unicode-picker { --accent-hue: 195; --accent-chroma: 0.13; }
+      html[data-accent="graphite"][data-accent]   unicode-picker { --accent-hue: 260; --accent-chroma: 0.005; }
+      html[data-accent="vermillion"][data-accent] unicode-picker { --accent-hue:  30; --accent-chroma: 0.25; }
 
-      /* Digital-native */
-      html[data-palette="digital"][data-theme="light"] unicode-picker {
-        --color-bg-base: #fafaf7;
-        --color-bg-raised: #ffffff;
-        --color-bg-surface: #f3f3ef;
-        --color-bg-hover: #ededea;
-        --color-bg-selected: #ededea;
-        --color-input-bg: #fafaf7;
-        --color-text-primary: #0b0f14;
-        --color-text-secondary: #6c7480;
-        --color-text-tertiary: #9ba3ae;
-        --color-border-subtle: rgba(11, 15, 20, 0.08);
-        --color-border-strong: rgba(11, 15, 20, 0.2);
-        --color-accent: #5c2ad9;
-        --color-accent-subtle: rgba(92, 42, 217, 0.12);
-        --color-accent-text: #ffffff;
-        --color-glyph-bg: rgba(11, 15, 20, 0.03);
-      }
-      html[data-palette="digital"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #09090b;
-        --color-bg-raised: #111114;
-        --color-bg-surface: #17171b;
-        --color-bg-hover: #1f1f24;
-        --color-bg-selected: #1f1f24;
-        --color-input-bg: #111114;
-        --color-text-primary: #eef0f2;
-        --color-text-secondary: #8590a0;
-        --color-text-tertiary: #5e6573;
-        --color-border-subtle: rgba(255, 255, 255, 0.08);
-        --color-border-strong: rgba(255, 255, 255, 0.2);
-        --color-accent: #c6ff00;
-        --color-accent-subtle: rgba(198, 255, 0, 0.2);
-        --color-accent-text: #061010;
-        --color-glyph-bg: rgba(255, 255, 255, 0.04);
-      }
+      /* Semantic tokens — resolved at use time from the current L,
+         hue, and chroma cascade. This block is what actually drives
+         every visual token in the picker. */
+      unicode-picker {
+        --color-bg-base:
+          oklch(var(--L-bg-base) var(--neutral-chroma) var(--neutral-hue));
+        --color-bg-raised:
+          oklch(var(--L-bg-raised) var(--neutral-chroma) var(--neutral-hue));
+        --color-bg-surface:
+          oklch(var(--L-bg-surface) var(--neutral-chroma) var(--neutral-hue));
+        --color-bg-hover:
+          oklch(var(--L-bg-hover) var(--neutral-chroma) var(--neutral-hue));
+        --color-bg-selected:
+          oklch(var(--L-bg-selected) var(--neutral-chroma) var(--neutral-hue));
+        --color-input-bg:
+          oklch(var(--L-input-bg) var(--neutral-chroma) var(--neutral-hue));
+        --color-text-primary:
+          oklch(var(--L-text-primary) var(--neutral-chroma) var(--neutral-hue));
+        --color-text-secondary:
+          oklch(var(--L-text-secondary) var(--neutral-chroma) var(--neutral-hue));
+        --color-text-tertiary:
+          oklch(var(--L-text-tertiary) var(--neutral-chroma) var(--neutral-hue));
+        --color-border-subtle:
+          oklch(var(--L-border-subtle) var(--neutral-chroma) var(--neutral-hue));
+        --color-border-strong:
+          oklch(var(--L-border-strong) var(--neutral-chroma) var(--neutral-hue));
+        --color-accent:
+          oklch(var(--L-accent) var(--accent-chroma) var(--accent-hue));
+        --color-accent-text:
+          oklch(var(--L-accent-text) 0 0);
+        --color-accent-subtle:
+          oklch(var(--L-accent) var(--accent-chroma) var(--accent-hue) / 0.14);
+        --color-glyph-bg:
+          oklch(var(--L-text-primary) 0 0 / var(--glyph-bg-alpha));
 
-      /* Poster — vermillion */
-      html[data-palette="poster"][data-theme="light"] unicode-picker {
-        --color-bg-base: #f1ecdc;
-        --color-bg-raised: #e8e1c8;
-        --color-bg-surface: #dcd3b2;
-        --color-bg-hover: #d0c59f;
-        --color-bg-selected: #d0c59f;
-        --color-input-bg: #f1ecdc;
-        --color-text-primary: #0a0807;
-        --color-text-secondary: #5a5243;
-        --color-text-tertiary: #7a705a;
-        --color-border-subtle: rgba(10, 8, 7, 0.15);
-        --color-border-strong: #0a0807;
-        --color-accent: #d83321;
-        --color-accent-subtle: rgba(216, 51, 33, 0.15);
-        --color-accent-text: #ffffff;
-        --color-glyph-bg: rgba(10, 8, 7, 0.05);
-      }
-      html[data-palette="poster"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #0a0807;
-        --color-bg-raised: #14100f;
-        --color-bg-surface: #1c1716;
-        --color-bg-hover: #241e1c;
-        --color-bg-selected: #241e1c;
-        --color-input-bg: #14100f;
-        --color-text-primary: #f1ecdc;
-        --color-text-secondary: #a39880;
-        --color-text-tertiary: #7a7058;
-        --color-border-subtle: rgba(241, 236, 220, 0.15);
-        --color-border-strong: #f1ecdc;
-        --color-accent: #ff5141;
-        --color-accent-subtle: rgba(255, 81, 65, 0.2);
-        --color-accent-text: #0a0807;
-        --color-glyph-bg: rgba(241, 236, 220, 0.05);
-      }
-
-      /* Art object */
-      html[data-palette="art-object"][data-theme="light"] unicode-picker {
-        --color-bg-base: #e7e7ce;
-        --color-bg-raised: #efeed3;
-        --color-bg-surface: #f4f2d8;
-        --color-bg-hover: #d8d7bf;
-        --color-bg-selected: #d8d7bf;
-        --color-input-bg: #efeed3;
-        --color-text-primary: #17182e;
-        --color-text-secondary: #6d6884;
-        --color-text-tertiary: #8c8aa0;
-        --color-border-subtle: rgba(23, 24, 46, 0.1);
-        --color-border-strong: rgba(23, 24, 46, 0.3);
-        --color-accent: #ff2f7a;
-        --color-accent-subtle: rgba(255, 47, 122, 0.14);
-        --color-accent-text: #ffffff;
-        --color-glyph-bg: rgba(23, 24, 46, 0.05);
-      }
-      html[data-palette="art-object"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #0f0e20;
-        --color-bg-raised: #171630;
-        --color-bg-surface: #1d1c3a;
-        --color-bg-hover: #252445;
-        --color-bg-selected: #252445;
-        --color-input-bg: #171630;
-        --color-text-primary: #e7e7ce;
-        --color-text-secondary: #9d95bb;
-        --color-text-tertiary: #6f6889;
-        --color-border-subtle: rgba(231, 231, 206, 0.1);
-        --color-border-strong: rgba(231, 231, 206, 0.3);
-        --color-accent: #ff6ba8;
-        --color-accent-subtle: rgba(255, 107, 168, 0.2);
-        --color-accent-text: #0f0e20;
-        --color-glyph-bg: rgba(231, 231, 206, 0.05);
-      }
-
-      /* Scientific */
-      html[data-palette="scientific"][data-theme="light"] unicode-picker {
-        --color-bg-base: #fbf8f1;
-        --color-bg-raised: #ffffff;
-        --color-bg-surface: #f4efe1;
-        --color-bg-hover: #ebe5d0;
-        --color-bg-selected: #ebe5d0;
-        --color-input-bg: #fbf8f1;
-        --color-text-primary: #19211d;
-        --color-text-secondary: #6e7a72;
-        --color-text-tertiary: #909890;
-        --color-border-subtle: #d8d3c4;
-        --color-border-strong: #b5b09f;
-        --color-accent: #2d6d63;
-        --color-accent-subtle: rgba(45, 109, 99, 0.13);
-        --color-accent-text: #fbf8f1;
-        --color-glyph-bg: rgba(25, 33, 29, 0.04);
-      }
-      html[data-palette="scientific"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #0e1514;
-        --color-bg-raised: #162321;
-        --color-bg-surface: #1e2d2a;
-        --color-bg-hover: #253834;
-        --color-bg-selected: #253834;
-        --color-input-bg: #162321;
-        --color-text-primary: #e9efe8;
-        --color-text-secondary: #8da49d;
-        --color-text-tertiary: #5b7870;
-        --color-border-subtle: #213531;
-        --color-border-strong: #3a544e;
-        --color-accent: #80cfc1;
-        --color-accent-subtle: rgba(128, 207, 193, 0.2);
-        --color-accent-text: #0e1514;
-        --color-glyph-bg: rgba(233, 239, 232, 0.04);
-      }
-
-      /* Specimen */
-      html[data-palette="specimen"][data-theme="light"] unicode-picker {
-        --color-bg-base: #f1ede3;
-        --color-bg-raised: #e8e3d4;
-        --color-bg-surface: #ded8c6;
-        --color-bg-hover: #d3cdb8;
-        --color-bg-selected: #d3cdb8;
-        --color-input-bg: #f1ede3;
-        --color-text-primary: #0b0a08;
-        --color-text-secondary: #7a7362;
-        --color-text-tertiary: #999180;
-        --color-border-subtle: rgba(11, 10, 8, 0.15);
-        --color-border-strong: #0b0a08;
-        --color-accent: #ff4d1a;
-        --color-accent-subtle: rgba(255, 77, 26, 0.12);
-        --color-accent-text: #ffffff;
-        --color-glyph-bg: rgba(11, 10, 8, 0.04);
-      }
-      html[data-palette="specimen"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #0a0a0a;
-        --color-bg-raised: #141414;
-        --color-bg-surface: #1c1c1c;
-        --color-bg-hover: #242424;
-        --color-bg-selected: #242424;
-        --color-input-bg: #141414;
-        --color-text-primary: #eeeae0;
-        --color-text-secondary: #8a8374;
-        --color-text-tertiary: #615b50;
-        --color-border-subtle: rgba(238, 234, 224, 0.15);
-        --color-border-strong: #eeeae0;
-        --color-accent: #ff6a36;
-        --color-accent-subtle: rgba(255, 106, 54, 0.2);
-        --color-accent-text: #0a0a0a;
-        --color-glyph-bg: rgba(238, 234, 224, 0.04);
-      }
-
-      /* Global */
-      html[data-palette="global"][data-theme="light"] unicode-picker {
-        --color-bg-base: #fbf5e5;
-        --color-bg-raised: #f5ecd2;
-        --color-bg-surface: #ede0bc;
-        --color-bg-hover: #e3d4a3;
-        --color-bg-selected: #e3d4a3;
-        --color-input-bg: #fbf5e5;
-        --color-text-primary: #1e1810;
-        --color-text-secondary: #6d5d42;
-        --color-text-tertiary: #8f7e60;
-        --color-border-subtle: #d9c9a4;
-        --color-border-strong: #a89575;
-        --color-accent: #b03b25;
-        --color-accent-subtle: rgba(176, 59, 37, 0.13);
-        --color-accent-text: #fbf5e5;
-        --color-glyph-bg: rgba(30, 24, 16, 0.04);
-      }
-      html[data-palette="global"][data-theme="dark"] unicode-picker {
-        --color-bg-base: #151108;
-        --color-bg-raised: #1e1912;
-        --color-bg-surface: #25201a;
-        --color-bg-hover: #2d2820;
-        --color-bg-selected: #2d2820;
-        --color-input-bg: #1e1912;
-        --color-text-primary: #f5e9cd;
-        --color-text-secondary: #b8a37e;
-        --color-text-tertiary: #897656;
-        --color-border-subtle: #3b2e1b;
-        --color-border-strong: #5d4a2a;
-        --color-accent: #e77559;
-        --color-accent-subtle: rgba(231, 117, 89, 0.2);
-        --color-accent-text: #151108;
-        --color-glyph-bg: rgba(245, 233, 205, 0.04);
-      }
-
-      /* Palette-derived chrome tokens. Also fires when only accent
-         is set (palette left at default) so the toggle + focus ring
-         follow the accent override. */
-      html[data-palette]:not([data-palette="default"]) unicode-picker,
-      html[data-accent] unicode-picker {
+        /* Chrome tokens derive from the semantic palette — so the
+           theme toggle and focus ring always follow the active
+           palette and accent, never the original seed scale. */
         --color-toggle-track: var(--color-bg-surface);
         --color-toggle-thumb: var(--color-accent);
         --color-toggle-icon:  var(--color-accent-text);
         --color-focus:
           color-mix(in oklab, var(--color-accent), transparent 55%);
       }
-
-      /* 4. Accent color override. Bumped specificity ([data-accent]
-         used twice) so it beats palette rules which specify two
-         attribute selectors of their own ([data-palette][data-theme]).
-         Also overrides the accent-subtle tint so hover/selected
-         tinted states pick up the new hue. */
-      html[data-accent="cobalt"][data-accent]     unicode-picker { --color-accent: #0047ff; --color-accent-text: #ffffff; --color-accent-subtle: rgba(0, 71, 255, 0.15); }
-      html[data-accent="forest"][data-accent]     unicode-picker { --color-accent: #1b6845; --color-accent-text: #ffffff; --color-accent-subtle: rgba(27, 104, 69, 0.15); }
-      html[data-accent="oxblood"][data-accent]    unicode-picker { --color-accent: #7e1e2a; --color-accent-text: #ffffff; --color-accent-subtle: rgba(126, 30, 42, 0.15); }
-      html[data-accent="ochre"][data-accent]      unicode-picker { --color-accent: #b8721a; --color-accent-text: #ffffff; --color-accent-subtle: rgba(184, 114, 26, 0.15); }
-      html[data-accent="plum"][data-accent]       unicode-picker { --color-accent: #6b2b5b; --color-accent-text: #ffffff; --color-accent-subtle: rgba(107, 43, 91, 0.15); }
-      html[data-accent="teal"][data-accent]       unicode-picker { --color-accent: #0f6f75; --color-accent-text: #ffffff; --color-accent-subtle: rgba(15, 111, 117, 0.15); }
-      html[data-accent="graphite"][data-accent]   unicode-picker { --color-accent: #2a2a2a; --color-accent-text: #ffffff; --color-accent-subtle: rgba(42, 42, 42, 0.15); }
-      html[data-accent="vermillion"][data-accent] unicode-picker { --color-accent: #d83321; --color-accent-text: #ffffff; --color-accent-subtle: rgba(216, 51, 33, 0.15); }
     </style>
   </head>
 
