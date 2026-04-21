@@ -736,15 +736,16 @@
         --L-border-subtle:  82%;
         --L-border-strong:  50%;
         --L-accent:         48%;
+        --L-accent-subtle:  93%;
         --L-accent-text:    98%;
         --glyph-bg-alpha:   0.05;
 
         /* Default palette hue + chroma (teal-green). Each palette
            overrides these four numbers; nothing else. */
         --neutral-hue:    162;
-        --neutral-chroma: 0.025;
+        --neutral-chroma: 0.010;
         --accent-hue:     162;
-        --accent-chroma:  0.09;
+        --accent-chroma:  0.06;
       }
       html[data-theme="dark"] unicode-picker {
         --L-bg-base:        11%;
@@ -759,70 +760,71 @@
         --L-border-subtle:  22%;
         --L-border-strong:  50%;
         --L-accent:         72%;
+        --L-accent-subtle:  24%;
         --L-accent-text:    12%;
       }
 
-      /* Per-palette parameters. Chroma is bounded by what sRGB can
-         display at the given L; accents stay ≤ 0.20 so every hue
-         is in-gamut at both L=48% (light) and L=72% (dark) — no
-         browser gamut-mapping, no hue shifts. Neutrals stay ≤ 0.03
-         so paper reads as a warm tint, not a wash. */
+      /* Per-palette parameters. Chroma is kept low so paper + ink
+         read as refined rather than saturated; accents top out at
+         ~0.14 for the boldest palettes, most land 0.07–0.10.
+         Neutrals stay ≤ 0.015 so the paper tint is perceptible but
+         never reads as a color wash. */
       html[data-palette="typewriter"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.025;
-        --accent-hue:   30; --accent-chroma:  0.15;
+        --neutral-hue:  75; --neutral-chroma: 0.012;
+        --accent-hue:   30; --accent-chroma:  0.08;
       }
       html[data-palette="classical"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.03;
-        --accent-hue:   28; --accent-chroma:  0.16;
+        --neutral-hue:  80; --neutral-chroma: 0.015;
+        --accent-hue:   28; --accent-chroma:  0.08;
       }
       html[data-palette="specimen"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.02;
-        --accent-hue:   35; --accent-chroma:  0.18;
+        --neutral-hue:  80; --neutral-chroma: 0.010;
+        --accent-hue:   35; --accent-chroma:  0.10;
       }
       html[data-palette="scientific"] unicode-picker {
-        --neutral-hue: 105; --neutral-chroma: 0.02;
-        --accent-hue:  180; --accent-chroma:  0.12;
+        --neutral-hue: 105; --neutral-chroma: 0.008;
+        --accent-hue:  180; --accent-chroma:  0.07;
       }
       html[data-palette="museum"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.02;
-        --accent-hue:   32; --accent-chroma:  0.16;
+        --neutral-hue:  75; --neutral-chroma: 0.010;
+        --accent-hue:   32; --accent-chroma:  0.09;
       }
       html[data-palette="swiss"] unicode-picker {
-        --neutral-hue: 260; --neutral-chroma: 0.005;
-        --accent-hue:  263; --accent-chroma:  0.20;
+        --neutral-hue: 260; --neutral-chroma: 0.003;
+        --accent-hue:  263; --accent-chroma:  0.14;
       }
       html[data-palette="poster"] unicode-picker {
-        --neutral-hue:  80; --neutral-chroma: 0.022;
-        --accent-hue:   30; --accent-chroma:  0.20;
+        --neutral-hue:  80; --neutral-chroma: 0.010;
+        --accent-hue:   30; --accent-chroma:  0.13;
       }
       html[data-palette="art-object"] unicode-picker {
-        --neutral-hue: 110; --neutral-chroma: 0.025;
-        --accent-hue:    0; --accent-chroma:  0.20;
+        --neutral-hue: 110; --neutral-chroma: 0.012;
+        --accent-hue:    0; --accent-chroma:  0.13;
       }
       html[data-palette="digital"] unicode-picker {
-        --neutral-hue: 260; --neutral-chroma: 0.008;
-        --accent-hue:  290; --accent-chroma:  0.20;
+        --neutral-hue: 260; --neutral-chroma: 0.005;
+        --accent-hue:  290; --accent-chroma:  0.15;
       }
       html[data-palette="archive"] unicode-picker {
-        --neutral-hue:  85; --neutral-chroma: 0.03;
-        --accent-hue:   32; --accent-chroma:  0.16;
+        --neutral-hue:  85; --neutral-chroma: 0.015;
+        --accent-hue:   32; --accent-chroma:  0.08;
       }
       html[data-palette="global"] unicode-picker {
-        --neutral-hue:  75; --neutral-chroma: 0.025;
-        --accent-hue:   25; --accent-chroma:  0.16;
+        --neutral-hue:  75; --neutral-chroma: 0.012;
+        --accent-hue:   25; --accent-chroma:  0.09;
       }
 
       /* Accent overrides — hue + chroma only; L stays fixed at
          --L-accent so the override can never break the contrast
-         hierarchy the palette already established. Capped at 0.20. */
-      html[data-accent="cobalt"][data-accent]     unicode-picker { --accent-hue: 263; --accent-chroma: 0.20; }
-      html[data-accent="forest"][data-accent]     unicode-picker { --accent-hue: 145; --accent-chroma: 0.14; }
-      html[data-accent="oxblood"][data-accent]    unicode-picker { --accent-hue:  20; --accent-chroma: 0.15; }
-      html[data-accent="ochre"][data-accent]      unicode-picker { --accent-hue:  65; --accent-chroma: 0.14; }
-      html[data-accent="plum"][data-accent]       unicode-picker { --accent-hue: 340; --accent-chroma: 0.17; }
-      html[data-accent="teal"][data-accent]       unicode-picker { --accent-hue: 195; --accent-chroma: 0.12; }
-      html[data-accent="graphite"][data-accent]   unicode-picker { --accent-hue: 260; --accent-chroma: 0.005; }
-      html[data-accent="vermillion"][data-accent] unicode-picker { --accent-hue:  30; --accent-chroma: 0.20; }
+         hierarchy the palette already established. Capped at ~0.14. */
+      html[data-accent="cobalt"][data-accent]     unicode-picker { --accent-hue: 263; --accent-chroma: 0.13; }
+      html[data-accent="forest"][data-accent]     unicode-picker { --accent-hue: 145; --accent-chroma: 0.08; }
+      html[data-accent="oxblood"][data-accent]    unicode-picker { --accent-hue:  20; --accent-chroma: 0.09; }
+      html[data-accent="ochre"][data-accent]      unicode-picker { --accent-hue:  65; --accent-chroma: 0.08; }
+      html[data-accent="plum"][data-accent]       unicode-picker { --accent-hue: 340; --accent-chroma: 0.10; }
+      html[data-accent="teal"][data-accent]       unicode-picker { --accent-hue: 195; --accent-chroma: 0.07; }
+      html[data-accent="graphite"][data-accent]   unicode-picker { --accent-hue: 260; --accent-chroma: 0.003; }
+      html[data-accent="vermillion"][data-accent] unicode-picker { --accent-hue:  30; --accent-chroma: 0.14; }
 
       /* Semantic tokens — resolved at use time from the current L,
          hue, and chroma cascade. This block is what actually drives
@@ -855,7 +857,7 @@
         --color-accent-text:
           oklch(var(--L-accent-text) 0 0);
         --color-accent-subtle:
-          oklch(var(--L-accent) var(--accent-chroma) var(--accent-hue) / 0.14);
+          oklch(var(--L-accent-subtle) calc(var(--accent-chroma) * 1.4) var(--accent-hue));
         --color-glyph-bg:
           oklch(var(--L-text-primary) 0 0 / var(--glyph-bg-alpha));
 
