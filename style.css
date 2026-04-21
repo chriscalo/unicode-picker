@@ -113,7 +113,8 @@
     --color-bg-raised:          var(--color-15);
     --color-bg-surface:         var(--color-20);
     --color-bg-hover:           var(--color-25);
-    --color-bg-selected:        var(--color-25);
+    --color-bg-selected:
+      oklch(from var(--color-65) 30% calc(c * 2.2) h);
 
     /* Component backgrounds */
     --color-input-bg:           var(--color-25);
@@ -204,7 +205,8 @@
     --color-bg-raised:          var(--color-95);
     --color-bg-surface:         var(--color-90);
     --color-bg-hover:           var(--color-85);
-    --color-bg-selected:        var(--color-85);
+    --color-bg-selected:
+      oklch(from var(--color-40) 91% calc(c * 2.2) h);
 
     --color-input-bg:           var(--color-85);
     --color-toggle-track:       var(--color-85);
