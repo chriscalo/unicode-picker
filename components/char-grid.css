@@ -119,11 +119,20 @@ char-grid .char-cell {
 }
 
 char-grid .char-cell[aria-selected="true"] {
-  background: var(--color-bg-selected);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 char-grid .char-cell[aria-selected="true"] .char-glyph {
-  background: var(--color-glyph-bg-selected);
+  background:
+    color-mix(in oklab,
+      var(--color-accent-text) 15%,
+      transparent);
+  color: var(--color-accent-text);
+}
+
+char-grid .char-cell[aria-selected="true"] .char-name {
+  color: var(--color-accent-text);
 }
 
 char-grid .char-cell.copied {

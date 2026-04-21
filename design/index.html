@@ -554,7 +554,10 @@
       html[data-cell-selected="inverted"]
         char-grid .char-cell[aria-selected="true"] .char-glyph {
         color: var(--color-accent-text);
-        background: transparent;
+        background:
+          color-mix(in oklab,
+            var(--color-accent-text) 15%,
+            transparent);
       }
       html[data-cell-selected="inverted"]
         char-grid .char-cell[aria-selected="true"] .char-name {
@@ -838,10 +841,6 @@
           oklch(var(--L-bg-surface) var(--neutral-chroma) var(--neutral-hue));
         --color-bg-hover:
           oklch(var(--L-bg-hover) var(--neutral-chroma) var(--neutral-hue));
-        --color-bg-selected:
-          color-mix(in oklab,
-            var(--color-accent) 32%,
-            var(--color-bg-base));
         --color-input-bg:
           oklch(var(--L-input-bg) var(--neutral-chroma) var(--neutral-hue));
         --color-text-primary:
@@ -1104,13 +1103,12 @@
           default: "tint" },
         { id: "cell-selected", step: "form", label: "Selected tile",
           options: [
-            ["filled",    "Filled", { preferred: true }],
             ["outlined",  "Outlined"],
             ["tinted",    "Tinted"],
             ["underline", "Underline"],
             ["inverted",  "Inverted", { preferred: true }],
           ],
-          default: "filled" },
+          default: "inverted" },
         { id: "sidebar-active", step: "form", label: "Nav active (wide)",
           options: [
             ["left-bar",  "Left bar"],
