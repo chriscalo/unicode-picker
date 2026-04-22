@@ -845,7 +845,7 @@
 
       const DISPLAY_SIZE = 300;
 
-      function geometry(size, { hasRing = false, hue = 0, ringWidth = 26, ringGap = 14, ringPad = 4, triPad = 20 } = {}) {
+      function geometry(size, { hasRing = false, hue = 0, flipped = false, ringWidth = 26, ringGap = 14, ringPad = 4, triPad = 20 } = {}) {
         const scale = size / DISPLAY_SIZE;
         const px = v => v * scale;
         const cx = size / 2, cy = size / 2;
@@ -853,7 +853,11 @@
         const ringInner = hasRing ? ringOuter - px(ringWidth) : 0;
         const gap = hasRing ? px(ringGap) : 0;
         const triR = hasRing ? ringInner - gap : size / 2 - px(triPad);
-        const angles = { C: hue, W: hue + 120, B: hue + 240 };
+        // `flipped` swaps W and B angles so the triangle reads
+        // "black bottom-left, white bottom-right" at hue=90 (C-top).
+        const angles = flipped
+          ? { C: hue, B: hue + 120, W: hue + 240 }
+          : { C: hue, W: hue + 120, B: hue + 240 };
         const verts = {};
         for (const [k, deg] of Object.entries(angles)) {
           const r = deg * Math.PI / 180;
@@ -918,10 +922,10 @@
         ctx.putImageData(img, 0, 0);
       }
 
-      function paintBody(canvas, hue) {
+      function paintBody(canvas, hue, geoOverride) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
-        const geo = geometry(width, { hasRing: true, hue: 0 });
+        const geo = geoOverride || geometry(width, { hasRing: true, hue: 0 });
         const { cx, cy, triR, verts } = geo;
         ctx.clearRect(0, 0, width, height);
 
@@ -1293,23 +1297,23 @@
       }
 
       function renderArcs() {
-        // paintBody() paints in canonical orientation (hue=0, C at
-        // east) and the canvas is CSS-rotated by -hue for display.
-        // The SVG overlay must match: draw in the canonical frame
-        // and apply the same CSS rotation so arcs and dots land on
-        // the rendered triangle edges.
-        paintBody(arcBody, state.hue);
-        const rot = `rotate(${-state.hue}deg)`;
-        arcBody.style.transform        = rot;
-        arcSvg.style.transform         = rot;
-        arcDotsOverlay.style.transform = rot;
+        // Tile 4 uses a fixed "painter's triangle" orientation:
+        //   full color → top        (C at 90° math)
+        //   black      → bottom-left (B at 210°)
+        //   white      → bottom-right (W at 330°)
+        // No CSS rotation — the triangle doesn't follow the hue.
+        // Only the color interpolation uses state.hue.
+        const width = arcBody.width;
+        const geoTile4 = geometry(width, {
+          hasRing: true, hue: 90, flipped: true,
+        });
+        paintBody(arcBody, state.hue, geoTile4);
+        arcBody.style.transform        = "";
+        arcSvg.style.transform         = "";
+        arcDotsOverlay.style.transform = "";
         arcDotsOverlay.innerHTML = "";
 
-        const width = arcBody.width;
-        // Use the same geometry paintBody uses so the SVG overlay
-        // lines up with the rendered triangle edges.
-        const geoBody = geometry(width, { hasRing: true, hue: 0 });
-        const verts = geoBody.verts;
+        const verts = geoTile4.verts;
 
         // Draw arcs as SVG paths so they anti-alias nicely.
         const svg = arcSvg;
