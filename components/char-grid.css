@@ -211,7 +211,7 @@ char-grid .char-glyph {
   font-family: var(--font-glyph);
   font-size: var(--text-glyph);
   line-height: var(--leading-tight);
-  color: var(--color-text-primary);
+  color: var(--color-accent);
   background: var(--color-glyph-bg);
   border-radius: var(--radius-xs, 2px);
 }
