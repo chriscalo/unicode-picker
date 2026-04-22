@@ -155,7 +155,10 @@
       .control-bar {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px 20px;
+        /* Row gap stays tight; column gap is generous so labels
+           with `overflow: visible` can bleed past their own box
+           without crowding the next control. */
+        gap: 16px 44px;
         padding: 14px 18px;
         background: var(--hc-bg-2);
       }
@@ -165,21 +168,30 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
-        min-width: 0;
+        /* Sized to the widest interactive row (.seg / .swatches).
+           The label is positioned absolutely, so its natural width
+           doesn't push the container wider. */
         width: fit-content;
+        min-width: 0;
+        position: relative;
+        padding-top: 18px;
       }
-      /* Label shouldn't force container width. width:0 makes its
-         max-content drop to 0 (so .control sizes to .seg/.swatches);
-         min-width:100% then stretches it to the container width so
-         the text can wrap naturally at spaces if it overflows. */
+      /* Absolutely positioned so the label doesn't participate in
+         sizing the flex column. `white-space: nowrap` + `overflow:
+         visible` lets a long label bleed into the column gap (wider
+         now, see .control-bar) instead of wrapping or truncating. */
       .control__label {
-        width: 0;
-        min-width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        white-space: nowrap;
+        overflow: visible;
         font-size: 9.5px;
         font-weight: 600;
         letter-spacing: 0.14em;
         text-transform: uppercase;
         color: var(--hc-ink-60);
+        pointer-events: none;
       }
       .seg {
         display: inline-flex;
