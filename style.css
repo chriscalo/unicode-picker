@@ -13,7 +13,7 @@
     /*
      * ═══ Phase 1: Scales ════════════════════════════════════
      *
-     * Two scales — neutral (paper/ink) and accent. Each scale is
+     * Two scales — surface (paper/ink) and accent. Each scale is
      * defined by (hue, chroma) plus 12 fixed lightness steps
      * shared across both scales.
      *
@@ -33,8 +33,8 @@
      * the scale's base chroma rescales the whole curve.
      */
 
-    --neutral-hue:    162;
-    --neutral-chroma: 0.010;
+    --surface-hue:    162;
+    --surface-chroma: 0.010;
     --accent-hue:     162;
     --accent-chroma:  0.070;
 
@@ -42,7 +42,7 @@
        re-sets these by inverting step indices. */
     --step-1:   10%;  /* app bg */
     --step-2:   14%;  /* raised panel */
-    --step-3:   20%;  /* surface / input bg */
+    --step-3:   20%;  /* panel / surface bg */
     --step-4:   26%;  /* hover */
     --step-5:   32%;  /* subtle border */
     --step-6:   40%;
@@ -71,18 +71,18 @@
     --step-11-c:  0.70;
     --step-12-c:  0.50;
 
-    --neutral-1:   oklch(var(--step-1)  calc(var(--neutral-chroma) * var(--step-1-c))  var(--neutral-hue));
-    --neutral-2:   oklch(var(--step-2)  calc(var(--neutral-chroma) * var(--step-2-c))  var(--neutral-hue));
-    --neutral-3:   oklch(var(--step-3)  calc(var(--neutral-chroma) * var(--step-3-c))  var(--neutral-hue));
-    --neutral-4:   oklch(var(--step-4)  calc(var(--neutral-chroma) * var(--step-4-c))  var(--neutral-hue));
-    --neutral-5:   oklch(var(--step-5)  calc(var(--neutral-chroma) * var(--step-5-c))  var(--neutral-hue));
-    --neutral-6:   oklch(var(--step-6)  calc(var(--neutral-chroma) * var(--step-6-c))  var(--neutral-hue));
-    --neutral-7:   oklch(var(--step-7)  calc(var(--neutral-chroma) * var(--step-7-c))  var(--neutral-hue));
-    --neutral-8:   oklch(var(--step-8)  calc(var(--neutral-chroma) * var(--step-8-c))  var(--neutral-hue));
-    --neutral-9:   oklch(var(--step-9)  calc(var(--neutral-chroma) * var(--step-9-c))  var(--neutral-hue));
-    --neutral-10:  oklch(var(--step-10) calc(var(--neutral-chroma) * var(--step-10-c)) var(--neutral-hue));
-    --neutral-11:  oklch(var(--step-11) calc(var(--neutral-chroma) * var(--step-11-c)) var(--neutral-hue));
-    --neutral-12:  oklch(var(--step-12) calc(var(--neutral-chroma) * var(--step-12-c)) var(--neutral-hue));
+    --surface-1:   oklch(var(--step-1)  calc(var(--surface-chroma) * var(--step-1-c))  var(--surface-hue));
+    --surface-2:   oklch(var(--step-2)  calc(var(--surface-chroma) * var(--step-2-c))  var(--surface-hue));
+    --surface-3:   oklch(var(--step-3)  calc(var(--surface-chroma) * var(--step-3-c))  var(--surface-hue));
+    --surface-4:   oklch(var(--step-4)  calc(var(--surface-chroma) * var(--step-4-c))  var(--surface-hue));
+    --surface-5:   oklch(var(--step-5)  calc(var(--surface-chroma) * var(--step-5-c))  var(--surface-hue));
+    --surface-6:   oklch(var(--step-6)  calc(var(--surface-chroma) * var(--step-6-c))  var(--surface-hue));
+    --surface-7:   oklch(var(--step-7)  calc(var(--surface-chroma) * var(--step-7-c))  var(--surface-hue));
+    --surface-8:   oklch(var(--step-8)  calc(var(--surface-chroma) * var(--step-8-c))  var(--surface-hue));
+    --surface-9:   oklch(var(--step-9)  calc(var(--surface-chroma) * var(--step-9-c))  var(--surface-hue));
+    --surface-10:  oklch(var(--step-10) calc(var(--surface-chroma) * var(--step-10-c)) var(--surface-hue));
+    --surface-11:  oklch(var(--step-11) calc(var(--surface-chroma) * var(--step-11-c)) var(--surface-hue));
+    --surface-12:  oklch(var(--step-12) calc(var(--surface-chroma) * var(--step-12-c)) var(--surface-hue));
 
     --accent-1:   oklch(var(--step-1)  calc(var(--accent-chroma) * var(--step-1-c))  var(--accent-hue));
     --accent-2:   oklch(var(--step-2)  calc(var(--accent-chroma) * var(--step-2-c))  var(--accent-hue));
@@ -109,25 +109,25 @@
      */
 
     /* Backgrounds */
-    --color-bg-base:        var(--neutral-1);
-    --color-bg-raised:      var(--neutral-2);
-    --color-bg-surface:     var(--neutral-3);
-    --color-bg-hover:       var(--neutral-4);
-    --color-input-bg:       var(--neutral-4);
+    --color-bg-base:        var(--surface-1);
+    --color-bg-raised:      var(--surface-2);
+    --color-bg-panel:     var(--surface-3);
+    --color-bg-hover:       var(--surface-4);
+    --color-input-bg:       var(--surface-4);
 
     /* Text */
-    --color-text-primary:   var(--neutral-12);
-    --color-text-secondary: var(--neutral-11);
-    --color-text-tertiary:  var(--neutral-9);
+    --color-text-primary:   var(--surface-12);
+    --color-text-secondary: var(--surface-11);
+    --color-text-tertiary:  var(--surface-9);
 
     /* Borders */
-    --color-border-subtle:  var(--neutral-5);
-    --color-border-strong:  var(--neutral-7);
+    --color-border-subtle:  var(--surface-5);
+    --color-border-strong:  var(--surface-7);
 
     /* Accent */
     --color-accent:         var(--accent-9);
     --color-accent-subtle:  var(--accent-3);
-    --color-accent-text:    var(--neutral-1);
+    --color-accent-text:    var(--surface-1);
 
     /* Focus ring — accent at reduced opacity */
     --color-focus:
@@ -146,9 +146,9 @@
         transparent);
 
     /* Component-specific */
-    --color-toggle-track:   var(--neutral-3);
-    --color-toggle-thumb:   var(--neutral-9);
-    --color-toggle-icon:    var(--neutral-1);
+    --color-toggle-track:   var(--surface-3);
+    --color-toggle-thumb:   var(--surface-9);
+    --color-toggle-icon:    var(--surface-1);
 
     color-scheme: dark;
 
