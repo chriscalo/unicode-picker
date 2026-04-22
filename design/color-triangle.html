@@ -1731,6 +1731,32 @@
         quantSample.style.background = cssFromRgb(rgb);
       }
 
+      // Snap a (mx, my) in quant-stage coords to the nearest
+      // ternary-grid cell (i, k) and apply it to state.quant.
+      function snapToNearestQuantDot(mx, my) {
+        const geo = state.quant.geo;
+        const dx = mx - geo.cx, dy = my - geo.cy;
+        const [cdx, cdy] = unrotate(dx, dy, state.hue);
+        const canonX = cdx + geo.cx, canonY = cdy + geo.cy;
+        const { N } = state;
+        let bestI = state.quant.i, bestK = state.quant.k, bestD = Infinity;
+        for (let k = 0; k <= N; k++) {
+          for (let i = 0; i <= N - k; i++) {
+            const j = N - i - k;
+            const w = i / N, b = j / N, c = k / N;
+            const [px, py] = fromBarycentric(w, b, c, geo.verts);
+            const d = Math.hypot(px - canonX, py - canonY);
+            if (d < bestD) { bestD = d; bestI = i; bestK = k; }
+          }
+        }
+        if (state.quant.i !== bestI || state.quant.k !== bestK) {
+          state.quant.i = bestI;
+          state.quant.k = bestK;
+          renderQuantDots();
+          updateQuantReadout();
+        }
+      }
+
       quantStage.addEventListener("pointerdown", e => {
         const rect = quantStage.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width * quantBody.width;
@@ -1738,9 +1764,23 @@
         const geo = state.quant.geo;
         const dx = x - geo.cx, dy = y - geo.cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < geo.ringInner - 2 || dist > geo.ringOuter + 8) return;
+
+        // Decide target: ring if on the band, triangle if anywhere
+        // inside the triangle bounds (with a generous margin so
+        // you can drag a bit outside and still snap).
+        let target = null;
+        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) {
+          target = "ring";
+        } else if (dist < geo.ringInner - 2) {
+          const [cdx, cdy] = unrotate(dx, dy, state.hue);
+          const [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
+          if (w >= -0.1 && b >= -0.1 && c >= -0.1) target = "tri";
+        }
+        if (!target) return;
+
         quantStage.setPointerCapture(e.pointerId);
-        activeDrag = "quant";
+        if (target === "ring") activeDrag = "quant";
+
         let rafId = null, pendingEvt = null;
         const flush = () => {
           rafId = null;
@@ -1749,10 +1789,14 @@
           const r = quantStage.getBoundingClientRect();
           const mx = (ev.clientX - r.left) / r.width * quantBody.width;
           const my = (ev.clientY - r.top) / r.height * quantBody.height;
-          const g = state.quant.geo;
-          const angle = Math.atan2(-(my - g.cy), mx - g.cx) * 180 / Math.PI;
-          state.hue = quantizeHue(angle);
-          onHueChanged();
+          if (target === "ring") {
+            const g = state.quant.geo;
+            const angle = Math.atan2(-(my - g.cy), mx - g.cx) * 180 / Math.PI;
+            state.hue = quantizeHue(angle);
+            onHueChanged();
+          } else {
+            snapToNearestQuantDot(mx, my);
+          }
         };
         const dispatch = ev => {
           pendingEvt = ev;
@@ -1763,12 +1807,18 @@
           quantStage.removeEventListener("pointermove", dispatch);
           quantStage.removeEventListener("pointerup", up);
           quantStage.removeEventListener("pointercancel", up);
-          onDragEnd();
+          if (target === "ring") onDragEnd();
         };
-        // initial
-        const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
-        state.hue = quantizeHue(angle0);
-        onHueChanged();
+
+        // Initial snap.
+        if (target === "ring") {
+          const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
+          state.hue = quantizeHue(angle0);
+          onHueChanged();
+        } else {
+          snapToNearestQuantDot(x, y);
+        }
+
         quantStage.addEventListener("pointermove", dispatch);
         quantStage.addEventListener("pointerup", up);
         quantStage.addEventListener("pointercancel", up);
