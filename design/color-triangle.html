@@ -359,16 +359,6 @@
           <input type="range" id="hue-input" min="0" max="360" value="180" step="1">
         </div>
 
-        <div class="control">
-          <div class="control__label">Resolution N</div>
-          <div class="seg" data-decision="N">
-            <button data-value="4">4</button>
-            <button data-value="6">6</button>
-            <button data-value="8">8</button>
-            <button data-value="10" aria-pressed="true">10</button>
-            <button data-value="12">12</button>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -448,6 +438,16 @@
 
         <div class="inline-controls">
           <div class="inline-control">
+            <span class="inline-control__label">N</span>
+            <div class="seg" data-decision="N">
+              <button data-value="4">4</button>
+              <button data-value="6">6</button>
+              <button data-value="8">8</button>
+              <button data-value="10" aria-pressed="true">10</button>
+              <button data-value="12">12</button>
+            </div>
+          </div>
+          <div class="inline-control">
             <span class="inline-control__label">Naming</span>
             <div class="seg" data-decision="scheme">
               <button data-value="cl" aria-pressed="true">c-l</button>
@@ -468,6 +468,29 @@
           peak-chroma levels 0–100%. Each arc carries N+1 tokens
           spaced by arc length.
         </p>
+
+        <div class="inline-controls">
+          <div class="inline-control">
+            <span class="inline-control__label">N</span>
+            <div class="seg" data-decision="arcN">
+              <button data-value="4">4</button>
+              <button data-value="6">6</button>
+              <button data-value="8">8</button>
+              <button data-value="10" aria-pressed="true">10</button>
+              <button data-value="12">12</button>
+            </div>
+          </div>
+          <div class="inline-control">
+            <span class="inline-control__label">Arcs</span>
+            <div class="seg" data-decision="arcCount">
+              <button data-value="3">3</button>
+              <button data-value="4">4</button>
+              <button data-value="5">5</button>
+              <button data-value="6" aria-pressed="true">6</button>
+              <button data-value="8">8</button>
+            </div>
+          </div>
+        </div>
 
         <div class="arcs-layout">
           <div class="tri-stage" id="arc-stage">
@@ -490,7 +513,9 @@
         space:  "oklch",
         hue:    180,
         nHues:  16,   // 0 = continuous; >0 = quantized to that many hues (tile 2 only)
-        N:      10,
+        N:      10,   // ternary-grid resolution (tiles 2 and 3 share this)
+        arcN:   10,   // arc sampling resolution (tile 4, independent)
+        arcCount: 6,  // number of arcs in tile 4
         scheme: "cl",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 5, k: 5, geo: null },
@@ -1211,7 +1236,6 @@
       const arcSvg  = document.getElementById("arc-svg");
       const arcDotsOverlay = document.getElementById("arc-dots-overlay");
       const arcScalesTarget = document.getElementById("arc-scales");
-      const ARC_COUNT = 5;
 
       // Arc parameterised so peak=0 is a straight line B→W (no
       // chroma) and peak=1 is a true V: B → C → W along the
@@ -1295,12 +1319,12 @@
 
         const s = strat();
         const peaks = [];
-        for (let a = 0; a < ARC_COUNT; a++) {
-          peaks.push(a / (ARC_COUNT - 1));
+        for (let a = 0; a < state.arcCount; a++) {
+          peaks.push(a / (state.arcCount - 1));
         }
 
         const arcData = [];
-        for (let a = 0; a < ARC_COUNT; a++) {
+        for (let a = 0; a < state.arcCount; a++) {
           const peak = peaks[a];
           // Draw the continuous curve.
           let d = "";
@@ -1321,7 +1345,7 @@
           svg.appendChild(path);
 
           // Sample N+1 points along arc length.
-          const pts = arcSamples(peak, state.N);
+          const pts = arcSamples(peak, state.arcN);
           arcData.push({ peak, points: pts });
 
           // Dots — match tile 1 / tile 2 cursor style (HTML divs
@@ -1341,7 +1365,7 @@
 
         // Ramps per arc.
         arcScalesTarget.innerHTML = "";
-        for (let a = 0; a < ARC_COUNT; a++) {
+        for (let a = 0; a < state.arcCount; a++) {
           const { peak, points } = arcData[a];
           const row = document.createElement("div");
           row.className = "arc-scale";
@@ -1472,13 +1496,13 @@
         renderArcs();
       }
       function onNChanged() {
-        // Clamp quant selection to new N.
+        // Clamp quant selection to new N; re-render tiles 2 and 3.
+        // Tile 4 has its own arcN and is untouched.
         state.quant.i = Math.min(state.quant.i, state.N - state.quant.k);
         state.quant.k = Math.min(state.quant.k, state.N);
         renderQuantDots();
         updateQuantReadout();
         renderGrid();
-        renderArcs();
       }
       function onSchemeChanged() {
         updatePickerReadout();
@@ -1512,6 +1536,20 @@
           state.scheme = btn.dataset.value;
           setSegActive(btn.parentElement, state.scheme);
           onSchemeChanged();
+        });
+      });
+      document.querySelectorAll('[data-decision="arcN"] button').forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.arcN = +btn.dataset.value;
+          setSegActive(btn.parentElement, state.arcN);
+          renderArcs();
+        });
+      });
+      document.querySelectorAll('[data-decision="arcCount"] button').forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.arcCount = +btn.dataset.value;
+          setSegActive(btn.parentElement, state.arcCount);
+          renderArcs();
         });
       });
       document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
