@@ -164,18 +164,10 @@
       .control {
         display: flex;
         flex-direction: column;
+        align-items: flex-start;
         gap: 4px;
-        /* Container shrinks to its widest non-breakable child
-           (.seg / .swatches). The label sits in-flow above; its
-           `width: 0` below makes it contribute 0 to the container's
-           intrinsic width, so labels wider than the button row wrap
-           to multiple lines instead of stretching the control. */
-        width: fit-content;
-        min-width: 0;
       }
       .control__label {
-        width: 0;
-        min-width: 100%;
         font-size: 9.5px;
         font-weight: 600;
         letter-spacing: 0.14em;
@@ -184,6 +176,7 @@
       }
       .seg {
         display: inline-flex;
+        height: 28px;
         border: 1px solid var(--hc-ink-12);
         border-radius: 4px;
         overflow: hidden;
@@ -309,8 +302,8 @@
       }
       .swatch {
         appearance: none;
-        width: 22px;
-        height: 22px;
+        width: 28px;
+        height: 28px;
         border-radius: 4px;
         border: 1px solid var(--hc-ink-12);
         padding: 0;
