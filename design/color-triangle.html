@@ -552,6 +552,86 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       </ul>
     </section>
 
+    <!-- ════════════════════════════════════════════════════════
+         5. Quantization
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">5.</span>Quantizing the triangle</h2>
+
+      <p>
+        A 1D scale is just a ruler divided into N marked points. The
+        triangle is a 2-simplex — two degrees of freedom — so the
+        natural analogue is a <strong>ternary grid</strong>. At
+        resolution <code>N</code>, every token is a triple
+        <code>(i, j, k)</code> of non-negative integers with
+        <code>i + j + k = N</code>, interpreted as barycentric
+        weights <code>(W, B, C) = (i/N, j/N, k/N)</code>.
+      </p>
+      <p>
+        The grid has <code>(N+1)(N+2)/2</code> cells. A few sizes:
+      </p>
+      <pre>N = 3 →  10 tokens per hue
+N = 4 →  15
+N = 5 →  21
+N = 6 →  28
+N = 8 →  45</pre>
+      <p>
+        Color math runs in OKLCH so perceptual spacing is uniform:
+        each cell interpolates <code>L = i·1 + k·L*</code> and
+        <code>C = k·C*</code>, where <code>(L*, C*)</code> is the
+        hue's sRGB gamut cusp. Choose a resolution below and drag
+        the hue ring to see where each token lands.
+      </p>
+
+      <div class="quant-controls">
+        <label>resolution <select id="quant-N">
+          <option value="3">N = 3 (10 tokens)</option>
+          <option value="4" selected>N = 4 (15 tokens)</option>
+          <option value="5">N = 5 (21 tokens)</option>
+          <option value="6">N = 6 (28 tokens)</option>
+          <option value="8">N = 8 (45 tokens)</option>
+        </select></label>
+      </div>
+
+      <div class="tri-row">
+        <div class="tri-stage" id="quant-stage" style="width: 420px; height: 420px;">
+          <canvas class="tri-ring" id="quant-ring-canvas" width="840" height="840"></canvas>
+          <canvas class="tri-body" id="quant-canvas" width="420" height="420"></canvas>
+          <div class="tri-overlay tri-overlay-rotating" id="quant-body-overlay"></div>
+          <div class="tri-overlay" id="quant-overlay">
+            <div class="hue-cursor" id="quant-hue-cursor"></div>
+          </div>
+        </div>
+        <div class="tri-controls">
+          <dl class="tri-value-grid">
+            <dt>hue</dt><dd id="quant-h">162°</dd>
+            <dt>N</dt><dd id="quant-N-readout">4</dd>
+            <dt>tokens</dt><dd id="quant-count">15</dd>
+          </dl>
+        </div>
+      </div>
+
+      <h3>Token table</h3>
+      <div id="quant-list" style="margin-top: 8px;"></div>
+
+      <h3>Naming</h3>
+      <p>
+        Two readable schemes on top of the ternary address:
+      </p>
+      <pre>{scale}-w{i}b{j}        e.g.  surface-w4b0  (pure white tint)
+                             accent-w0b0   (pure hue)
+                             accent-w2b2   (dusty mid-tone)
+
+{scale}-N{k}-w{i}       e.g.  surface-4-w4   (i=4 of the low-C band)
+                             accent-0-w0    (max-C corner)</pre>
+      <p>
+        Scheme A gives every cell a globally-unique two-number name.
+        Scheme B groups cells by their C row (constant <code>k</code>),
+        matching how stepped 1D scales work today.
+      </p>
+    </section>
+
     <script type="module">
       // ═══ Color math ═══════════════════════════════════════════
 
@@ -587,8 +667,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return [min, 1 - max];
       }
 
-      // OKLab → linear sRGB (Björn Ottosson). Returns unclamped
-      // linear RGB so callers can test gamut.
+      // OKLab → linear sRGB (Björn Ottosson, exact matrix). Returns
+      // unclamped linear RGB so callers can test gamut.
       function oklchToLinearRgb(L, C, H) {
         const hRad = H * Math.PI / 180;
         const a = C * Math.cos(hRad);
@@ -603,9 +683,9 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const s = sp * sp * sp;
 
         return [
-          +4.0767245293 * l - 3.3072168827 * m + 0.2307590544 * s,
-          -1.2681437731 * l + 2.6093323231 * m - 0.3411344290 * s,
-          -0.0041119885 * l - 0.7034763098 * m + 1.7068625689 * s,
+          +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
         ];
       }
 
@@ -627,28 +707,83 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
             && b >= -epsilon && b <= 1 + epsilon;
       }
 
-      // For a given hue, find the sRGB gamut cusp — the (L, C) on
-      // the hue plane that maximises chroma. The cusp becomes the
-      // C vertex for that hue so the picker reaches real saturation
-      // limits instead of a conservative universal peak.
-      function findCusp(hue) {
-        let bestL = 0.5, bestC = 0;
-        for (let L = 0.02; L < 0.99; L += 0.01) {
-          let lo = 0, hi = 0.5;
-          for (let i = 0; i < 22; i++) {
-            const mid = (lo + hi) / 2;
-            if (inSrgbGamut(L, mid, hue, 0.001)) lo = mid;
-            else hi = mid;
-          }
-          if (lo > bestC) { bestC = lo; bestL = L; }
+      // Björn Ottosson's analytical cusp finder. Given normalized
+      // (a, b) on the hue circle, returns [L_cusp, C_cusp] — the
+      // sRGB gamut cusp for that hue. Far faster and more reliable
+      // than my earlier binary-search version, which produced
+      // wrong answers in the cyan/blue region.
+      function computeMaxSaturation(a, b) {
+        let k0, k1, k2, k3, k4, wl, wm, ws;
+        if (-1.88170328 * a - 0.80936493 * b > 1) {
+          // red component
+          k0 =  1.19086277; k1 =  1.76576728; k2 =  0.59662641;
+          k3 =  0.75515197; k4 =  0.56771245;
+          wl =  4.0767416621; wm = -3.3077115913; ws =  0.2309699292;
+        } else if (1.81444104 * a - 1.19445276 * b > 1) {
+          // green component
+          k0 =  0.73956515; k1 = -0.45954404; k2 =  0.08285427;
+          k3 =  0.12541070; k4 =  0.14503204;
+          wl = -1.2684380046; wm =  2.6097574011; ws = -0.3413193965;
+        } else {
+          // blue component
+          k0 =  1.35733652; k1 = -0.00915799; k2 = -1.15130210;
+          k3 = -0.50559606; k4 =  0.00692167;
+          wl = -0.0041960863; wm = -0.7034186147; ws =  1.7076147010;
         }
-        // Pull inside by a hair so edges don't clip ugly.
-        return [bestL, bestC * 0.98];
+        let S = k0 + k1 * a + k2 * b + k3 * a * a + k4 * a * b;
+
+        const k_l =  0.3963377774 * a + 0.2158037573 * b;
+        const k_m = -0.1055613458 * a - 0.0638541728 * b;
+        const k_s = -0.0894841775 * a - 1.2914855480 * b;
+
+        const l_ = 1 + S * k_l;
+        const m_ = 1 + S * k_m;
+        const s_ = 1 + S * k_s;
+        const l = l_ * l_ * l_;
+        const m = m_ * m_ * m_;
+        const s = s_ * s_ * s_;
+        const l_dS = 3 * k_l * l_ * l_;
+        const m_dS = 3 * k_m * m_ * m_;
+        const s_dS = 3 * k_s * s_ * s_;
+        const l_dS2 = 6 * k_l * k_l * l_;
+        const m_dS2 = 6 * k_m * k_m * m_;
+        const s_dS2 = 6 * k_s * k_s * s_;
+
+        const f   = wl * l    + wm * m    + ws * s;
+        const f1  = wl * l_dS + wm * m_dS + ws * s_dS;
+        const f2  = wl * l_dS2 + wm * m_dS2 + ws * s_dS2;
+        S = S - (f * f1) / (f1 * f1 - 0.5 * f * f2);
+        return S;
+      }
+
+      function findCuspForHue(hue) {
+        const hRad = hue * Math.PI / 180;
+        const a = Math.cos(hRad);
+        const b = Math.sin(hRad);
+        const S = computeMaxSaturation(a, b);
+        const k_l =  0.3963377774 * a + 0.2158037573 * b;
+        const k_m = -0.1055613458 * a - 0.0638541728 * b;
+        const k_s = -0.0894841775 * a - 1.2914855480 * b;
+        const l_ = 1 + S * k_l;
+        const m_ = 1 - S * k_m;
+        const s_ = 1 - S * k_s;
+        const l = l_ * l_ * l_;
+        const m = m_ * m_ * m_;
+        const s = s_ * s_ * s_;
+        const rgbMax = Math.max(
+          +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        );
+        const L_cusp = Math.cbrt(1 / rgbMax);
+        // Pull C in by a hair so on-boundary pixels don't clip.
+        const C_cusp = L_cusp * S * 0.985;
+        return [L_cusp, C_cusp];
       }
 
       const CUSP_LUT = (() => {
         const lut = new Array(361);
-        for (let h = 0; h <= 360; h++) lut[h] = findCusp(h);
+        for (let h = 0; h <= 360; h++) lut[h] = findCuspForHue(h);
         return lut;
       })();
 
@@ -1214,6 +1349,169 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       }
 
       for (const scale of SCALES) plotScale(scale);
+
+      // ═══ Section 5 — quantization viz ═════════════════════════
+
+      const quantStage       = document.getElementById("quant-stage");
+      const quantCanvas      = document.getElementById("quant-canvas");
+      const quantRingCanvas  = document.getElementById("quant-ring-canvas");
+      const quantBodyOverlay = document.getElementById("quant-body-overlay");
+      const quantHueCursor   = document.getElementById("quant-hue-cursor");
+      const quantOverlay     = document.getElementById("quant-overlay");
+      const quantNSelect     = document.getElementById("quant-N");
+      const quantList        = document.getElementById("quant-list");
+
+      let quantState = { h: 162, N: +quantNSelect.value, geo: null, mode: "oklch" };
+
+      paintRing(quantRingCanvas, "oklch");
+
+      function applyQuantOrientation() {
+        const rot = `rotate(${-quantState.h}deg)`;
+        quantCanvas.style.transform = rot;
+        quantBodyOverlay.style.transform = rot;
+      }
+
+      function updateQuantReadout() {
+        document.getElementById("quant-h").textContent = `${quantState.h.toFixed(0)}°`;
+        document.getElementById("quant-N-readout").textContent = quantState.N;
+        const count = (quantState.N + 1) * (quantState.N + 2) / 2;
+        document.getElementById("quant-count").textContent = count;
+
+        const ringMid = (quantState.geo.ringInner + quantState.geo.ringOuter) / 2;
+        const rad = quantState.h * Math.PI / 180;
+        const size = quantCanvas.width;
+        const hx = quantState.geo.cx + ringMid * Math.cos(rad);
+        const hy = quantState.geo.cy - ringMid * Math.sin(rad);
+        quantHueCursor.style.left = (hx / size * 100) + "%";
+        quantHueCursor.style.top  = (hy / size * 100) + "%";
+      }
+
+      function renderGrid() {
+        const { N, h, geo } = quantState;
+        const verts = geo.verts;
+        const size = quantCanvas.width;
+
+        // Remove previous dots (keep nothing — overlay is dots-only).
+        quantBodyOverlay.innerHTML = "";
+
+        const rows = [];
+        for (let i = N; i >= 0; i--) {
+          for (let j = 0; j <= N - i; j++) {
+            const k = N - i - j;
+            const w = i / N, b = j / N, c = k / N;
+            rows.push({ i, j, k, w, b, c });
+          }
+        }
+
+        // Place dots in the rotating overlay (canonical frame).
+        for (const r of rows) {
+          const [px, py] = fromBarycentric(r.w, r.b, r.c, verts);
+          const dot = document.createElement("span");
+          dot.className = "quant-dot";
+          dot.style.left = (px / size * 100) + "%";
+          dot.style.top  = (py / size * 100) + "%";
+          dot.title = `w${r.i} b${r.j} c${r.k}`;
+          quantBodyOverlay.appendChild(dot);
+        }
+
+        // Token table.
+        const [Lp, Cp] = cusp(h);
+        const thead = `
+          <div class="token-table">
+            <span class="th"></span>
+            <span class="th">address</span>
+            <span class="th">W/B/C</span>
+            <span class="th">oklch</span>
+        `;
+        let html = thead;
+        for (const r of rows) {
+          const L = r.w + r.c * Lp;
+          const C = r.c * Cp;
+          const css = `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${h.toFixed(0)})`;
+          html += `
+            <span class="sw" style="background:${css}"></span>
+            <span>w${r.i}b${r.j}c${r.k}</span>
+            <span>${r.w.toFixed(2)} / ${r.b.toFixed(2)} / ${r.c.toFixed(2)}</span>
+            <span>${(L * 100).toFixed(0)}%, ${C.toFixed(2)}, ${h.toFixed(0)}°</span>
+          `;
+        }
+        html += `</div>`;
+        quantList.innerHTML = html;
+      }
+
+      function repaintQuantBody() {
+        quantState.geo = paintBody(quantCanvas, quantState.h, "oklch");
+      }
+
+      function repaintQuant() {
+        repaintQuantBody();
+        applyQuantOrientation();
+        renderGrid();
+        updateQuantReadout();
+      }
+
+      function onQuantHueChange() {
+        repaintQuantBody();
+        applyQuantOrientation();
+        renderGrid();
+        updateQuantReadout();
+      }
+
+      quantNSelect.addEventListener("change", () => {
+        quantState.N = +quantNSelect.value;
+        renderGrid();
+        updateQuantReadout();
+      });
+
+      // Reuse attachPickerDrag for the hue ring. The quant picker
+      // doesn't have a (W, B, C) cursor so the "tri" branch just
+      // no-ops via a stub hitTest — we accept ring hits only.
+      quantStage.addEventListener("pointerdown", e => {
+        const rect = quantStage.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width * quantCanvas.width;
+        const y = (e.clientY - rect.top) / rect.height * quantCanvas.height;
+        const geo = quantState.geo;
+        const dx = x - geo.cx, dy = y - geo.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < geo.ringInner - 2 || dist > geo.ringOuter + 8) return;
+        quantStage.setPointerCapture(e.pointerId);
+
+        let pendingEvt = null, rafId = null;
+        const flush = () => {
+          rafId = null;
+          if (!pendingEvt) return;
+          const ev = pendingEvt; pendingEvt = null;
+          const r = quantStage.getBoundingClientRect();
+          const mx = (ev.clientX - r.left) / r.width * quantCanvas.width;
+          const my = (ev.clientY - r.top) / r.height * quantCanvas.height;
+          const g = quantState.geo;
+          const dx2 = mx - g.cx, dy2 = my - g.cy;
+          const angle = Math.atan2(-dy2, dx2) * 180 / Math.PI;
+          quantState.h = (angle + 360) % 360;
+          onQuantHueChange();
+        };
+        const dispatch = ev => {
+          pendingEvt = ev;
+          if (rafId === null) rafId = requestAnimationFrame(flush);
+        };
+
+        // Initial pick.
+        const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
+        quantState.h = (angle0 + 360) % 360;
+        onQuantHueChange();
+
+        const up = () => {
+          if (rafId) cancelAnimationFrame(rafId);
+          quantStage.removeEventListener("pointermove", dispatch);
+          quantStage.removeEventListener("pointerup", up);
+          quantStage.removeEventListener("pointercancel", up);
+        };
+        quantStage.addEventListener("pointermove", dispatch);
+        quantStage.addEventListener("pointerup", up);
+        quantStage.addEventListener("pointercancel", up);
+      });
+
+      repaintQuant();
     </script>
   </body>
 </html>
