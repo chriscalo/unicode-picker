@@ -106,17 +106,17 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 10px;
-        padding: 10px 14px 14px;
+        gap: 0;
+        padding: 0;
         min-height: 0;
         min-width: 0;
       }
 
       section {
         margin: 0;
-        padding: 10px 12px;
-        border: 1px solid var(--color-border-subtle);
-        border-radius: 8px;
+        padding: 10px 14px 14px;
+        border: 0;
+        border-radius: 0;
         background: var(--color-bg-base);
         min-width: 0;
         min-height: 0;
@@ -125,21 +125,43 @@
         flex-direction: column;
         gap: 6px;
       }
+      /* Internal borders only — plus-sign cross between tiles. */
+      section:nth-child(1) {
+        border-right: 1px solid var(--color-border-subtle);
+        border-bottom: 1px solid var(--color-border-subtle);
+      }
+      section:nth-child(2) {
+        border-bottom: 1px solid var(--color-border-subtle);
+      }
+      section:nth-child(3) {
+        border-right: 1px solid var(--color-border-subtle);
+      }
       h2 {
         font-size: var(--text-sm);
         font-weight: var(--weight-medium);
         margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
       h2 .num {
         display: inline-block;
         width: 1.5em;
         color: var(--color-text-tertiary);
       }
-      section > p {
+      h2 .info {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid var(--color-border-subtle);
         color: var(--color-text-secondary);
-        font-size: 11px;
-        line-height: 1.4;
-        margin: 0;
+        font-size: 9px;
+        font-weight: var(--weight-medium);
+        cursor: help;
+        font-family: var(--font-ui);
       }
 
       /* ── picker stage ─────────────────────────────────────── */
@@ -155,7 +177,9 @@
       .tri-stage {
         position: relative;
         aspect-ratio: 1;
-        height: min(100%, 260px);
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
         width: auto;
         flex-shrink: 0;
       }
@@ -323,11 +347,6 @@
 
     <header class="workbench">
       <h1>Color system workbench</h1>
-      <p class="lede">
-        Controls pick the color space, the canonical hue slice, the
-        quantization resolution, and the naming scheme. Everything
-        below updates live.
-      </p>
 
       <div class="controls">
         <div class="control">
@@ -346,11 +365,10 @@
 
       <!-- 1. Continuous picker -->
       <section>
-        <h2><span class="num">1.</span>Continuous picker</h2>
-        <p>
-          Drag the triangle for (W, B, C); drag the ring for hue.
-          No quantization; the C vertex tracks the selected hue.
-        </p>
+        <h2>
+          <span class="num">1.</span>Continuous picker
+          <span class="info" title="Drag the triangle for (W, B, C); drag the ring for hue. No quantization; the C vertex tracks the selected hue.">ⓘ</span>
+        </h2>
 
         <div class="tri-row">
           <div class="tri-stage" id="picker-stage">
@@ -372,11 +390,10 @@
 
       <!-- 2. Quantized picker -->
       <section>
-        <h2><span class="num">2.</span>Quantized picker</h2>
-        <p>
-          Only the ternary-grid points at resolution N and the hue
-          angles at the chosen step count are clickable.
-        </p>
+        <h2>
+          <span class="num">2.</span>Quantized picker
+          <span class="info" title="Only the ternary-grid points at resolution N and the hue angles at the chosen step count are clickable.">ⓘ</span>
+        </h2>
 
         <div class="inline-controls">
           <div class="inline-control">
@@ -407,11 +424,10 @@
 
       <!-- 3. 2D grid -->
       <section>
-        <h2><span class="num">3.</span>2D grid</h2>
-        <p>
-          Rows = chroma band k, cols = lightness index i. Top-right
-          = white, top-left = black, bottom-left = pure hue.
-        </p>
+        <h2>
+          <span class="num">3.</span>2D grid
+          <span class="info" title="Rows = chroma band k, cols = lightness index i. Top-right = white, top-left = black, bottom-left = pure hue.">ⓘ</span>
+        </h2>
 
         <div class="inline-controls">
           <div class="inline-control">
@@ -439,12 +455,10 @@
 
       <!-- 4. Arc-based scales -->
       <section>
-        <h2><span class="num">4.</span>Arc-based scales</h2>
-        <p>
-          Five arcs run black → max-C midpoint → white at
-          peak-chroma levels 0–100%. Each arc carries N+1 tokens
-          spaced by arc length.
-        </p>
+        <h2>
+          <span class="num">4.</span>Arc-based scales
+          <span class="info" title="Arcs run black → max-C midpoint → white at peak-chroma levels 0–100%. Each arc carries N color stops spaced by arc length.">ⓘ</span>
+        </h2>
 
         <div class="inline-controls">
           <div class="inline-control">
