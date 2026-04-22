@@ -130,3 +130,69 @@ for (const Ltest of [0.5, 0.6, 0.7, 0.8]) {
   const mean = sum / samples2.length;
   console.log(`\nfixed L=${Ltest}:  mean ΔE=${mean.toFixed(5)}  max ΔE=${mx.toFixed(5)} @ ${mxH}°  ratio=${(mx/mean).toFixed(1)}×`);
 }
+
+// Smoothed cusp — moving-average on the LUT. Preserves near-cusp
+// saturation in most of the ring but blunts the cube-corner kink.
+const cuspLut = Array.from({ length: 360 }, (_, h) => cuspForHue(h));
+
+function smoothed(lut, window) {
+  const n = lut.length;
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    let L = 0, C = 0;
+    for (let j = -window; j <= window; j++) {
+      const k = ((i + j) % n + n) % n;
+      L += lut[k][0];
+      C += lut[k][1];
+    }
+    out[i] = [L / (2 * window + 1), C / (2 * window + 1)];
+  }
+  return out;
+}
+
+function gaussian(lut, sigma) {
+  const n = lut.length;
+  const half = Math.ceil(3 * sigma);
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    let L = 0, C = 0, wSum = 0;
+    for (let j = -half; j <= half; j++) {
+      const w = Math.exp(-(j * j) / (2 * sigma * sigma));
+      const k = ((i + j) % n + n) % n;
+      L += lut[k][0] * w;
+      C += lut[k][1] * w;
+      wSum += w;
+    }
+    out[i] = [L / wSum, C / wSum];
+  }
+  return out;
+}
+
+function measureLut(lut, label) {
+  let mx = 0, mxH = -1, sum = 0, cSum = 0;
+  for (let i = 0; i < lut.length; i++) {
+    const [LA, CA] = lut[i];
+    const [LB, CB] = lut[(i + 1) % lut.length];
+    const hA = i * Math.PI / 180, hB = ((i + 1) % lut.length) * Math.PI / 180;
+    const aA = CA * Math.cos(hA), bA = CA * Math.sin(hA);
+    const aB = CB * Math.cos(hB), bB = CB * Math.sin(hB);
+    const dE = Math.hypot(LA - LB, aA - aB, bA - bB);
+    sum += dE;
+    cSum += CA;
+    if (dE > mx) { mx = dE; mxH = i; }
+  }
+  const mean = sum / lut.length;
+  const avgC = cSum / lut.length;
+  console.log(
+    `${label}:  mean ΔE=${mean.toFixed(5)}  max ΔE=${mx.toFixed(5)} @ ${mxH}°  ratio=${(mx / mean).toFixed(1)}×  meanC=${avgC.toFixed(3)}`
+  );
+}
+
+console.log(`\n--- Cusp smoothing ---`);
+measureLut(cuspLut, `cusp (raw)            `);
+for (const w of [1, 2, 3, 5, 8, 12]) {
+  measureLut(smoothed(cuspLut, w), `MA window ±${w}°          `.slice(0, 22));
+}
+for (const s of [1, 2, 3, 5, 8]) {
+  measureLut(gaussian(cuspLut, s), `Gaussian σ=${s}°            `.slice(0, 22));
+}
