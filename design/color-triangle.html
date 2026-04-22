@@ -472,6 +472,15 @@
           <input type="range" id="ease-c" class="ease-input" min="-1" max="1" step="0.05" value="0">
         </div>
 
+        <div class="control">
+          <div class="control__label">Curve magnitude</div>
+          <div class="seg" data-decision="easingMag">
+            <button data-value="2">2</button>
+            <button data-value="4" aria-pressed="true">4</button>
+            <button data-value="8">8</button>
+          </div>
+        </div>
+
       </div>
     </header>
 
@@ -637,6 +646,7 @@
         //   − → ease-in  (slow start, fast finish)
         // Applied as gamma = 2^(−v·2), i.e. v=1→γ=0.25, v=-1→γ=4.
         easing: {},
+        easingMag: 4,   // γ = mag^(-v); +1 → 1/mag, -1 → mag.
       };
 
       function getEasing() {
@@ -647,9 +657,10 @@
       // then renormalise so w + b + c = 1.
       function easeBary(w, b, c) {
         const e = getEasing();
-        const gW = Math.pow(2, -e.w * 2);
-        const gB = Math.pow(2, -e.b * 2);
-        const gC = Math.pow(2, -e.c * 2);
+        const m = state.easingMag;
+        const gW = Math.pow(m, -e.w);
+        const gB = Math.pow(m, -e.b);
+        const gC = Math.pow(m, -e.c);
         let wE = Math.pow(Math.max(0, w), gW);
         let bE = Math.pow(Math.max(0, b), gB);
         let cE = Math.pow(Math.max(0, c), gC);
@@ -1604,9 +1615,10 @@
         // Precompute easing gammas for this paint so the inner
         // loop stays tight.
         const easeRec = getEasing();
-        const gW = Math.pow(2, -easeRec.w * 2);
-        const gB = Math.pow(2, -easeRec.b * 2);
-        const gC = Math.pow(2, -easeRec.c * 2);
+        const mag = state.easingMag;
+        const gW = Math.pow(mag, -easeRec.w);
+        const gB = Math.pow(mag, -easeRec.b);
+        const gC = Math.pow(mag, -easeRec.c);
         const needsEase =
           easeRec.w !== 0 || easeRec.b !== 0 || easeRec.c !== 0;
         ctx.clearRect(0, 0, width, height);
@@ -2443,6 +2455,17 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
       easeW.addEventListener("input", () => onEaseChanged("w", +easeW.value));
       easeB.addEventListener("input", () => onEaseChanged("b", +easeB.value));
       easeC.addEventListener("input", () => onEaseChanged("c", +easeC.value));
+
+      document.querySelectorAll('[data-decision="easingMag"] button').forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.easingMag = +btn.dataset.value;
+          setSegActive(btn.parentElement, state.easingMag);
+          repaintPicker();
+          repaintQuant();
+          renderGrid();
+          renderArcs();
+        });
+      });
       document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
         btn.addEventListener("click", () => {
           state.nHues = +btn.dataset.value;
