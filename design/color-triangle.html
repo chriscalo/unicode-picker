@@ -1594,12 +1594,15 @@
         const c = 1 - w - b;
         const [px, py] = fromBarycentric(w, b, c, geo.verts);
         const size = pickerBody.width;
+        const s = strat();
         pickerCursor.style.left = (px / size * 100) + "%";
         pickerCursor.style.top  = (py / size * 100) + "%";
+        pickerCursor.style.background = cssFromRgb(s.atBary(state.hue, w, b, c));
         const ringMid = (geo.ringInner + geo.ringOuter) / 2;
         const rad = state.hue * Math.PI / 180;
         pickerHueCursor.style.left = ((geo.cx + ringMid * Math.cos(rad)) / size * 100) + "%";
         pickerHueCursor.style.top  = ((geo.cy - ringMid * Math.sin(rad)) / size * 100) + "%";
+        pickerHueCursor.style.background = cssFromRgb(s.ringAt(state.hue));
       }
       function updatePickerReadout() {
         const { w, b } = state.picker;
@@ -1614,7 +1617,7 @@
         // Tile 1 is the continuous picker — never snap.
         onHue: h => { state.hue = ((h % 360) + 360) % 360; onHueChanged(); },
         onTri: (w, b) => { state.picker.w = w; state.picker.b = b; updatePickerCursors(); updatePickerReadout(); },
-      });
+      }, "picker");
 
       // ═══════════════════════════════════════════════════════════
       // Section 2 — Quantized picker
@@ -1647,10 +1650,12 @@
             const j = N - i - k;
             const w = i / N, b = j / N, c = k / N;
             const [px, py] = fromBarycentric(w, b, c, geo.verts);
+            const rgb = strat().atBary(state.hue, w, b, c);
             const dot = document.createElement("span");
             dot.className = "quant-dot";
             dot.style.left = (px / size * 100) + "%";
             dot.style.top  = (py / size * 100) + "%";
+            dot.style.background = cssFromRgb(rgb);
             dot.title = tokenName(i, j, k, N);
             if (i === quant.i && k === quant.k) dot.setAttribute("aria-selected", "true");
             dot.addEventListener("click", () => {
@@ -1673,10 +1678,12 @@
             const rad = angle * Math.PI / 180;
             const hx = geo.cx + ringMid * Math.cos(rad);
             const hy = geo.cy - ringMid * Math.sin(rad);
+            const rgb = strat().ringAt(angle);
             const dot = document.createElement("span");
             dot.className = "hue-step-dot";
             dot.style.left = (hx / size * 100) + "%";
             dot.style.top  = (hy / size * 100) + "%";
+            dot.style.background = cssFromRgb(rgb);
             // Small outward label with the hue name (common CSS
             // name) + degrees. The label nudges outward from the
             // ring centre along the radial so it doesn't overlap
@@ -1733,6 +1740,7 @@
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < geo.ringInner - 2 || dist > geo.ringOuter + 8) return;
         quantStage.setPointerCapture(e.pointerId);
+        activeDrag = "quant";
         let rafId = null, pendingEvt = null;
         const flush = () => {
           rafId = null;
@@ -1755,6 +1763,7 @@
           quantStage.removeEventListener("pointermove", dispatch);
           quantStage.removeEventListener("pointerup", up);
           quantStage.removeEventListener("pointercancel", up);
+          onDragEnd();
         };
         // initial
         const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
@@ -1969,15 +1978,16 @@
           const pts = arcSamples(peak, state.arcN);
           arcData.push({ peak, points: pts });
 
-          // Dots — match tile 1 / tile 2 cursor style (HTML divs
-          // in the rotating overlay, hollow with white border and
-          // dark outer shadow).
+          // Dots — filled with the exact sample color and wrapped
+          // in the shared .quant-dot white-border/dark-shadow style.
           for (const { bary } of pts) {
             const [px, py] = fromBarycentric(bary[0], bary[1], bary[2], verts);
+            const rgb = s.atBary(state.hue, bary[0], bary[1], bary[2]);
             const dot = document.createElement("span");
             dot.className = "quant-dot";
             dot.style.left = (px / width * 100) + "%";
             dot.style.top  = (py / width * 100) + "%";
+            dot.style.background = cssFromRgb(rgb);
             dot.style.pointerEvents = "none";
             dot.style.cursor = "default";
             arcDotsOverlay.appendChild(dot);
@@ -2030,7 +2040,7 @@
         ];
       }
 
-      function attachDrag(stage, canvas, picker, hooks) {
+      function attachDrag(stage, canvas, picker, hooks, dragKey) {
         stage.addEventListener("pointerdown", e => {
           const [x, y] = stageXY(e, stage, canvas);
           const geo = picker.geo;
@@ -2045,6 +2055,7 @@
           }
           if (!target) return;
           stage.setPointerCapture(e.pointerId);
+          if (target === "ring" && dragKey) activeDrag = dragKey;
 
           let rafId = null, pendingEvt = null;
           const flush = () => {
@@ -2087,6 +2098,7 @@
             stage.removeEventListener("pointermove", dispatch);
             stage.removeEventListener("pointerup", up);
             stage.removeEventListener("pointercancel", up);
+            if (target === "ring" && dragKey) onDragEnd();
           };
           stage.addEventListener("pointermove", dispatch);
           stage.addEventListener("pointerup", up);
@@ -2104,6 +2116,28 @@
         });
       }
 
+      // During a ring drag, `activeDrag` pins updates to the tile
+      // whose ring is being dragged; other tiles defer to idle /
+      // pointerup so the dragged tile hits 60fps even on the
+      // slower spaces (Jzazbz, LCh(ab)).
+      let activeDrag = null;     // "picker" | "quant" | null
+      let deferredRefresh = null; // requestIdleCallback handle
+
+      function refreshIdleTiles() {
+        if (deferredRefresh != null) {
+          (cancelIdleCallback || clearTimeout)(deferredRefresh);
+          deferredRefresh = null;
+        }
+        const run = () => {
+          deferredRefresh = null;
+          if (activeDrag !== "picker") repaintPicker();
+          if (activeDrag !== "quant")  repaintQuant();
+          renderGrid();
+          renderArcs();
+        };
+        deferredRefresh = (requestIdleCallback || (cb => setTimeout(cb, 16)))(run, { timeout: 120 });
+      }
+
       function onSpaceChanged() {
         repaintPicker();
         repaintQuant();
@@ -2111,6 +2145,26 @@
         renderArcs();
       }
       function onHueChanged() {
+        if (activeDrag === "picker") {
+          repaintPicker();
+          refreshIdleTiles();
+        } else if (activeDrag === "quant") {
+          repaintQuant();
+          refreshIdleTiles();
+        } else {
+          repaintPicker();
+          repaintQuant();
+          renderGrid();
+          renderArcs();
+        }
+      }
+      function onDragEnd() {
+        activeDrag = null;
+        if (deferredRefresh != null) {
+          (cancelIdleCallback || clearTimeout)(deferredRefresh);
+          deferredRefresh = null;
+        }
+        // Final full repaint so every tile reflects the settled hue.
         repaintPicker();
         repaintQuant();
         renderGrid();
