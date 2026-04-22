@@ -964,9 +964,7 @@
       // — OKHSV (Björn Ottosson) — HSV variant of OKHSL.
       function okhsvToLinearRgb(h, s, v) {
         if (v <= 0) return [0, 0, 0];
-        const hRad = h * Math.PI / 180;
-        const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
-        const cusp = okhslCusp(a_, b_);
+        const cusp = okhslCuspAtHue(h);
         const STmax = { S: cusp.C / cusp.L, T: cusp.C / (1 - cusp.L) };
         const S_0 = 0.5;
         const k = 1 - S_0 / STmax.S;
@@ -1104,6 +1102,9 @@
         return lo;
       }
       function okhslCusp(a, b) {
+        // Raw cusp — has the real sRGB cube-corner kink around
+        // hue ~265° (same as OKLCH). Prefer okhslCuspAtHue() for
+        // rendering so the smoothed CUSP_LUT is used.
         const S = findMaxSaturation(a, b);
         const k_l =  0.3963377774 * a + 0.2158037573 * b;
         const k_m = -0.1055613458 * a - 0.0638541728 * b;
@@ -1117,6 +1118,12 @@
         );
         const L_cusp = Math.cbrt(1 / rgbMax);
         return { L: L_cusp, C: L_cusp * S };
+      }
+      // Smoothed cusp lookup — reuses the OKLCH_CUSP LUT (Gaussian
+      // σ=5° smoothed) so OKHSL/OKHSV inherit the ring smoothing.
+      function okhslCuspAtHue(hue) {
+        const [L, C] = OKLCH_CUSP[Math.round(((hue % 360) + 360) % 360)];
+        return { L, C };
       }
       function okhslGetSTMid(a, b) {
         const S = 0.11516993 + 1 / (
@@ -1137,7 +1144,7 @@
         const hRad = h * Math.PI / 180;
         const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
         const L = okhslToeInv(l);
-        const cusp = okhslCusp(a_, b_);
+        const cusp = okhslCuspAtHue(h);
         const STmax = { S: cusp.C / cusp.L, T: cusp.C / (1 - cusp.L) };
         const STmid = okhslGetSTMid(a_, b_);
         const C_max = okhslMaxCAtL(L, h);
@@ -1222,9 +1229,7 @@
           label: "OKHSL",
           ringAt(hue) {
             // OKHSL ring: s=1 at each hue's toe-adjusted cusp L.
-            const hRad = hue * Math.PI / 180;
-            const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
-            const cusp = okhslCusp(a_, b_);
+            const cusp = okhslCuspAtHue(hue);
             // toe(L_cusp)
             const toeL = 0.5 * (OKHSL_K3 * cusp.L - OKHSL_K1
               + Math.sqrt((OKHSL_K3 * cusp.L - OKHSL_K1) ** 2
@@ -1235,9 +1240,7 @@
           atBary(hue, w, b, c) {
             // s = pure weight, l = perceptual blend of white and
             // cusp-lightness: w·1 + b·0 + c·toe(L_cusp).
-            const hRad = hue * Math.PI / 180;
-            const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
-            const cusp = okhslCusp(a_, b_);
+            const cusp = okhslCuspAtHue(hue);
             const toeL = 0.5 * (OKHSL_K3 * cusp.L - OKHSL_K1
               + Math.sqrt((OKHSL_K3 * cusp.L - OKHSL_K1) ** 2
                 + 4 * OKHSL_K2 * OKHSL_K3 * cusp.L));
@@ -1248,9 +1251,7 @@
           },
           readout(hue, w, b) {
             const c = 1 - w - b;
-            const hRad = hue * Math.PI / 180;
-            const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
-            const cusp = okhslCusp(a_, b_);
+            const cusp = okhslCuspAtHue(hue);
             const toeL = 0.5 * (OKHSL_K3 * cusp.L - OKHSL_K1
               + Math.sqrt((OKHSL_K3 * cusp.L - OKHSL_K1) ** 2
                 + 4 * OKHSL_K2 * OKHSL_K3 * cusp.L));
