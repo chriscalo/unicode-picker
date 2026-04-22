@@ -156,15 +156,22 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 14px;
-        height: 14px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
-        border: 1px solid var(--color-border-subtle);
-        color: var(--color-text-secondary);
-        font-size: 9px;
-        font-weight: var(--weight-medium);
+        border: 0;
+        background: oklch(95% 0 0);
+        color: oklch(12% 0 0);
+        font-family: ui-monospace, "IBM Plex Mono", monospace;
+        font-size: 11px;
+        line-height: 1;
+        font-weight: 700;
         cursor: help;
-        font-family: var(--font-ui);
+        font-style: italic;
+        padding-bottom: 1px;
+      }
+      h2 .info:hover {
+        background: oklch(100% 0 0);
       }
       h2 .info::after {
         content: attr(data-tooltip);
@@ -432,7 +439,7 @@
         <div class="section-head">
           <h2>
             Continuous mix
-            <span class="info" tabindex="0" data-tooltip="Continuous tint / shade / tone picker. Triangle corners: pure hue (C), tint = hue + white (W), shade = hue + black (B). Interior points are tones (hue + grey). Drag the ring to change the hue.">ⓘ</span>
+            <span class="info" tabindex="0" data-tooltip="Continuous tint / shade / tone picker. Triangle corners: pure hue (C), tint = hue + white (W), shade = hue + black (B). Interior points are tones (hue + grey). Drag the ring to change the hue.">i</span>
           </h2>
         </div>
 
@@ -454,79 +461,12 @@
         </div>
       </section>
 
-      <!-- 2. Quantized picker -->
-      <section>
-        <div class="section-head">
-          <h2>
-            Quantized mix
-            <span class="info" tabindex="0" data-tooltip="Same tint / shade / tone space as tile 1, snapped to a finite grid. The only hues available are the evenly-spaced ring steps; the only tints, shades, and tones are the ternary-grid cells at resolution N.">ⓘ</span>
-          </h2>
-          <div class="inline-controls">
-            <div class="inline-control">
-              <span class="inline-control__label">Hue steps</span>
-              <div class="seg" data-decision="nHues">
-                <button data-value="12">12</button>
-                <button data-value="16">16</button>
-                <button data-value="24" aria-pressed="true">24</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="tri-row">
-          <div class="tri-stage" id="quant-stage">
-            <canvas class="tri-ring" id="quant-ring" width="600" height="600"></canvas>
-            <canvas class="tri-body" id="quant-body" width="300" height="300"></canvas>
-            <div class="tri-overlay-rotating" id="quant-body-overlay"></div>
-            <div class="tri-overlay" id="quant-overlay">
-              <div class="hue-cursor" id="quant-hue-cursor"></div>
-            </div>
-          </div>
-          <div>
-            <dl class="readouts" id="quant-readouts"></dl>
-            <div class="swatch-sample" id="quant-sample"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 3. 2D grid -->
-      <section>
-        <div class="section-head">
-          <h2>
-            Mix palette
-            <span class="info" tabindex="0" data-tooltip="Named palette of tints, shades, and tones at the chosen hue. Rows = tone level (how much pure hue is in the mix, k). Columns = white-vs-black bias (i). Top-left = black (max shade), top-right = white (max tint), bottom-left = pure hue. Top row reads as the shades-to-tints ramp; interior cells are tones.">ⓘ</span>
-          </h2>
-          <div class="inline-controls">
-            <div class="inline-control">
-              <span class="inline-control__label">N</span>
-              <div class="seg" data-decision="N">
-                <button data-value="2">2</button>
-                <button data-value="4">4</button>
-                <button data-value="5">5</button>
-                <button data-value="10" aria-pressed="true">10</button>
-                <button data-value="20">20</button>
-              </div>
-            </div>
-            <div class="inline-control">
-              <span class="inline-control__label">Naming</span>
-              <div class="seg" data-decision="scheme">
-                <button data-value="cl" aria-pressed="true">c-l</button>
-                <button data-value="wb">w-b</button>
-                <button data-value="num">XY</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
-      </section>
-
-      <!-- 4. Arc-based scales -->
+      <!-- 2. Tonal arcs (was 4) -->
       <section>
         <div class="section-head">
           <h2>
             Tonal arcs
-            <span class="info" tabindex="0" data-tooltip="Shade-to-tint ramps at varying peak tone. Each arc runs black (shade extreme) → midpoint → white (tint extreme); the arcs differ by how much pure hue sits at the midpoint — c00 is fully greyscale, c100 has the pure hue at its peak. Every arc carries N evenly-spaced color stops.">ⓘ</span>
+            <span class="info" tabindex="0" data-tooltip="Shade-to-tint ramps at varying peak tone. Each arc runs black (shade extreme) → midpoint → white (tint extreme); the arcs differ by how much pure hue sits at the midpoint — c00 is fully greyscale, c100 has the pure hue at its peak. Every arc carries N evenly-spaced color stops.">i</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -561,6 +501,73 @@
           </div>
           <div class="arc-scales" id="arc-scales"></div>
         </div>
+      </section>
+
+      <!-- 3. Quantized picker (was 2) -->
+      <section>
+        <div class="section-head">
+          <h2>
+            Quantized mix
+            <span class="info" tabindex="0" data-tooltip="Same tint / shade / tone space as tile 1, snapped to a finite grid. The only hues available are the evenly-spaced ring steps; the only tints, shades, and tones are the ternary-grid cells at resolution N.">i</span>
+          </h2>
+          <div class="inline-controls">
+            <div class="inline-control">
+              <span class="inline-control__label">Hue steps</span>
+              <div class="seg" data-decision="nHues">
+                <button data-value="12">12</button>
+                <button data-value="16">16</button>
+                <button data-value="24" aria-pressed="true">24</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tri-row">
+          <div class="tri-stage" id="quant-stage">
+            <canvas class="tri-ring" id="quant-ring" width="600" height="600"></canvas>
+            <canvas class="tri-body" id="quant-body" width="300" height="300"></canvas>
+            <div class="tri-overlay-rotating" id="quant-body-overlay"></div>
+            <div class="tri-overlay" id="quant-overlay">
+              <div class="hue-cursor" id="quant-hue-cursor"></div>
+            </div>
+          </div>
+          <div>
+            <dl class="readouts" id="quant-readouts"></dl>
+            <div class="swatch-sample" id="quant-sample"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 2D grid (was 3) -->
+      <section>
+        <div class="section-head">
+          <h2>
+            Mix palette
+            <span class="info" tabindex="0" data-tooltip="Named palette of tints, shades, and tones at the chosen hue. Rows = tone level (how much pure hue is in the mix, k). Columns = white-vs-black bias (i). Top-left = black (max shade), top-right = white (max tint), bottom-left = pure hue. Top row reads as the shades-to-tints ramp; interior cells are tones.">i</span>
+          </h2>
+          <div class="inline-controls">
+            <div class="inline-control">
+              <span class="inline-control__label">N</span>
+              <div class="seg" data-decision="N">
+                <button data-value="2">2</button>
+                <button data-value="4">4</button>
+                <button data-value="5">5</button>
+                <button data-value="10" aria-pressed="true">10</button>
+                <button data-value="20">20</button>
+              </div>
+            </div>
+            <div class="inline-control">
+              <span class="inline-control__label">Naming</span>
+              <div class="seg" data-decision="scheme">
+                <button data-value="cl" aria-pressed="true">c-l</button>
+                <button data-value="wb">w-b</button>
+                <button data-value="num">XY</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
       </section>
 
     </main>
