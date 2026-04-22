@@ -86,10 +86,21 @@
         width: 340px;
         height: 340px;
       }
-      canvas.tri {
+      canvas.tri,
+      canvas.tri-body,
+      canvas.tri-ring {
         display: block;
         width: 100%;
         height: 100%;
+      }
+      canvas.tri-body,
+      canvas.tri-ring,
+      .tri-overlay-rotating {
+        position: absolute;
+        inset: 0;
+      }
+      .tri-overlay-rotating {
+        pointer-events: none;
       }
       .tri-overlay {
         position: absolute;
@@ -366,9 +377,12 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       <div class="tri-row">
         <div class="tri-stage" id="gen-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri" id="gen-canvas" width="840" height="840"></canvas>
-          <div class="tri-overlay" id="gen-overlay">
+          <canvas class="tri-ring" id="gen-ring-canvas" width="840" height="840"></canvas>
+          <canvas class="tri-body" id="gen-canvas" width="420" height="420"></canvas>
+          <div class="tri-overlay tri-overlay-rotating" id="gen-body-overlay">
             <div class="tri-cursor" id="gen-cursor"></div>
+          </div>
+          <div class="tri-overlay" id="gen-overlay">
             <div class="hue-cursor" id="gen-hue-cursor"></div>
           </div>
         </div>
@@ -410,9 +424,12 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       <div class="tri-row">
         <div class="tri-stage" id="ok-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri" id="ok-canvas" width="840" height="840"></canvas>
-          <div class="tri-overlay" id="ok-overlay">
+          <canvas class="tri-ring" id="ok-ring-canvas" width="840" height="840"></canvas>
+          <canvas class="tri-body" id="ok-canvas" width="420" height="420"></canvas>
+          <div class="tri-overlay tri-overlay-rotating" id="ok-body-overlay">
             <div class="tri-cursor" id="ok-cursor"></div>
+          </div>
+          <div class="tri-overlay" id="ok-overlay">
             <div class="hue-cursor" id="ok-hue-cursor"></div>
           </div>
         </div>
@@ -575,9 +592,9 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       function geometry(size, { hasRing = false, hue = 0 } = {}) {
         const cx = size / 2, cy = size / 2;
         const ringOuter = hasRing ? size / 2 - 6 : 0;
-        const ringWidth = 72;
+        const ringWidth = 40;
         const ringInner = hasRing ? ringOuter - ringWidth : 0;
-        const ringGap   = hasRing ? 20 : 0;
+        const ringGap   = hasRing ? 16 : 0;
         const triR      = hasRing ? ringInner - ringGap : size / 2 - 20;
         const angles = { C: hue, W: hue + 120, B: hue + 240 };
         const verts = {};
@@ -606,6 +623,109 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return [w * x1 + b * x2 + c * x3, w * y1 + b * y2 + c * y3];
       }
 
+      // Paint the hue ring once — pixel hues come from angle, no
+      // hue-of-picker dependency.
+      function paintRing(canvas, mode) {
+        const ctx = canvas.getContext("2d");
+        const { width, height } = canvas;
+        const geo = geometry(width, { hasRing: true });
+        const { cx, cy, ringInner, ringOuter } = geo;
+        const img = ctx.createImageData(width, height);
+        const data = img.data;
+
+        const rInnerSq = ringInner * ringInner;
+        const rOuterSq = ringOuter * ringOuter;
+        const yMin = Math.max(0, Math.floor(cy - ringOuter - 1));
+        const yMax = Math.min(height, Math.ceil(cy + ringOuter + 1));
+        const xMin = Math.max(0, Math.floor(cx - ringOuter - 1));
+        const xMax = Math.min(width, Math.ceil(cx + ringOuter + 1));
+
+        for (let y = yMin; y < yMax; y++) {
+          const dy = y - cy;
+          const dy2 = dy * dy;
+          for (let x = xMin; x < xMax; x++) {
+            const dx = x - cx;
+            const distSq = dx * dx + dy2;
+            if (distSq < rInnerSq || distSq > rOuterSq) continue;
+            const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+            const pixelHue = (angle + 360) % 360;
+            const rgb = mode === "oklch"
+              ? oklchToSrgb(L_PEAK, C_PEAK, pixelHue)
+              : hsvToRgb(pixelHue, 1, 1);
+            const i = (y * width + x) * 4;
+            data[i]     = Math.round(rgb[0] * 255);
+            data[i + 1] = Math.round(rgb[1] * 255);
+            data[i + 2] = Math.round(rgb[2] * 255);
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+
+      // Paint the triangle body in canonical orientation (C vertex
+      // east) with the actual hue. Called on each hue change; only
+      // iterates the triangle's bounding box. The canvas element
+      // gets transform: rotate() for visual orientation.
+      function paintBody(canvas, hue, mode) {
+        const ctx = canvas.getContext("2d");
+        const { width, height } = canvas;
+        const geo = geometry(width, { hasRing: true, hue: 0 });
+        const { cx, cy, triR, verts } = geo;
+
+        ctx.clearRect(0, 0, width, height);
+
+        const yMin = Math.max(0, Math.floor(cy - triR - 1));
+        const yMax = Math.min(height, Math.ceil(cy + triR + 1));
+        const xMin = Math.max(0, Math.floor(cx - triR - 1));
+        const xMax = Math.min(width, Math.ceil(cx + triR + 1));
+        const boxW = xMax - xMin;
+        const boxH = yMax - yMin;
+
+        const img = ctx.createImageData(boxW, boxH);
+        const data = img.data;
+
+        const [x1, y1] = verts.W;
+        const [x2, y2] = verts.B;
+        const [x3, y3] = verts.C;
+        const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+        const invDet = 1 / det;
+        const a1 = (y2 - y3) * invDet;
+        const b1 = (x3 - x2) * invDet;
+        const a2 = (y3 - y1) * invDet;
+        const b2 = (x1 - x3) * invDet;
+
+        for (let y = yMin; y < yMax; y++) {
+          const dy = y - y3;
+          for (let x = xMin; x < xMax; x++) {
+            const dx = x - x3;
+            const w = a1 * dx + b1 * dy;
+            const b = a2 * dx + b2 * dy;
+            const c = 1 - w - b;
+            if (w < -0.002 || b < -0.002 || c < -0.002) continue;
+            const wc = w < 0 ? 0 : w;
+            const bc = b < 0 ? 0 : b;
+            let rgb;
+            if (mode === "oklch") {
+              const cc = c < 0 ? 0 : c;
+              const L = wc + cc * L_PEAK;
+              const C = cc * C_PEAK;
+              rgb = oklchToSrgb(L, C, hue);
+            } else {
+              rgb = hwbToRgb(hue, wc, bc);
+            }
+            const i = ((y - yMin) * boxW + (x - xMin)) * 4;
+            data[i]     = Math.round(rgb[0] * 255);
+            data[i + 1] = Math.round(rgb[1] * 255);
+            data[i + 2] = Math.round(rgb[2] * 255);
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, xMin, yMin);
+        return geo;
+      }
+
+      // Legacy single-canvas painter, used for the constrained
+      // pickers in section 4 (static, no hue-ring overlap).
       function paintStage(canvas, hue, opts = {}) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
@@ -653,50 +773,6 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       const L_PEAK = 0.65;
       const C_PEAK = 0.22;
 
-      function paintStageOklch(canvas, hue, opts = {}) {
-        const ctx = canvas.getContext("2d");
-        const { width, height } = canvas;
-        const img = ctx.createImageData(width, height);
-        const data = img.data;
-        const geo = geometry(width, { ...opts, hue });
-        const { cx, cy, ringInner, ringOuter, verts } = geo;
-
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const dx = x - cx;
-            const dy = y - cy;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            let rgb = null;
-
-            if (opts.hasRing && dist >= ringInner && dist <= ringOuter) {
-              const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-              const pixelHue = (angle + 360) % 360;
-              rgb = oklchToSrgb(L_PEAK, C_PEAK, pixelHue);
-            } else if (dist <= geo.triR + 1) {
-              const [w, b, c] = barycentric(x, y, verts);
-              if (w >= -0.002 && b >= -0.002 && c >= -0.002) {
-                const wc = Math.max(0, w);
-                const bc = Math.max(0, b);
-                const cc = Math.max(0, c);
-                const L = wc + cc * L_PEAK;   // bc contributes 0
-                const C = cc * C_PEAK;
-                rgb = oklchToSrgb(L, C, hue);
-              }
-            }
-
-            if (rgb) {
-              const i = (y * width + x) * 4;
-              data[i]     = Math.round(rgb[0] * 255);
-              data[i + 1] = Math.round(rgb[1] * 255);
-              data[i + 2] = Math.round(rgb[2] * 255);
-              data[i + 3] = 255;
-            }
-          }
-        }
-        ctx.putImageData(img, 0, 0);
-        return geo;
-      }
-
       function placeVertexLabels(overlay, canvas, geo) {
         const OUTWARD = 20;
         const { cx, cy, verts } = geo;
@@ -716,18 +792,39 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       // ═══ Section 3 — general picker ═══════════════════════════
 
-      const genCanvas    = document.getElementById("gen-canvas");
-      const genOverlay   = document.getElementById("gen-overlay");
-      const genCursor    = document.getElementById("gen-cursor");
-      const genHueCursor = document.getElementById("gen-hue-cursor");
-      const genSample    = document.getElementById("gen-sample");
+      const genStage       = document.getElementById("gen-stage");
+      const genCanvas      = document.getElementById("gen-canvas");
+      const genRingCanvas  = document.getElementById("gen-ring-canvas");
+      const genBodyOverlay = document.getElementById("gen-body-overlay");
+      const genCursor      = document.getElementById("gen-cursor");
+      const genHueCursor   = document.getElementById("gen-hue-cursor");
+      const genSample      = document.getElementById("gen-sample");
 
-      let genState = { h: 162, w: 0.333, b: 0.333, geo: null };
+      let genState = { h: 162, w: 0.333, b: 0.333, geo: null, mode: "hwb" };
 
-      function repaintGen() {
-        genState.geo = paintStage(genCanvas, genState.h, { hasRing: true });
+      // Ring: paint once. Body: paint per hue at canonical, rotate
+      // the canvas + its overlay via CSS for orientation.
+      paintRing(genRingCanvas, "hwb");
+
+      function applyGenOrientation() {
+        const rot = `rotate(${-genState.h}deg)`;
+        genCanvas.style.transform = rot;
+        genBodyOverlay.style.transform = rot;
+      }
+
+      function repaintGenBody() {
+        genState.geo = paintBody(genCanvas, genState.h, genState.mode);
+      }
+
+      function onGenHueChange() {
+        repaintGenBody();
+        applyGenOrientation();
         updateGenCursors();
         updateGenReadout();
+      }
+
+      function repaintGen() {
+        onGenHueChange();
       }
 
       function updateGenReadout() {
@@ -758,32 +855,49 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         genHueCursor.style.top  = (hy / size * 100) + "%";
       }
 
-      function canvasXY(evt, canvas) {
-        const rect = canvas.getBoundingClientRect();
+      function stageXY(evt, stage) {
+        const rect = stage.getBoundingClientRect();
         return [
-          (evt.clientX - rect.left) / rect.width * canvas.width,
-          (evt.clientY - rect.top) / rect.height * canvas.height,
+          (evt.clientX - rect.left) / rect.width * stage.clientWidth,
+          (evt.clientY - rect.top) / rect.height * stage.clientHeight,
         ];
       }
 
-      function hitTest(x, y, geo) {
-        const dx = x - geo.cx, dy = y - geo.cy;
+      function unrotate(dx, dy, hueDeg) {
+        // Apply +hue rotation in screen coords to undo the body's
+        // CSS rotate(-hue). Screen rotation by +H:
+        //   x' = x cos H - y sin H
+        //   y' = x sin H + y cos H
+        const rad = hueDeg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        return [dx * cos - dy * sin, dx * sin + dy * cos];
+      }
+
+      function hitTest(sx, sy, state) {
+        const geo = state.geo;
+        const dx = sx - geo.cx, dy = sy - geo.cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) return "ring";
-        const [w, b, c] = barycentric(x, y, geo.verts);
+        // Triangle test: transform click back to canonical frame.
+        const [cdx, cdy] = unrotate(dx, dy, state.h);
+        const [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
         if (w >= -0.01 && b >= -0.01 && c >= -0.01) return "tri";
         return null;
       }
 
-      function applyRing(state, x, y, repaint) {
-        const dx = x - state.geo.cx, dy = y - state.geo.cy;
+      function applyRingPick(state, sx, sy, onHueChange) {
+        const geo = state.geo;
+        const dx = sx - geo.cx, dy = sy - geo.cy;
         const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
         state.h = (angle + 360) % 360;
-        repaint();
+        onHueChange();
       }
 
-      function applyTri(state, x, y, updateCursors, updateReadout) {
-        const [w, b, c] = barycentric(x, y, state.geo.verts);
+      function applyTriPick(state, sx, sy, updateCursors, updateReadout) {
+        const geo = state.geo;
+        const dx = sx - geo.cx, dy = sy - geo.cy;
+        const [cdx, cdy] = unrotate(dx, dy, state.h);
+        const [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
         state.w = Math.max(0, Math.min(1, w));
         state.b = Math.max(0, Math.min(1, b));
         if (state.w + state.b > 1) {
@@ -794,33 +908,48 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         updateReadout();
       }
 
-      function attachPickerDrag(canvas, state, hooks) {
-        canvas.addEventListener("pointerdown", e => {
-          const [x, y] = canvasXY(e, canvas);
-          const target = hitTest(x, y, state.geo);
+      function attachPickerDrag(stage, state, hooks) {
+        stage.addEventListener("pointerdown", e => {
+          const [x, y] = stageXY(e, stage);
+          const target = hitTest(x, y, state);
           if (!target) return;
-          canvas.setPointerCapture(e.pointerId);
+          stage.setPointerCapture(e.pointerId);
 
+          let pendingEvt = null;
+          let rafId = null;
+          const flush = () => {
+            rafId = null;
+            if (!pendingEvt) return;
+            const ev = pendingEvt;
+            pendingEvt = null;
+            const [mx, my] = stageXY(ev, stage);
+            if (target === "ring") applyRingPick(state, mx, my, hooks.onHueChange);
+            else applyTriPick(state, mx, my, hooks.updateCursors, hooks.updateReadout);
+          };
           const dispatch = ev => {
-            const [mx, my] = canvasXY(ev, canvas);
-            if (target === "ring") applyRing(state, mx, my, hooks.repaint);
-            else applyTri(state, mx, my, hooks.updateCursors, hooks.updateReadout);
+            pendingEvt = ev;
+            if (rafId === null) rafId = requestAnimationFrame(flush);
           };
 
-          dispatch(e);
+          // Initial click applies immediately.
+          const [mx0, my0] = [x, y];
+          if (target === "ring") applyRingPick(state, mx0, my0, hooks.onHueChange);
+          else applyTriPick(state, mx0, my0, hooks.updateCursors, hooks.updateReadout);
+
           const up = () => {
-            canvas.removeEventListener("pointermove", dispatch);
-            canvas.removeEventListener("pointerup", up);
-            canvas.removeEventListener("pointercancel", up);
+            if (rafId) cancelAnimationFrame(rafId);
+            stage.removeEventListener("pointermove", dispatch);
+            stage.removeEventListener("pointerup", up);
+            stage.removeEventListener("pointercancel", up);
           };
-          canvas.addEventListener("pointermove", dispatch);
-          canvas.addEventListener("pointerup", up);
-          canvas.addEventListener("pointercancel", up);
+          stage.addEventListener("pointermove", dispatch);
+          stage.addEventListener("pointerup", up);
+          stage.addEventListener("pointercancel", up);
         });
       }
 
-      attachPickerDrag(genCanvas, genState, {
-        repaint: repaintGen,
+      attachPickerDrag(genStage, genState, {
+        onHueChange: onGenHueChange,
         updateCursors: updateGenCursors,
         updateReadout: updateGenReadout,
       });
@@ -829,16 +958,31 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       // ═══ Section 3b — perceptually uniform (OKLCH) picker ═════
 
-      const okCanvas    = document.getElementById("ok-canvas");
-      const okOverlay   = document.getElementById("ok-overlay");
-      const okCursor    = document.getElementById("ok-cursor");
-      const okHueCursor = document.getElementById("ok-hue-cursor");
-      const okSample    = document.getElementById("ok-sample");
+      const okStage       = document.getElementById("ok-stage");
+      const okCanvas      = document.getElementById("ok-canvas");
+      const okRingCanvas  = document.getElementById("ok-ring-canvas");
+      const okBodyOverlay = document.getElementById("ok-body-overlay");
+      const okCursor      = document.getElementById("ok-cursor");
+      const okHueCursor   = document.getElementById("ok-hue-cursor");
+      const okSample      = document.getElementById("ok-sample");
 
-      let okState = { h: 162, w: 0.333, b: 0.333, geo: null };
+      let okState = { h: 162, w: 0.333, b: 0.333, geo: null, mode: "oklch" };
+
+      paintRing(okRingCanvas, "oklch");
+
+      function applyOkOrientation() {
+        const rot = `rotate(${-okState.h}deg)`;
+        okCanvas.style.transform = rot;
+        okBodyOverlay.style.transform = rot;
+      }
+
+      function repaintOkBody() {
+        okState.geo = paintBody(okCanvas, okState.h, okState.mode);
+      }
 
       function repaintOk() {
-        okState.geo = paintStageOklch(okCanvas, okState.h, { hasRing: true });
+        repaintOkBody();
+        applyOkOrientation();
         updateOkCursors();
         updateOkReadout();
       }
@@ -875,8 +1019,15 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         okHueCursor.style.top  = (hy / size * 100) + "%";
       }
 
-      attachPickerDrag(okCanvas, okState, {
-        repaint: repaintOk,
+      function onOkHueChange() {
+        repaintOkBody();
+        applyOkOrientation();
+        updateOkCursors();
+        updateOkReadout();
+      }
+
+      attachPickerDrag(okStage, okState, {
+        onHueChange: onOkHueChange,
         updateCursors: updateOkCursors,
         updateReadout: updateOkReadout,
       });
