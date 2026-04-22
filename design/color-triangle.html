@@ -305,7 +305,15 @@
         border: 1px solid var(--color-border-subtle);
         min-width: 0;
         min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-ui);
+        font-size: 9px;
+        font-variant-numeric: tabular-nums;
       }
+      .arc-swatch[data-dark]  { color: oklch(95% 0 0); }
+      .arc-swatch[data-light] { color: oklch(15% 0 0); }
 
       pre {
         font-family: var(--font-ui);
@@ -1368,12 +1376,17 @@
           const pct = Math.round(peak * 100);
           label.textContent = `c${pct.toString().padStart(2, "0")}`;
           arcScalesTarget.appendChild(label);
-          for (const { bary } of points) {
+          for (let j = 0; j < points.length; j++) {
+            const { bary } = points[j];
             const [w, b, c] = bary;
             const rgb = s.atBary(state.hue, w, b, c);
             const sw = document.createElement("div");
             sw.className = "arc-swatch";
             sw.style.background = cssFromRgb(rgb);
+            const posPct = Math.round((j / state.arcN) * 100);
+            sw.textContent = posPct.toString().padStart(2, "0");
+            const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+            sw.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
             arcScalesTarget.appendChild(sw);
           }
         }
