@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <title>BWC triangle — exploration</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+      body {
+        padding: 32px 40px;
+        overflow: auto;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: var(--text-lg);
+        font-weight: var(--weight-medium);
+        margin-bottom: 6px;
+      }
+      .lede {
+        color: var(--color-text-secondary);
+        font-size: var(--text-xs);
+        margin-bottom: 32px;
+      }
+
+      section {
+        margin-top: 44px;
+        padding-top: 28px;
+        border-top: 1px solid var(--color-border-subtle);
+      }
+      section:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+      }
+      h2 {
+        font-size: var(--text-base);
+        font-weight: var(--weight-medium);
+        margin-bottom: 6px;
+      }
+      h2 .num {
+        display: inline-block;
+        width: 1.5em;
+        color: var(--color-text-tertiary);
+      }
+      h3 {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        margin-top: 20px;
+        margin-bottom: 6px;
+      }
+      p {
+        font-size: var(--text-sm);
+        line-height: 1.55;
+        margin-bottom: 12px;
+        max-width: 70ch;
+      }
+      ul, ol {
+        font-size: var(--text-sm);
+        line-height: 1.55;
+        margin-bottom: 12px;
+        padding-left: 20px;
+      }
+      code, pre {
+        font-family: var(--font-ui);
+        font-size: 0.88em;
+      }
+      pre {
+        background: var(--color-bg-panel);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        overflow: auto;
+        line-height: 1.5;
+        max-width: 70ch;
+      }
+
+      /* Triangles */
+      .tri-row {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .tri-stage {
+        position: relative;
+        width: 340px;
+        height: 340px;
+      }
+      canvas.tri {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .tri-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .tri-vertex-label {
+        position: absolute;
+        font-size: 10px;
+        font-weight: var(--weight-medium);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-text-primary);
+        background: var(--color-bg-panel);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-sm);
+        padding: 2px 6px;
+        pointer-events: none;
+      }
+
+      .tri-cursor {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid oklch(95% 0 0);
+        box-shadow: 0 0 0 1px oklch(10% 0 0);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+
+      .tri-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+      .tri-row-label {
+        font-size: 9.5px;
+        font-weight: var(--weight-medium);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary);
+      }
+      .tri-value-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 10px;
+        row-gap: 2px;
+        font-size: var(--text-xs);
+        font-family: var(--font-ui);
+        font-variant-numeric: tabular-nums;
+      }
+      .tri-value-grid dt {
+        color: var(--color-text-secondary);
+      }
+      .tri-sample {
+        height: 48px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-subtle);
+      }
+
+      input[type=range] {
+        width: 100%;
+      }
+
+      .token-dot {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 1.5px solid oklch(95% 0 0);
+        box-shadow: 0 0 0 1px oklch(10% 0 0);
+        transform: translate(-50%, -50%);
+        pointer-events: auto;
+        cursor: help;
+      }
+      .token-dot[data-scale="accent"] {
+        border-color: oklch(10% 0 0);
+        box-shadow: 0 0 0 1px oklch(95% 0 0);
+      }
+
+      .legend {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        font-size: var(--text-xs);
+        color: var(--color-text-secondary);
+        margin-top: 8px;
+      }
+      .legend-swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      .pair-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .pair {
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        font-size: var(--text-xs);
+      }
+      .pair .swatch-pair {
+        height: 44px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--text-base);
+      }
+    </style>
+  </head>
+  <body>
+
+    <h1>BWC triangle — exploration</h1>
+    <p class="lede">
+      Working through the fixed-hue black / white / color triangle
+      as a mental model, a naming scheme, a general color picker,
+      and a constrained picker for our tokens.
+    </p>
+
+    <!-- ════════════════════════════════════════════════════════
+         1. The math
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">1.</span>The math</h2>
+
+      <p>
+        Pick a hue and freeze it. Every color at that hue is a mix
+        of <strong>white</strong>, <strong>black</strong>, and the
+        <strong>pure hue</strong>. Call those three primaries
+        <code>W</code>, <code>B</code>, <code>C</code> (for
+        <em>whiteness</em>, <em>blackness</em>, <em>colorfulness</em>).
+        Any color is a weighted sum:
+      </p>
+      <pre>color = W · white + B · black + C · pure_hue
+W + B + C = 1   (normalized)</pre>
+
+      <p>
+        Three weights summing to 1 means only two are independent.
+        That's why a triangle (a 2D simplex) is the right picture —
+        points inside it address every possible mix by their
+        <strong>barycentric coordinates</strong>
+        <code>(w, b, c)</code>.
+      </p>
+
+      <p>
+        This is Alvy Ray Smith's <strong>HWB</strong> model (1996),
+        reachable from HSV by:
+      </p>
+      <pre>W = (1 - S) · V
+B = 1 - V
+C = 1 - W - B = S · V</pre>
+
+      <p>
+        CSS exposes it as <code>hwb(h w% b%)</code>. The browser does
+        the conversion for us when we render.
+      </p>
+
+      <h3>Barycentric coordinates</h3>
+      <p>
+        Pick three triangle vertices <code>V_W</code>,
+        <code>V_B</code>, <code>V_C</code>. Any point
+        <code>P = (x, y)</code> inside has unique
+        <code>(w, b, c)</code> with <code>w + b + c = 1</code>
+        satisfying <code>P = w · V_W + b · V_B + c · V_C</code>.
+        Solving gives a small linear system (one determinant, two
+        ratios). Go look at <code>barycentric()</code> in the script.
+      </p>
+
+      <h3>sRGB vs perceptual</h3>
+      <p>
+        CSS <code>hwb()</code> is sRGB-based (derived from HSV). It's
+        geometrically elegant but <em>not</em> perceptually uniform —
+        equal steps in W don't look equally different. Our current
+        system uses <strong>OKLCH</strong>, which is perceptually
+        uniform but unbounded in C (real displays clip).
+      </p>
+      <p>
+        For this exploration we use CSS <code>hwb()</code> directly
+        so the math and the picture line up. If we commit to this
+        model for tokens we'd likely still <em>store</em> values in
+        OKLCH for perceptual cadence and just <em>name</em> them in
+        W/B/C terms.
+      </p>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         2. Naming
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">2.</span>As a naming convention</h2>
+
+      <p>
+        If every mark is <code>(scale, w, b)</code> (with
+        <code>c = 1 - w - b</code> implied), tokens name themselves
+        after their position on the triangle. Grid-style — pick a
+        resolution, quantize, and you get a finite palette.
+      </p>
+
+      <h3>Proposal A — round W/B to tenths</h3>
+      <pre>{scale}-w{W×10}-b{B×10}
+
+surface-w9-b0   paper   (near-pure white, zero black, zero color)
+surface-w0-b9   ink     (pure ink)
+surface-w0-b3   mid-grey
+accent-w0-b2    deep brand
+accent-w0-b0    pure accent at that hue
+accent-w3-b0    tinted accent (washed toward white)</pre>
+      <p>
+        Readable, names are addresses. The bounded grid (11×11 with
+        <code>w + b ≤ 10</code>) gives <strong>66</strong> legal
+        cells, which is larger than we probably need.
+      </p>
+
+      <h3>Proposal B — named anchors on a rough grid</h3>
+      <pre>{scale}-bg     =  w9,b0   (theme flips to w0,b9)
+{scale}-bg+1   =  w8,b0
+{scale}-ink    =  w0,b9   (theme flips to w9,b0)
+{scale}-ink-1  =  w0,b8
+{scale}-tint-3 =  w6,b0   (mostly white with some color)
+{scale}-full   =  w0,b0   (pure hue)</pre>
+      <p>
+        Fewer, meaningful names. Less flexible per-mark but much
+        easier to adopt without a dictionary.
+      </p>
+
+      <h3>Where contrast pairs live geometrically</h3>
+      <ul>
+        <li><strong>White on black</strong> — W corner on B corner.</li>
+        <li><strong>Black on white</strong> — B corner on W corner.</li>
+        <li><strong>Color on white</strong> — C corner on W corner.</li>
+        <li><strong>Color on black</strong> — C corner on B corner.</li>
+        <li><strong>White on color</strong> — W corner on C corner.</li>
+        <li><strong>Black on color</strong> — B corner on C corner.</li>
+      </ul>
+      <p>
+        Every classical contrast pair is literally "one corner on
+        another." The empty center is where UI mostly lives —
+        dialled-down tints, subtle borders, calmer accent text.
+      </p>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         3. General picker
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">3.</span>General picker</h2>
+
+      <p>
+        Click anywhere in the triangle. Move the hue slider to see
+        the same triangle at a different hue. Coordinates update live.
+      </p>
+
+      <div class="tri-row">
+        <div class="tri-stage" id="gen-stage">
+          <canvas class="tri" id="gen-canvas" width="340" height="340"></canvas>
+          <div class="tri-overlay">
+            <span class="tri-vertex-label" style="left: 50%; top: 2px; transform: translateX(-50%);">W</span>
+            <span class="tri-vertex-label" style="left: 50%; top: calc(100% - 22px); transform: translateX(-50%);">B</span>
+            <span class="tri-vertex-label" style="right: 2px; top: 50%; transform: translateY(-50%);">C</span>
+            <div class="tri-cursor" id="gen-cursor" style="left: 50%; top: 50%;"></div>
+          </div>
+        </div>
+        <div class="tri-controls">
+          <div>
+            <div class="tri-row-label">Hue</div>
+            <input type="range" id="gen-hue" min="0" max="360" value="162">
+          </div>
+          <dl class="tri-value-grid">
+            <dt>hue</dt><dd id="gen-h">162°</dd>
+            <dt>W</dt><dd id="gen-w">—</dd>
+            <dt>B</dt><dd id="gen-b">—</dd>
+            <dt>C</dt><dd id="gen-c">—</dd>
+            <dt>css</dt><dd id="gen-css">—</dd>
+          </dl>
+          <div class="tri-sample" id="gen-sample"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         4. Constrained picker
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">4.</span>Constrained picker — our tokens</h2>
+
+      <p>
+        The triangle is pinned to each scale's hue. Dots mark where
+        our 12 tokens land. The cluster along the W–B edge (zero C)
+        is the "mostly grey" side; deviations toward the C corner
+        show how colorful each token actually is.
+      </p>
+
+      <div class="tri-row" style="margin-top: 18px;">
+        <div class="tri-stage" id="surface-stage">
+          <canvas class="tri" id="surface-canvas" width="340" height="340"></canvas>
+          <div class="tri-overlay" id="surface-overlay"></div>
+        </div>
+        <div class="tri-controls">
+          <div class="tri-row-label">Surface scale — h 162°, c 0.010</div>
+          <div id="surface-list"></div>
+        </div>
+      </div>
+
+      <div class="tri-row" style="margin-top: 28px;">
+        <div class="tri-stage" id="accent-stage">
+          <canvas class="tri" id="accent-canvas" width="340" height="340"></canvas>
+          <div class="tri-overlay" id="accent-overlay"></div>
+        </div>
+        <div class="tri-controls">
+          <div class="tri-row-label">Accent scale — h 162°, c 0.070</div>
+          <div id="accent-list"></div>
+        </div>
+      </div>
+
+      <h3>Observations</h3>
+      <ul>
+        <li>
+          The surface scale lives almost entirely on the W–B edge
+          (C ≈ 0). The tiny chroma moves so little that the dots
+          read as a straight line. That's "greyscale" by
+          construction.
+        </li>
+        <li>
+          The accent scale bows out toward C, peaking around
+          step 8–9. Tokens at the extremes (1, 12) pull back toward
+          the W–B edge because of the per-step chroma taper.
+        </li>
+        <li>
+          The empty triangle interior on the accent side is the
+          unexplored design space — marks that are the same lightness
+          as today's tokens but meaningfully more or less colorful.
+        </li>
+      </ul>
+    </section>
+
+    <script type="module">
+      // ═══ Color math ═══════════════════════════════════════════
+
+      function hsvToRgb(h, s, v) {
+        const c = v * s;
+        const hh = (h % 360 + 360) % 360 / 60;
+        const x = c * (1 - Math.abs(hh % 2 - 1));
+        let r = 0, g = 0, b = 0;
+        if      (hh < 1) { r = c; g = x; }
+        else if (hh < 2) { r = x; g = c; }
+        else if (hh < 3) { g = c; b = x; }
+        else if (hh < 4) { g = x; b = c; }
+        else if (hh < 5) { r = x; b = c; }
+        else             { r = c; b = x; }
+        const m = v - c;
+        return [r + m, g + m, b + m];
+      }
+
+      function hwbToRgb(h, w, b) {
+        if (w + b >= 1) {
+          const g = w / (w + b);
+          return [g, g, g];
+        }
+        const v = 1 - b;
+        const s = v > 0 ? 1 - w / v : 0;
+        return hsvToRgb(h, s, v);
+      }
+
+      function rgbToHwb(r, g, b) {
+        // r,g,b in [0,1]
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        return [min, 1 - max];
+      }
+
+      // Read sRGB bytes the browser renders for any CSS color.
+      // Single shared 1x1 canvas keeps this cheap.
+      const probeCanvas = document.createElement("canvas");
+      probeCanvas.width = probeCanvas.height = 1;
+      const probeCtx = probeCanvas.getContext("2d", { willReadFrequently: true });
+
+      function cssColorToRgb(css) {
+        probeCtx.clearRect(0, 0, 1, 1);
+        probeCtx.fillStyle = css;
+        probeCtx.fillRect(0, 0, 1, 1);
+        const d = probeCtx.getImageData(0, 0, 1, 1).data;
+        return [d[0] / 255, d[1] / 255, d[2] / 255];
+      }
+
+      // ═══ Triangle geometry ════════════════════════════════════
+      //
+      // Vertices: W at top, B at bottom, C at right. This is the
+      // orientation from the Hugo Daniel article and reads as
+      // "lightness from top to bottom, colorfulness rightward".
+
+      function triangleVertices(size) {
+        const pad = 18;
+        return {
+          W: [size / 2,        pad],
+          B: [size / 2,        size - pad],
+          C: [size - pad,      size / 2],
+        };
+      }
+
+      function barycentric(x, y, verts) {
+        const [x1, y1] = verts.W;
+        const [x2, y2] = verts.B;
+        const [x3, y3] = verts.C;
+        const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+        const w = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / det;
+        const b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / det;
+        const c = 1 - w - b;
+        return [w, b, c];
+      }
+
+      function fromBarycentric(w, b, c, verts) {
+        const [x1, y1] = verts.W;
+        const [x2, y2] = verts.B;
+        const [x3, y3] = verts.C;
+        return [w * x1 + b * x2 + c * x3, w * y1 + b * y2 + c * y3];
+      }
+
+      function paintTriangle(canvas, hue) {
+        const ctx = canvas.getContext("2d");
+        const { width, height } = canvas;
+        const img = ctx.createImageData(width, height);
+        const data = img.data;
+        const verts = triangleVertices(width);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const [w, b, c] = barycentric(x, y, verts);
+            if (w >= 0 && b >= 0 && c >= 0) {
+              const [r, gc, bl] = hwbToRgb(hue, w, b);
+              const i = (y * width + x) * 4;
+              data[i]     = Math.round(r  * 255);
+              data[i + 1] = Math.round(gc * 255);
+              data[i + 2] = Math.round(bl * 255);
+              data[i + 3] = 255;
+            }
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+
+      // ═══ Section 3 — general picker ═══════════════════════════
+
+      const genCanvas = document.getElementById("gen-canvas");
+      const genCursor = document.getElementById("gen-cursor");
+      const genSample = document.getElementById("gen-sample");
+      const genHue    = document.getElementById("gen-hue");
+      const genVerts  = triangleVertices(genCanvas.width);
+
+      let genState = { h: +genHue.value, w: 0.333, b: 0.333 };
+
+      function updateGen() {
+        const { h, w, b } = genState;
+        const c = 1 - w - b;
+        document.getElementById("gen-h").textContent = `${h}°`;
+        document.getElementById("gen-w").textContent = w.toFixed(2);
+        document.getElementById("gen-b").textContent = b.toFixed(2);
+        document.getElementById("gen-c").textContent = c.toFixed(2);
+        const css = `hwb(${h} ${(w * 100).toFixed(1)}% ${(b * 100).toFixed(1)}%)`;
+        document.getElementById("gen-css").textContent = css;
+        genSample.style.background = css;
+
+        const [px, py] = fromBarycentric(w, b, c, genVerts);
+        const rect = genCanvas.getBoundingClientRect();
+        // Canvas internal coords == displayed coords since width:100% with matching internal width.
+        genCursor.style.left = (px / genCanvas.width * 100) + "%";
+        genCursor.style.top  = (py / genCanvas.height * 100) + "%";
+      }
+
+      function pickGen(evt) {
+        const rect = genCanvas.getBoundingClientRect();
+        const x = (evt.clientX - rect.left) / rect.width * genCanvas.width;
+        const y = (evt.clientY - rect.top) / rect.height * genCanvas.height;
+        const [w, b, c] = barycentric(x, y, genVerts);
+        if (w < 0 || b < 0 || c < 0) return;
+        genState.w = w;
+        genState.b = b;
+        updateGen();
+      }
+
+      genCanvas.addEventListener("pointerdown", e => {
+        pickGen(e);
+        genCanvas.setPointerCapture(e.pointerId);
+        const move = ev => pickGen(ev);
+        const up = () => {
+          genCanvas.removeEventListener("pointermove", move);
+          genCanvas.removeEventListener("pointerup", up);
+        };
+        genCanvas.addEventListener("pointermove", move);
+        genCanvas.addEventListener("pointerup", up);
+      });
+
+      genHue.addEventListener("input", () => {
+        genState.h = +genHue.value;
+        paintTriangle(genCanvas, genState.h);
+        updateGen();
+      });
+
+      paintTriangle(genCanvas, genState.h);
+      updateGen();
+
+      // ═══ Section 4 — constrained picker ═══════════════════════
+
+      const STEPS = [
+        { n: 1,  L: 10, cMult: 0.30 },
+        { n: 2,  L: 14, cMult: 0.40 },
+        { n: 3,  L: 20, cMult: 0.55 },
+        { n: 4,  L: 26, cMult: 0.70 },
+        { n: 5,  L: 32, cMult: 0.80 },
+        { n: 6,  L: 40, cMult: 0.90 },
+        { n: 7,  L: 50, cMult: 0.95 },
+        { n: 8,  L: 62, cMult: 1.00 },
+        { n: 9,  L: 72, cMult: 1.00 },
+        { n: 10, L: 80, cMult: 0.90 },
+        { n: 11, L: 88, cMult: 0.70 },
+        { n: 12, L: 95, cMult: 0.50 },
+      ];
+
+      const SCALES = [
+        { name: "surface", hue: 162, chroma: 0.010 },
+        { name: "accent",  hue: 162, chroma: 0.070 },
+      ];
+
+      function plotScale(scale) {
+        const canvas = document.getElementById(`${scale.name}-canvas`);
+        const overlay = document.getElementById(`${scale.name}-overlay`);
+        const list = document.getElementById(`${scale.name}-list`);
+        const verts = triangleVertices(canvas.width);
+        paintTriangle(canvas, scale.hue);
+
+        list.innerHTML = `
+          <dl class="tri-value-grid">
+            <dt>step</dt><dt></dt><dt>W</dt><dt>B</dt><dt>C</dt>
+          </dl>
+        `;
+        const grid = list.querySelector(".tri-value-grid");
+        grid.style.gridTemplateColumns = "auto 16px auto auto auto";
+
+        for (const s of STEPS) {
+          const c = scale.chroma * s.cMult;
+          const css = `oklch(${s.L}% ${c} ${scale.hue})`;
+          const [r, g, b] = cssColorToRgb(css);
+          const [w, bl] = rgbToHwb(r, g, b);
+          const col = Math.max(0, 1 - w - bl);
+          const [px, py] = fromBarycentric(w, bl, col, verts);
+
+          const dot = document.createElement("span");
+          dot.className = "token-dot";
+          dot.dataset.scale = scale.name;
+          dot.style.left = (px / canvas.width * 100) + "%";
+          dot.style.top  = (py / canvas.height * 100) + "%";
+          dot.title = `${scale.name}-${s.n}  W ${w.toFixed(2)}  B ${bl.toFixed(2)}  C ${col.toFixed(2)}`;
+          overlay.appendChild(dot);
+
+          const row = document.createElement("span");
+          const swatch = document.createElement("span");
+          swatch.style.cssText = `
+            display:inline-block;
+            width:14px;height:14px;
+            border-radius:3px;
+            border:1px solid var(--color-border-subtle);
+            background:${css};
+          `;
+          grid.insertAdjacentHTML("beforeend", `
+            <span>${s.n}</span>
+            <span></span>
+            <span>${w.toFixed(2)}</span>
+            <span>${bl.toFixed(2)}</span>
+            <span>${col.toFixed(2)}</span>
+          `);
+          grid.children[grid.children.length - 4].appendChild(swatch);
+        }
+      }
+
+      for (const scale of SCALES) plotScale(scale);
+    </script>
+  </body>
+</html>

@@ -215,6 +215,11 @@ Cheap to try. Builds intuition before we commit to a refactor.
   number, OKLCH breakdown, and role hint per swatch.
 - [x] **Visualizer: (L × C) plane per scale / theme.** Rows = L steps,
   cols = chroma levels. Outlines mark the 12 current tokens.
+- [x] **BWC triangle exploration page.** `design/color-triangle.html`
+  — walks the math (HWB, barycentric coords, sRGB vs OKLCH),
+  proposes two naming schemes against the triangle, adds an
+  interactive general picker, and plots our 12 tokens per scale on
+  a constrained triangle.
 - [ ] **Revisit Q4 with the grid in hand.** For each real UI mark,
   ask: does it want an L that's off the current curve's default C?
   Log the answers — that's the evidence base for Option A vs B.
