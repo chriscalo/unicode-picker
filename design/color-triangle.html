@@ -496,6 +496,55 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
     </section>
 
     <!-- ════════════════════════════════════════════════════════
+         3c. HSLuv picker
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">3c.</span>HSLuv picker</h2>
+
+      <p>
+        <a href="https://www.hsluv.org/">HSLuv</a> is Alexei
+        Boronine's human-friendly HSL. It's built on CIELUV rather
+        than OKLab, so it's only <em>lightness</em>-uniform rather
+        than fully perceptually uniform — but its saturation is
+        <em>normalized</em> to the sRGB gamut per hue, which means
+        <code>S = 100</code> always means "on the gamut boundary",
+        whatever the hue. That guarantees a smooth ring by
+        construction: no cube corners to crash into.
+      </p>
+      <p>
+        Triangle: <code>W</code> at (L=100, S=0, H), <code>B</code>
+        at (L=0, S=0, H), <code>C</code> at (L=60, S=100, H). The
+        ring shows S=100 at L=60.
+      </p>
+
+      <div class="tri-row">
+        <div class="tri-stage" id="hsluv-stage" style="width: 420px; height: 420px;">
+          <canvas class="tri-ring" id="hsluv-ring-canvas" width="840" height="840"></canvas>
+          <canvas class="tri-body" id="hsluv-canvas" width="420" height="420"></canvas>
+          <div class="tri-overlay tri-overlay-rotating" id="hsluv-body-overlay">
+            <div class="tri-cursor" id="hsluv-cursor"></div>
+          </div>
+          <div class="tri-overlay" id="hsluv-overlay">
+            <div class="hue-cursor" id="hsluv-hue-cursor"></div>
+          </div>
+        </div>
+        <div class="tri-controls">
+          <dl class="tri-value-grid">
+            <dt>hue</dt><dd id="hsluv-h">162°</dd>
+            <dt>W</dt><dd id="hsluv-w">—</dd>
+            <dt>B</dt><dd id="hsluv-b">—</dd>
+            <dt>C</dt><dd id="hsluv-c">—</dd>
+            <dt>L</dt><dd id="hsluv-L">—</dd>
+            <dt>S</dt><dd id="hsluv-S">—</dd>
+            <dt>css</dt><dd id="hsluv-css">—</dd>
+          </dl>
+          <div class="tri-sample" id="hsluv-sample"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
          4. Constrained picker
     ═════════════════════════════════════════════════════════ -->
 
@@ -1333,6 +1382,250 @@ N = 8 →  45</pre>
       });
 
       repaintOk();
+
+      // ═══ Section 3c — HSLuv picker ════════════════════════════
+      //
+      // Minimal HSLuv implementation based on the reference at
+      // hsluv.org. HSLuv saturation is normalised to the sRGB
+      // gamut per hue, so the ring at S=100 across all hues is
+      // smooth by construction — no cube corners to hit.
+
+      const M_XYZ = [
+        [ 3.240969941904521, -1.537383177570093, -0.498610760293],
+        [-0.969243636280879,  1.875967501507720,  0.041555057407176],
+        [ 0.055630079696993, -0.203976958888970,  1.056971514242879],
+      ];
+      const REF_U  = 0.19783000664283;
+      const REF_V  = 0.46831999493879;
+      const KAPPA  = 903.2962962;
+      const EPSILON = 0.0088564516;
+
+      function yToL(Y) {
+        if (Y <= EPSILON) return Y * KAPPA;
+        return 116 * Math.cbrt(Y) - 16;
+      }
+      function lToY(L) {
+        if (L <= 8) return L / KAPPA;
+        const x = (L + 16) / 116;
+        return x * x * x;
+      }
+
+      // Bounds: six lines on the (U, V) plane for the given L such
+      // that intersecting them gives the gamut boundary at that L.
+      function getBounds(L) {
+        const sub1 = ((L + 16) ** 3) / 1560896;
+        const sub2 = sub1 > EPSILON ? sub1 : L / KAPPA;
+        const bounds = [];
+        for (let c = 0; c < 3; c++) {
+          const m1 = M_XYZ[c][0];
+          const m2 = M_XYZ[c][1];
+          const m3 = M_XYZ[c][2];
+          for (let t = 0; t < 2; t++) {
+            const top1 = (284517 * m1 - 94839 * m3) * sub2;
+            const top2 =
+              (838422 * m3 + 769860 * m2 + 731718 * m1) * L * sub2
+              - 769860 * t * L;
+            const bottom = (632260 * m3 - 126452 * m2) * sub2 + 126452 * t;
+            bounds.push({ slope: top1 / bottom, intercept: top2 / bottom });
+          }
+        }
+        return bounds;
+      }
+
+      function maxChromaForLH(L, H) {
+        const hRad = H * Math.PI / 180;
+        const bounds = getBounds(L);
+        let min = Infinity;
+        for (const bd of bounds) {
+          const len = bd.intercept / (Math.sin(hRad) - bd.slope * Math.cos(hRad));
+          if (len >= 0 && len < min) min = len;
+        }
+        return min;
+      }
+
+      function luvToXyz(L, U, V) {
+        if (L === 0) return [0, 0, 0];
+        const varU = U / (13 * L) + REF_U;
+        const varV = V / (13 * L) + REF_V;
+        const Y = lToY(L);
+        const X = 0 - (9 * Y * varU) / ((varU - 4) * varV - varU * varV);
+        const Z = (9 * Y - 15 * varV * Y - varV * X) / (3 * varV);
+        return [X, Y, Z];
+      }
+
+      function xyzToLinearRgb(X, Y, Z) {
+        return [
+          M_XYZ[0][0] * X + M_XYZ[0][1] * Y + M_XYZ[0][2] * Z,
+          M_XYZ[1][0] * X + M_XYZ[1][1] * Y + M_XYZ[1][2] * Z,
+          M_XYZ[2][0] * X + M_XYZ[2][1] * Y + M_XYZ[2][2] * Z,
+        ];
+      }
+
+      function hsluvToLinearRgb(H, S, L) {
+        if (L > 99.9999999) return [1, 1, 1];
+        if (L < 0.0000001) return [0, 0, 0];
+        const maxC = maxChromaForLH(L, H);
+        const C = (maxC * S) / 100;
+        const hRad = H * Math.PI / 180;
+        const U = C * Math.cos(hRad);
+        const V = C * Math.sin(hRad);
+        const [X, Y, Z] = luvToXyz(L, U, V);
+        return xyzToLinearRgb(X, Y, Z);
+      }
+
+      function paintRingHsluv(canvas) {
+        const ctx = canvas.getContext("2d");
+        const { width, height } = canvas;
+        const geo = geometry(width, { hasRing: true });
+        const { cx, cy, ringInner, ringOuter } = geo;
+        const img = ctx.createImageData(width, height);
+        const data = img.data;
+        const rInnerSq = ringInner * ringInner;
+        const rOuterSq = ringOuter * ringOuter;
+        const yMin = Math.max(0, Math.floor(cy - ringOuter - 1));
+        const yMax = Math.min(height, Math.ceil(cy + ringOuter + 1));
+        const xMin = Math.max(0, Math.floor(cx - ringOuter - 1));
+        const xMax = Math.min(width, Math.ceil(cx + ringOuter + 1));
+        for (let y = yMin; y < yMax; y++) {
+          const dy = y - cy, dy2 = dy * dy;
+          for (let x = xMin; x < xMax; x++) {
+            const dx = x - cx;
+            const distSq = dx * dx + dy2;
+            if (distSq < rInnerSq || distSq > rOuterSq) continue;
+            const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+            const pixelHue = (angle + 360) % 360;
+            const [r, g, b] = hsluvToLinearRgb(pixelHue, 100, 60);
+            const i = (y * width + x) * 4;
+            data[i]     = Math.round(linearToSrgb(r) * 255);
+            data[i + 1] = Math.round(linearToSrgb(g) * 255);
+            data[i + 2] = Math.round(linearToSrgb(b) * 255);
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+
+      function paintBodyHsluv(canvas, hue) {
+        const ctx = canvas.getContext("2d");
+        const { width, height } = canvas;
+        const geo = geometry(width, { hasRing: true, hue: 0 });
+        const { cx, cy, triR, verts } = geo;
+        ctx.clearRect(0, 0, width, height);
+        const yMin = Math.max(0, Math.floor(cy - triR - 1));
+        const yMax = Math.min(height, Math.ceil(cy + triR + 1));
+        const xMin = Math.max(0, Math.floor(cx - triR - 1));
+        const xMax = Math.min(width, Math.ceil(cx + triR + 1));
+        const boxW = xMax - xMin;
+        const img = ctx.createImageData(boxW, yMax - yMin);
+        const data = img.data;
+        const [x1, y1] = verts.W;
+        const [x2, y2] = verts.B;
+        const [x3, y3] = verts.C;
+        const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+        const invDet = 1 / det;
+        const a1 = (y2 - y3) * invDet;
+        const b1 = (x3 - x2) * invDet;
+        const a2 = (y3 - y1) * invDet;
+        const b2 = (x1 - x3) * invDet;
+
+        const L_PEAK_HSLUV = 60;
+        for (let y = yMin; y < yMax; y++) {
+          const dy = y - y3;
+          for (let x = xMin; x < xMax; x++) {
+            const dx = x - x3;
+            const w = a1 * dx + b1 * dy;
+            const b = a2 * dx + b2 * dy;
+            const c = 1 - w - b;
+            if (w < -0.002 || b < -0.002 || c < -0.002) continue;
+            const wc = Math.max(0, w);
+            const bc = Math.max(0, b);
+            const cc = Math.max(0, c);
+            const L = 100 * wc + 0 * bc + L_PEAK_HSLUV * cc;
+            const S = 100 * cc;
+            const [r, g, bl] = hsluvToLinearRgb(hue, S, L);
+            const i = ((y - yMin) * boxW + (x - xMin)) * 4;
+            data[i]     = Math.round(linearToSrgb(r) * 255);
+            data[i + 1] = Math.round(linearToSrgb(g) * 255);
+            data[i + 2] = Math.round(linearToSrgb(bl) * 255);
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, xMin, yMin);
+        return geo;
+      }
+
+      const hsluvStage       = document.getElementById("hsluv-stage");
+      const hsluvCanvas      = document.getElementById("hsluv-canvas");
+      const hsluvRingCanvas  = document.getElementById("hsluv-ring-canvas");
+      const hsluvBodyOverlay = document.getElementById("hsluv-body-overlay");
+      const hsluvCursor      = document.getElementById("hsluv-cursor");
+      const hsluvHueCursor   = document.getElementById("hsluv-hue-cursor");
+      const hsluvSample      = document.getElementById("hsluv-sample");
+
+      let hsluvState = { h: 162, w: 0.333, b: 0.333, geo: null };
+
+      paintRingHsluv(hsluvRingCanvas);
+
+      function applyHsluvOrientation() {
+        const rot = `rotate(${-hsluvState.h}deg)`;
+        hsluvCanvas.style.transform = rot;
+        hsluvBodyOverlay.style.transform = rot;
+      }
+
+      function updateHsluvReadout() {
+        const { h, w, b } = hsluvState;
+        const c = 1 - w - b;
+        const L = 100 * w + 60 * c;
+        const S = 100 * c;
+        document.getElementById("hsluv-h").textContent = `${h.toFixed(0)}°`;
+        document.getElementById("hsluv-w").textContent = w.toFixed(2);
+        document.getElementById("hsluv-b").textContent = b.toFixed(2);
+        document.getElementById("hsluv-c").textContent = c.toFixed(2);
+        document.getElementById("hsluv-L").textContent = `${L.toFixed(1)}%`;
+        document.getElementById("hsluv-S").textContent = `${S.toFixed(1)}%`;
+        const [r, g, bl] = hsluvToLinearRgb(h, S, L);
+        const css = `rgb(${Math.round(linearToSrgb(r) * 255)}, ${Math.round(linearToSrgb(g) * 255)}, ${Math.round(linearToSrgb(bl) * 255)})`;
+        document.getElementById("hsluv-css").textContent = css;
+        hsluvSample.style.background = css;
+      }
+
+      function updateHsluvCursors() {
+        const { h, w, b, geo } = hsluvState;
+        const c = 1 - w - b;
+        const [px, py] = fromBarycentric(w, b, c, geo.verts);
+        const size = hsluvCanvas.width;
+        hsluvCursor.style.left = (px / size * 100) + "%";
+        hsluvCursor.style.top  = (py / size * 100) + "%";
+        const ringMid = (geo.ringInner + geo.ringOuter) / 2;
+        const rad = h * Math.PI / 180;
+        const hx = geo.cx + ringMid * Math.cos(rad);
+        const hy = geo.cy - ringMid * Math.sin(rad);
+        hsluvHueCursor.style.left = (hx / size * 100) + "%";
+        hsluvHueCursor.style.top  = (hy / size * 100) + "%";
+      }
+
+      function repaintHsluvBody() {
+        hsluvState.geo = paintBodyHsluv(hsluvCanvas, hsluvState.h);
+      }
+
+      function onHsluvHueChange() {
+        repaintHsluvBody();
+        applyHsluvOrientation();
+        updateHsluvCursors();
+        updateHsluvReadout();
+      }
+
+      function repaintHsluv() {
+        onHsluvHueChange();
+      }
+
+      attachPickerDrag(hsluvStage, hsluvState, {
+        onHueChange: onHsluvHueChange,
+        updateCursors: updateHsluvCursors,
+        updateReadout: updateHsluvReadout,
+      });
+
+      repaintHsluv();
 
       // ═══ Section 4 — constrained picker ═══════════════════════
 
