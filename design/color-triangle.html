@@ -577,11 +577,14 @@ N = 5 →  21
 N = 6 →  28
 N = 8 →  45</pre>
       <p>
-        Color math runs in OKLCH so perceptual spacing is uniform:
-        each cell interpolates <code>L = i·1 + k·L*</code> and
-        <code>C = k·C*</code>, where <code>(L*, C*)</code> is the
-        hue's sRGB gamut cusp. Choose a resolution below and drag
-        the hue ring to see where each token lands.
+        Color math runs in OKLCH for perceptually-uniform
+        lightness. The triangle's C vertex is fixed at
+        <code>L* = 0.55</code>, and for each hue we use the
+        max in-gamut <code>C*</code> at that <code>L*</code>.
+        Consequence: the same address <code>(i, j, k)</code>
+        resolves to the <em>same L</em> regardless of hue — only
+        the chroma changes across hues. That's the cross-hue
+        cadence you want for a design-system palette.
       </p>
 
       <div class="quant-controls">
@@ -787,6 +790,32 @@ N = 8 →  45</pre>
         return lut;
       })();
 
+      // For cross-hue consistency in lightness, fix L to a target
+      // and find the max in-gamut chroma at that L for each hue.
+      // Same (w, c) then gives the same L regardless of hue; only
+      // C varies per hue.
+      function findMaxChromaAtL(L, hue) {
+        let lo = 0, hi = 0.5;
+        for (let i = 0; i < 22; i++) {
+          const mid = (lo + hi) / 2;
+          if (inSrgbGamut(L, mid, hue, 0.0005)) lo = mid;
+          else hi = mid;
+        }
+        return lo * 0.98;
+      }
+
+      const QUANT_L_TARGET = 0.55;
+      const QUANT_C_LUT = (() => {
+        const lut = new Array(361);
+        for (let h = 0; h <= 360; h++) lut[h] = findMaxChromaAtL(QUANT_L_TARGET, h);
+        return lut;
+      })();
+
+      function quantPeaks(hue) {
+        const h = ((hue % 360) + 360) % 360;
+        return [QUANT_L_TARGET, QUANT_C_LUT[Math.round(h)]];
+      }
+
       function cusp(hue) {
         const h = ((hue % 360) + 360) % 360;
         return CUSP_LUT[Math.round(h)];
@@ -904,7 +933,7 @@ N = 8 →  45</pre>
       // east) with the actual hue. Called on each hue change; only
       // iterates the triangle's bounding box. The canvas element
       // gets transform: rotate() for visual orientation.
-      function paintBody(canvas, hue, mode) {
+      function paintBody(canvas, hue, mode, peaks) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
         const geo = geometry(width, { hasRing: true, hue: 0 });
@@ -932,7 +961,7 @@ N = 8 →  45</pre>
         const a2 = (y3 - y1) * invDet;
         const b2 = (x1 - x3) * invDet;
 
-        const [hueLpeak, hueCpeak] = cusp(hue);
+        const [hueLpeak, hueCpeak] = peaks || cusp(hue);
 
         for (let y = yMin; y < yMax; y++) {
           const dy = y - y3;
@@ -1414,8 +1443,9 @@ N = 8 →  45</pre>
           quantBodyOverlay.appendChild(dot);
         }
 
-        // Token table.
-        const [Lp, Cp] = cusp(h);
+        // Token table. Uses the quant peaks (fixed L, per-hue
+        // max-C-at-L) so same (i,j,k) = same L across hues.
+        const [Lp, Cp] = quantPeaks(h);
         const thead = `
           <div class="token-table">
             <span class="th"></span>
@@ -1440,7 +1470,12 @@ N = 8 →  45</pre>
       }
 
       function repaintQuantBody() {
-        quantState.geo = paintBody(quantCanvas, quantState.h, "oklch");
+        quantState.geo = paintBody(
+          quantCanvas,
+          quantState.h,
+          "oklch",
+          quantPeaks(quantState.h),
+        );
       }
 
       function repaintQuant() {
