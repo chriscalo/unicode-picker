@@ -1375,7 +1375,8 @@
           row.className = "arc-scale";
           const label = document.createElement("div");
           label.className = "arc-scale-label";
-          label.textContent = `c${a} · peak ${(peak * 100).toFixed(0)}%`;
+          const pct = Math.round(peak * 100);
+          label.textContent = `c${pct.toString().padStart(2, "0")}`;
           row.appendChild(label);
           const ramp = document.createElement("div");
           ramp.className = "arc-scale-ramp";
