@@ -411,10 +411,14 @@
         <div class="control">
           <div class="control__label">Color space</div>
           <div class="seg" data-decision="space">
-            <button data-value="hwb">HWB (sRGB)</button>
+            <button data-value="hwb">HWB</button>
             <button data-value="oklch" aria-pressed="true">OKLCH</button>
             <button data-value="okhsl">OKHSL</button>
+            <button data-value="okhsv">OKHSV</button>
+            <button data-value="lchab">LCh(ab)</button>
+            <button data-value="jzazbz">Jzazbz</button>
             <button data-value="hsluv">HSLuv</button>
+            <button data-value="hpluv">HPLuv</button>
           </div>
         </div>
 
@@ -589,25 +593,33 @@
       // HSV) aligns with CSS named colours; OKLCH and HSLuv each
       // have slightly different hue positions. Hand-anchored from
       // the swatches produced at those angles.
+      const HWB_ANCHORS = [
+        [  0, "red"],      [ 30, "orange"], [ 60, "yellow"],
+        [ 90, "chartreuse"], [120, "green"], [150, "spring"],
+        [180, "cyan"],     [210, "azure"],  [240, "blue"],
+        [270, "violet"],   [300, "magenta"],[330, "rose"],
+      ];
+      const OKLAB_ANCHORS = [
+        [ 29, "red"],      [ 54, "orange"], [ 85, "yellow"],
+        [120, "chartreuse"], [142, "green"], [170, "teal"],
+        [196, "cyan"],     [232, "blue"],   [264, "indigo"],
+        [303, "magenta"],  [355, "rose"],
+      ];
+      const HSLUV_ANCHORS = [
+        [ 12, "red"],      [ 40, "orange"], [ 80, "yellow"],
+        [115, "chartreuse"],[130, "green"], [160, "teal"],
+        [192, "cyan"],     [225, "blue"],   [265, "violet"],
+        [300, "magenta"],  [345, "rose"],
+      ];
       const HUE_ANCHORS = {
-        hwb: [
-          [  0, "red"],      [ 30, "orange"], [ 60, "yellow"],
-          [ 90, "chartreuse"], [120, "green"], [150, "spring"],
-          [180, "cyan"],     [210, "azure"],  [240, "blue"],
-          [270, "violet"],   [300, "magenta"],[330, "rose"],
-        ],
-        oklch: [
-          [ 29, "red"],      [ 54, "orange"], [ 85, "yellow"],
-          [120, "chartreuse"], [142, "green"], [170, "teal"],
-          [196, "cyan"],     [232, "blue"],   [264, "indigo"],
-          [303, "magenta"],  [355, "rose"],
-        ],
-        hsluv: [
-          [ 12, "red"],      [ 40, "orange"], [ 80, "yellow"],
-          [115, "chartreuse"],[130, "green"], [160, "teal"],
-          [192, "cyan"],     [225, "blue"],   [265, "violet"],
-          [300, "magenta"],  [345, "rose"],
-        ],
+        hwb:    HWB_ANCHORS,
+        oklch:  OKLAB_ANCHORS,
+        okhsl:  OKLAB_ANCHORS,
+        okhsv:  OKLAB_ANCHORS,
+        lchab:  HSLUV_ANCHORS,   // CIELab hue layout is close to CIELUV
+        jzazbz: OKLAB_ANCHORS,   // rough approximation
+        hsluv:  HSLUV_ANCHORS,
+        hpluv:  HSLUV_ANCHORS,
       };
       function hueNameAt(angle) {
         const anchors = HUE_ANCHORS[state.space] || HUE_ANCHORS.hwb;
@@ -839,6 +851,239 @@
         return out;
       })();
 
+      // — HPLuv (HSLuv's pastel-only sibling) —
+      // Same L, H as HSLuv, but C_max is the min-over-all-hues
+      // gamut chroma at that L (perceptually-uniform chroma by
+      // construction; lower ceiling).
+      function hpluvMaxC(L) {
+        const bounds = getBounds(L);
+        let min = Infinity;
+        for (const bd of bounds) {
+          const dist = Math.abs(bd.intercept) / Math.sqrt(bd.slope ** 2 + 1);
+          if (dist < min) min = dist;
+        }
+        return min;
+      }
+      function hpluvToLinearRgb(H, S, L) {
+        if (L > 99.9999) return [1, 1, 1];
+        if (L < 0.0001) return [0, 0, 0];
+        const maxC = hpluvMaxC(L);
+        const C = (maxC * S) / 100;
+        const hRad = H * Math.PI / 180;
+        const U = C * Math.cos(hRad);
+        const V = C * Math.sin(hRad);
+        const [X, Y, Z] = luvToXyz(L, U, V);
+        return xyzToLinearRgb(X, Y, Z);
+      }
+      function hpluvCuspL(hue) {
+        // Same as HSLuv's — chroma is hue-independent in HPLuv
+        // (limited by the narrowest hue) so peak L is still the
+        // L where the inter-hue min-C is largest.
+        let bestL = 50, bestC = 0;
+        for (let L = 1; L < 99; L += 0.5) {
+          const c = hpluvMaxC(L);
+          if (c > bestC) { bestC = c; bestL = L; }
+        }
+        return bestL;
+      }
+      const HPLUV_CUSP_L_RAW = (() => {
+        const lut = new Array(361);
+        const v = hpluvCuspL(0); // hue-independent
+        for (let h = 0; h <= 360; h++) lut[h] = v;
+        return lut;
+      })();
+
+      // — CIELCH(ab) — classic LCh on the 1976 CIE L*a*b* space.
+      // D65 reference white; f-function split at 6/29.
+      const LAB_XN = 0.95047, LAB_YN = 1.00000, LAB_ZN = 1.08883;
+      const LAB_DELTA = 6 / 29;
+      function labF(t) {
+        return t > LAB_DELTA ** 3
+          ? Math.cbrt(t)
+          : t / (3 * LAB_DELTA * LAB_DELTA) + 4 / 29;
+      }
+      function labFInv(t) {
+        return t > LAB_DELTA
+          ? t ** 3
+          : 3 * LAB_DELTA * LAB_DELTA * (t - 4 / 29);
+      }
+      function labToXyz(L, a, b) {
+        const fy = (L + 16) / 116;
+        const fx = fy + a / 500;
+        const fz = fy - b / 200;
+        return [
+          LAB_XN * labFInv(fx),
+          LAB_YN * labFInv(fy),
+          LAB_ZN * labFInv(fz),
+        ];
+      }
+      function lchabToLinearRgb(L, C, H) {
+        const hRad = H * Math.PI / 180;
+        const a = C * Math.cos(hRad);
+        const b = C * Math.sin(hRad);
+        const [X, Y, Z] = labToXyz(L, a, b);
+        return xyzToLinearRgb(X, Y, Z);
+      }
+      function lchabMaxCAtL(L, hue) {
+        let lo = 0, hi = 200;
+        for (let i = 0; i < 28; i++) {
+          const m = (lo + hi) / 2;
+          const [r, g, b] = lchabToLinearRgb(L, m, hue);
+          if (r >= 0 && r <= 1 && g >= 0 && g <= 1 && b >= 0 && b <= 1) lo = m;
+          else hi = m;
+        }
+        return lo;
+      }
+      function lchabCuspForHue(hue) {
+        let bestL = 50, bestC = 0;
+        for (let L = 1; L < 99; L += 1) {
+          const C = lchabMaxCAtL(L, hue);
+          if (C > bestC) { bestC = C; bestL = L; }
+        }
+        return [bestL, bestC * 0.985];
+      }
+      const LCHAB_CUSP = (() => {
+        const raw = new Array(361);
+        for (let h = 0; h <= 360; h++) raw[h] = lchabCuspForHue(h);
+        const sigma = 5, half = Math.ceil(3 * sigma);
+        const out = new Array(361);
+        for (let i = 0; i <= 360; i++) {
+          let L = 0, C = 0, wS = 0;
+          for (let j = -half; j <= half; j++) {
+            const w = Math.exp(-(j * j) / (2 * sigma * sigma));
+            const k = ((i + j) % 360 + 360) % 360;
+            L += raw[k][0] * w;
+            C += raw[k][1] * w;
+            wS += w;
+          }
+          out[i] = [L / wS, C / wS];
+        }
+        return out;
+      })();
+
+      // — OKHSV (Björn Ottosson) — HSV variant of OKHSL.
+      function okhsvToLinearRgb(h, s, v) {
+        if (v <= 0) return [0, 0, 0];
+        const hRad = h * Math.PI / 180;
+        const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
+        const cusp = okhslCusp(a_, b_);
+        const STmax = { S: cusp.C / cusp.L, T: cusp.C / (1 - cusp.L) };
+        const S_0 = 0.5;
+        const k = 1 - S_0 / STmax.S;
+        // L, C from (s, v)
+        const L_v = 1 - s * S_0 / (S_0 + STmax.T - STmax.T * k * s);
+        const C_v = s * STmax.T * S_0 / (S_0 + STmax.T - STmax.T * k * s);
+        const L = v * L_v;
+        const C = v * C_v;
+        // Toe compensation
+        const toeL = 0.5 * (OKHSL_K3 * L_v - OKHSL_K1
+          + Math.sqrt((OKHSL_K3 * L_v - OKHSL_K1) ** 2 + 4 * OKHSL_K2 * OKHSL_K3 * L_v));
+        const L_vt = okhslToeInv(toeL);
+        const toeV = 0.5 * (OKHSL_K3 * v - OKHSL_K1
+          + Math.sqrt((OKHSL_K3 * v - OKHSL_K1) ** 2 + 4 * OKHSL_K2 * OKHSL_K3 * v));
+        const V_t = okhslToeInv(toeV);
+        // Adjust L, C for perceptual
+        const L_new = V_t * L / L_v;
+        const C_new = (V_t * L / L_v) * (C / L);
+        return oklchToLinearRgb(L_new, C_new, h);
+      }
+
+      // — Jzazbz (Safdar et al. 2017) — perceptually-uniform HDR
+      // space. Input hue + L-like Jz + chroma Cz.
+      const JZ_B = 1.15, JZ_G = 0.66;
+      const JZ_N = 2610 / 16384;
+      const JZ_P = 1.7 * 2523 / 32;
+      const JZ_C1 = 3424 / 4096;
+      const JZ_C2 = 2413 / 128;
+      const JZ_C3 = 2392 / 128;
+      const JZ_D = -0.56;
+      const JZ_D0 = 1.6295499532821566e-11;
+      function jzPQ(v) {
+        const x = Math.pow(Math.max(0, v) / 10000, JZ_N);
+        return Math.pow((JZ_C1 + JZ_C2 * x) / (1 + JZ_C3 * x), JZ_P);
+      }
+      function jzPQInv(vp) {
+        const num = Math.max(Math.pow(vp, 1 / JZ_P) - JZ_C1, 0);
+        const den = JZ_C2 - JZ_C3 * Math.pow(vp, 1 / JZ_P);
+        return 10000 * Math.pow(num / den, 1 / JZ_N);
+      }
+      // Forward sRGB-white → Jz (under normalized 0-1 XYZ). Used
+      // as the "white corner" Jz for barycentric interpolation.
+      const JZ_WHITE = (() => {
+        const X = 0.9505, Y = 1.0, Z = 1.0891;
+        const Xp = JZ_B * X - (JZ_B - 1) * Z;
+        const Yp = JZ_G * Y - (JZ_G - 1) * X;
+        const Zp = Z;
+        const L = 0.41478972 * Xp + 0.579999 * Yp + 0.014648 * Zp;
+        const M = -0.2015100 * Xp + 1.120649 * Yp + 0.0531008 * Zp;
+        const S = -0.0166008 * Xp + 0.264800 * Yp + 0.668471 * Zp;
+        const Lp = jzPQ(L), Mp = jzPQ(M);
+        const Iz = 0.5 * (Lp + Mp);
+        return ((1 + JZ_D) * Iz) / (1 + JZ_D * Iz) - JZ_D0;
+      })();
+      function jzazbzToLinearRgb(Jz, az, bz) {
+        const Iz = (Jz + JZ_D0) / (1 + JZ_D - JZ_D * (Jz + JZ_D0));
+        // Inverse LMS' matrix
+        const Lp = Iz + 1.386050432715393e-1 * az + 5.804731615611891e-2 * bz;
+        const Mp = Iz - 1.386050432715393e-1 * az - 5.804731615611891e-2 * bz;
+        const Sp = Iz - 9.601924202631895e-2 * az - 8.118918960560390e-1 * bz;
+        const L = jzPQInv(Lp);
+        const M = jzPQInv(Mp);
+        const S = jzPQInv(Sp);
+        // LMS → X'Y'Z'
+        const Xp =  1.924226435787607 * L - 1.004792312753519 * M + 0.037651404030618 * S;
+        const Yp =  0.350316762094999 * L + 0.726481193931655 * M - 0.065384422948085 * S;
+        const Zp = -0.090982810982848 * L - 0.312728290523474 * M + 1.522766561305260 * S;
+        // X'Y'Z' → XYZ_D65
+        const X = (Xp + (JZ_B - 1) * Zp) / JZ_B;
+        const Y = (Yp + (JZ_G - 1) * X) / JZ_G;
+        const Z = Zp;
+        return xyzToLinearRgb(X, Y, Z);
+      }
+      function jzczhzToLinearRgb(Jz, Cz, hz) {
+        const hRad = hz * Math.PI / 180;
+        const az = Cz * Math.cos(hRad);
+        const bz = Cz * Math.sin(hRad);
+        return jzazbzToLinearRgb(Jz, az, bz);
+      }
+      function jzMaxCAtJz(Jz, hue) {
+        let lo = 0, hi = 0.3;
+        for (let i = 0; i < 26; i++) {
+          const m = (lo + hi) / 2;
+          const [r, g, b] = jzczhzToLinearRgb(Jz, m, hue);
+          if (r >= 0 && r <= 1 && g >= 0 && g <= 1 && b >= 0 && b <= 1) lo = m;
+          else hi = m;
+        }
+        return lo;
+      }
+      function jzCuspForHue(hue) {
+        let bestJ = JZ_WHITE / 2, bestC = 0;
+        const step = JZ_WHITE / 40;
+        for (let Jz = step; Jz < JZ_WHITE; Jz += step) {
+          const C = jzMaxCAtJz(Jz, hue);
+          if (C > bestC) { bestC = C; bestJ = Jz; }
+        }
+        return [bestJ, bestC * 0.985];
+      }
+      const JZ_CUSP = (() => {
+        const raw = new Array(361);
+        for (let h = 0; h <= 360; h++) raw[h] = jzCuspForHue(h);
+        const sigma = 5, half = Math.ceil(3 * sigma);
+        const out = new Array(361);
+        for (let i = 0; i <= 360; i++) {
+          let J = 0, C = 0, wS = 0;
+          for (let j = -half; j <= half; j++) {
+            const w = Math.exp(-(j * j) / (2 * sigma * sigma));
+            const k = ((i + j) % 360 + 360) % 360;
+            J += raw[k][0] * w;
+            C += raw[k][1] * w;
+            wS += w;
+          }
+          out[i] = [J / wS, C / wS];
+        }
+        return out;
+      })();
+
       // — OKHSL (Björn Ottosson, 2021) — HSL built on OKLab so the
       // colours are OKLab-perceptually-uniform in lightness *and*
       // the saturation axis passes through a visually-plausible
@@ -1019,6 +1264,125 @@
               ["L",      `${(l*100).toFixed(1)}%`],
               ["sat.",   `${(s*100).toFixed(1)}%`],
               ["css",    `okhsl(${hue.toFixed(0)} ${(s*100).toFixed(0)}% ${(l*100).toFixed(0)}%)`],
+            ];
+          },
+        },
+        okhsv: {
+          label: "OKHSV",
+          ringAt(hue) {
+            const [r, g, b] = okhsvToLinearRgb(hue, 1, 1);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+          },
+          atBary(hue, w, b, c) {
+            // v = w + c (how bright); s = c / (w + c) (how saturated)
+            const v = Math.min(1, Math.max(0, w + c));
+            const denom = w + c;
+            const s = denom > 1e-6 ? c / denom : 0;
+            const [r, g, bl] = okhsvToLinearRgb(hue, s, v);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const v = Math.min(1, Math.max(0, w + c));
+            const denom = w + c;
+            const s = denom > 1e-6 ? c / denom : 0;
+            return [
+              ["hue",   `${hue.toFixed(0)}°`],
+              ["tint",  w.toFixed(2)],
+              ["shade", b.toFixed(2)],
+              ["pure",  c.toFixed(2)],
+              ["V",     `${(v*100).toFixed(1)}%`],
+              ["sat.",  `${(s*100).toFixed(1)}%`],
+              ["css",   `okhsv(${hue.toFixed(0)} ${(s*100).toFixed(0)}% ${(v*100).toFixed(0)}%)`],
+            ];
+          },
+        },
+        lchab: {
+          label: "LCh(ab)",
+          ringAt(hue) {
+            const [Lp, Cp] = LCHAB_CUSP[Math.round(((hue%360)+360)%360)];
+            const [r, g, b] = lchabToLinearRgb(Lp, Cp, hue);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+          },
+          atBary(hue, w, b, c) {
+            const [Lp, Cp] = LCHAB_CUSP[Math.round(((hue%360)+360)%360)];
+            const L = w * 100 + c * Lp;
+            const C = c * Cp;
+            const [r, g, bl] = lchabToLinearRgb(L, C, hue);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const [Lp, Cp] = LCHAB_CUSP[Math.round(((hue%360)+360)%360)];
+            const L = w * 100 + c * Lp;
+            const C = c * Cp;
+            return [
+              ["hue",    `${hue.toFixed(0)}°`],
+              ["tint",   w.toFixed(2)],
+              ["shade",  b.toFixed(2)],
+              ["pure",   c.toFixed(2)],
+              ["L*",     `${L.toFixed(1)}`],
+              ["C*",     C.toFixed(1)],
+              ["css",    `lch(${L.toFixed(1)} ${C.toFixed(1)} ${hue.toFixed(0)})`],
+            ];
+          },
+        },
+        jzazbz: {
+          label: "Jzazbz",
+          ringAt(hue) {
+            const [Jp, Cp] = JZ_CUSP[Math.round(((hue%360)+360)%360)];
+            const [r, g, b] = jzczhzToLinearRgb(Jp, Cp, hue);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+          },
+          atBary(hue, w, b, c) {
+            const [Jp, Cp] = JZ_CUSP[Math.round(((hue%360)+360)%360)];
+            const Jz = w * JZ_WHITE + c * Jp;
+            const Cz = c * Cp;
+            const [r, g, bl] = jzczhzToLinearRgb(Jz, Cz, hue);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const [Jp, Cp] = JZ_CUSP[Math.round(((hue%360)+360)%360)];
+            const Jz = w * JZ_WHITE + c * Jp;
+            const Cz = c * Cp;
+            return [
+              ["hue",    `${hue.toFixed(0)}°`],
+              ["tint",   w.toFixed(2)],
+              ["shade",  b.toFixed(2)],
+              ["pure",   c.toFixed(2)],
+              ["Jz",     Jz.toFixed(4)],
+              ["Cz",     Cz.toFixed(4)],
+            ];
+          },
+        },
+        hpluv: {
+          label: "HPLuv",
+          ringAt(hue) {
+            const L = HPLUV_CUSP_L_RAW[Math.round(((hue%360)+360)%360)];
+            const [r, g, b] = hpluvToLinearRgb(hue, 100, L);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+          },
+          atBary(hue, w, b, c) {
+            const Lp = HPLUV_CUSP_L_RAW[Math.round(((hue%360)+360)%360)];
+            const L = 100 * w + Lp * c;
+            const S = 100 * c;
+            const [r, g, bl] = hpluvToLinearRgb(hue, S, L);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const Lp = HPLUV_CUSP_L_RAW[Math.round(((hue%360)+360)%360)];
+            const L = 100 * w + Lp * c;
+            const S = 100 * c;
+            return [
+              ["hue",    `${hue.toFixed(0)}°`],
+              ["tint",   w.toFixed(2)],
+              ["shade",  b.toFixed(2)],
+              ["pure",   c.toFixed(2)],
+              ["L",      `${L.toFixed(1)}%`],
+              ["sat.",   `${S.toFixed(1)}%`],
+              ["css",    `hpluv(${hue.toFixed(0)} ${S.toFixed(0)}% ${L.toFixed(0)}%)`],
             ];
           },
         },
