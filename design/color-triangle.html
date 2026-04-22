@@ -362,12 +362,11 @@
         <div class="control">
           <div class="control__label">Resolution N</div>
           <div class="seg" data-decision="N">
-            <button data-value="3">3</button>
             <button data-value="4">4</button>
-            <button data-value="5">5</button>
             <button data-value="6">6</button>
             <button data-value="8">8</button>
             <button data-value="10" aria-pressed="true">10</button>
+            <button data-value="12">12</button>
           </div>
         </div>
       </div>
@@ -1238,48 +1237,34 @@
         return [w0 * scale, b0 * scale, c];
       }
 
-      // Arc length integration (numeric) in barycentric space.
-      // Always include the black endpoint (t=0), the peak midpoint
-      // (t=0.5) and the white endpoint (t=1); the remaining N−2
-      // interior samples are split evenly (by arc length) between
-      // the two halves. Off-parity N still gets a midpoint.
-      function halfArcSamples(peak, from, to, count) {
-        const segs = 200;
+      // Arc length integration (numeric) in barycentric space for
+      // uniform-along-arc sampling. N is restricted to even values
+      // (see Resolution-N segment) so the N+1 samples always
+      // include a natural midpoint at i = N/2 (arc length = len/2,
+      // which for a symmetric arc corresponds to t = 0.5).
+      function arcSamples(peak, N) {
+        const segs = 400;
         const pts = [];
         let len = 0;
-        let prev = arcBary(from, peak);
-        pts.push({ t: from, s: 0, bary: prev });
+        let prev = arcBary(0, peak);
+        pts.push({ t: 0, s: 0, bary: prev });
         for (let i = 1; i <= segs; i++) {
-          const t = from + (to - from) * i / segs;
+          const t = i / segs;
           const cur = arcBary(t, peak);
           len += Math.hypot(cur[0] - prev[0], cur[1] - prev[1], cur[2] - prev[2]);
           pts.push({ t, s: len, bary: cur });
           prev = cur;
         }
-        const result = [];
-        for (let i = 0; i < count; i++) {
-          const target = ((i + 1) / (count + 1)) * len;
+        const out = [];
+        for (let i = 0; i <= N; i++) {
+          const target = (i / N) * len;
           let j = 0;
           while (j < pts.length - 1 && pts[j + 1].s < target) j++;
           const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
           const frac = (b.s - a.s) > 0 ? (target - a.s) / (b.s - a.s) : 0;
           const t = a.t + (b.t - a.t) * frac;
-          result.push({ t, bary: arcBary(t, peak) });
+          out.push({ t, bary: arcBary(t, peak) });
         }
-        return result;
-      }
-
-      function arcSamples(peak, N) {
-        // Total samples = N+1: black + peak + white + (N-2) interior.
-        const out = [];
-        out.push({ t: 0, bary: arcBary(0, peak) });
-        const interior = Math.max(0, N - 2);
-        const leftCount  = Math.floor(interior / 2);
-        const rightCount = interior - leftCount;
-        for (const p of halfArcSamples(peak, 0, 0.5, leftCount))  out.push(p);
-        out.push({ t: 0.5, bary: arcBary(0.5, peak) });
-        for (const p of halfArcSamples(peak, 0.5, 1.0, rightCount)) out.push(p);
-        out.push({ t: 1, bary: arcBary(1, peak) });
         return out;
       }
 
