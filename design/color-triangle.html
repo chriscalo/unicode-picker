@@ -292,8 +292,9 @@
       }
       .arc-scale {
         display: flex;
-        flex-direction: column;
-        gap: 2px;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 8px;
         flex: 1 1 0;
         min-height: 0;
       }
@@ -303,11 +304,17 @@
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.04em;
         flex: 0 0 auto;
+        width: 34px;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
       }
       .arc-scale-ramp {
         display: grid;
         grid-auto-flow: column;
         grid-auto-columns: minmax(0, 1fr);
+        grid-template-rows: 1fr;
         gap: 2px;
         flex: 1 1 0;
         min-height: 0;
