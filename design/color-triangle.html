@@ -5,18 +5,24 @@
     <title>Color system workbench</title>
     <link rel="stylesheet" href="/style.css">
     <style>
+      html {
+        height: 100dvh;
+      }
       body {
+        height: 100dvh;
+        margin: 0;
         padding: 0;
-        overflow: auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
 
       header.workbench {
-        position: sticky;
-        top: 0;
-        z-index: 10;
+        flex: 0 0 auto;
         background: var(--color-bg-base);
         border-bottom: 1px solid var(--color-border-subtle);
-        padding: 20px 32px 16px;
+        padding: 14px 18px 12px;
       }
       header.workbench h1 {
         font-size: var(--text-lg);
@@ -79,7 +85,7 @@
         color: var(--color-bg-base);
       }
       .control input[type=range] {
-        width: 260px;
+        width: 200px;
       }
       .hue-readout {
         font-size: 11px;
@@ -88,23 +94,33 @@
       }
 
       main {
-        padding: 20px 32px 60px;
-        max-width: 1280px;
+        flex: 1 1 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px 14px 14px;
+        min-height: 0;
+        min-width: 0;
       }
 
       section {
-        margin-top: 36px;
-        padding-top: 24px;
-        border-top: 1px solid var(--color-border-subtle);
-      }
-      section:first-of-type {
-        border-top: 0;
-        padding-top: 8px;
+        margin: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border-subtle);
+        border-radius: 8px;
+        background: var(--color-bg-base);
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
       }
       h2 {
-        font-size: var(--text-base);
+        font-size: var(--text-sm);
         font-weight: var(--weight-medium);
-        margin-bottom: 4px;
+        margin: 0;
       }
       h2 .num {
         display: inline-block;
@@ -113,9 +129,9 @@
       }
       section > p {
         color: var(--color-text-secondary);
-        font-size: var(--text-xs);
-        margin-bottom: 14px;
-        max-width: 70ch;
+        font-size: 11px;
+        line-height: 1.4;
+        margin: 0;
       }
 
       /* ── picker stage ─────────────────────────────────────── */
@@ -123,13 +139,17 @@
       .tri-row {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: 24px;
+        gap: 12px;
         align-items: start;
+        min-height: 0;
+        flex: 1 1 0;
       }
       .tri-stage {
         position: relative;
-        width: 420px;
-        height: 420px;
+        aspect-ratio: 1;
+        height: min(100%, 260px);
+        width: auto;
+        flex-shrink: 0;
       }
       canvas.tri-body,
       canvas.tri-ring {
@@ -165,17 +185,16 @@
       .readouts {
         display: grid;
         grid-template-columns: auto 1fr;
-        column-gap: 12px;
+        column-gap: 10px;
         row-gap: 2px;
-        font-size: var(--text-xs);
+        font-size: 10.5px;
         font-family: var(--font-ui);
         font-variant-numeric: tabular-nums;
-        max-width: 280px;
       }
       .readouts dt { color: var(--color-text-secondary); }
       .swatch-sample {
-        height: 48px;
-        margin-top: 12px;
+        height: 36px;
+        margin-top: 8px;
         border-radius: var(--radius-sm);
         border: 1px solid var(--color-border-subtle);
       }
@@ -201,19 +220,18 @@
 
       .token-grid {
         display: grid;
-        gap: 6px;
+        gap: 3px;
         font-family: var(--font-ui);
         font-variant-numeric: tabular-nums;
-        max-width: 720px;
       }
       .token-grid .cell {
         aspect-ratio: 1;
-        border-radius: 6px;
+        border-radius: 4px;
         border: 1px solid var(--color-border-subtle);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
+        font-size: 9px;
         cursor: default;
       }
       .token-grid .cell[data-empty] {
@@ -238,8 +256,10 @@
       .arcs-layout {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: 24px;
+        gap: 12px;
         align-items: start;
+        min-height: 0;
+        flex: 1 1 0;
       }
       .arc-scales {
         display: flex;
@@ -305,7 +325,19 @@
 
         <div class="control">
           <div class="control__label">Hue <span id="hue-readout" class="hue-readout">162°</span></div>
-          <input type="range" id="hue-input" min="0" max="359" value="162">
+          <input type="range" id="hue-input" min="0" max="360" value="162" step="1">
+        </div>
+
+        <div class="control">
+          <div class="control__label">Hue steps</div>
+          <div class="seg" data-decision="nHues">
+            <button data-value="0" aria-pressed="true">cont.</button>
+            <button data-value="4">4</button>
+            <button data-value="6">6</button>
+            <button data-value="8">8</button>
+            <button data-value="12">12</button>
+            <button data-value="16">16</button>
+          </div>
         </div>
 
         <div class="control">
@@ -336,16 +368,14 @@
       <section>
         <h2><span class="num">1.</span>Picker</h2>
         <p>
-          Triangle: drag inside to choose <code>(W, B, C)</code>.
-          Ring: drag to choose hue. C vertex always points at the
-          selected hue. Interpretation of the three vertices is
-          determined by the active color space.
+          Drag the triangle for (W, B, C); drag the ring for hue.
+          The C vertex tracks the selected hue.
         </p>
 
         <div class="tri-row">
           <div class="tri-stage" id="picker-stage">
-            <canvas class="tri-ring" id="picker-ring" width="840" height="840"></canvas>
-            <canvas class="tri-body" id="picker-body" width="420" height="420"></canvas>
+            <canvas class="tri-ring" id="picker-ring" width="600" height="600"></canvas>
+            <canvas class="tri-body" id="picker-body" width="300" height="300"></canvas>
             <div class="tri-overlay-rotating" id="picker-body-overlay">
               <div class="tri-cursor" id="picker-cursor"></div>
             </div>
@@ -364,16 +394,14 @@
       <section>
         <h2><span class="num">2.</span>Quantized picker</h2>
         <p>
-          Same triangle, but only the ternary-grid points at
-          resolution <code>N</code> are clickable. Useful for
-          pinning down which quantized cell you actually want for a
-          role.
+          Only the ternary-grid points at resolution N are
+          clickable.
         </p>
 
         <div class="tri-row">
           <div class="tri-stage" id="quant-stage">
-            <canvas class="tri-ring" id="quant-ring" width="840" height="840"></canvas>
-            <canvas class="tri-body" id="quant-body" width="420" height="420"></canvas>
+            <canvas class="tri-ring" id="quant-ring" width="600" height="600"></canvas>
+            <canvas class="tri-body" id="quant-body" width="300" height="300"></canvas>
             <div class="tri-overlay-rotating" id="quant-body-overlay"></div>
             <div class="tri-overlay" id="quant-overlay">
               <div class="hue-cursor" id="quant-hue-cursor"></div>
@@ -388,41 +416,30 @@
 
       <!-- 3. 2D grid -->
       <section>
-        <h2><span class="num">3.</span>2D grid with names</h2>
+        <h2><span class="num">3.</span>2D grid</h2>
         <p>
-          Ternary grid flattened onto a rectangular grid: rows = chroma
-          band <code>k</code>, cols = lightness index <code>i</code>
-          (weight toward white). Top-left = black, top-right = white,
-          bottom-left = pure hue.
+          Rows = chroma band k, cols = lightness index i. Top-right
+          = white, top-left = black, bottom-left = pure hue.
         </p>
-        <div id="grid-target"></div>
+        <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden;"></div>
       </section>
 
       <!-- 4. Arc-based scales -->
       <section>
         <h2><span class="num">4.</span>Arc-based scales</h2>
         <p>
-          Alternative quantization. Five arcs run black → max-C
-          midpoint → white, each at a different peak chroma (0% to
-          100% of the hue's gamut cusp). Every arc carries
-          <code>N+1</code> tokens spaced by arc length.
+          Five arcs run black → max-C midpoint → white at
+          peak-chroma levels 0–100%. Each arc carries N+1 tokens
+          spaced by arc length.
         </p>
 
         <div class="arcs-layout">
-          <div class="tri-stage" id="arc-stage" style="width: 460px; height: 460px;">
-            <canvas class="tri-body" id="arc-body" width="460" height="460" style="position: absolute; inset: 0;"></canvas>
-            <svg class="tri-overlay" id="arc-svg" viewBox="0 0 460 460"></svg>
+          <div class="tri-stage" id="arc-stage">
+            <canvas class="tri-body" id="arc-body" width="300" height="300" style="position: absolute; inset: 0;"></canvas>
+            <svg class="tri-overlay" id="arc-svg" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"></svg>
           </div>
           <div class="arc-scales" id="arc-scales"></div>
         </div>
-
-        <p style="margin-top: 16px;">
-          Combining all five arcs gives
-          <code>5·(N+1)</code> tokens per hue — a longer but more
-          structured palette than the ternary grid. Each arc reads
-          as a familiar 1D scale, which maps cleanly onto existing
-          `scale-1…N` conventions.
-        </p>
       </section>
 
     </main>
@@ -434,12 +451,19 @@
 
       const state = {
         space:  "oklch",
-        hue:    162,
+        hue:    180,
+        nHues:  0,    // 0 = continuous; >0 = quantized to that many hues
         N:      5,
         scheme: "cl",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 2, k: 2, geo: null },
       };
+
+      function quantizeHue(h) {
+        if (!state.nHues) return ((h % 360) + 360) % 360;
+        const step = 360 / state.nHues;
+        return ((Math.round(h / step) * step) % 360 + 360) % 360;
+      }
 
       // ═══════════════════════════════════════════════════════════
       // Color math
@@ -757,7 +781,7 @@
       // Geometry
       // ═══════════════════════════════════════════════════════════
 
-      const DISPLAY_SIZE = 420;
+      const DISPLAY_SIZE = 300;
 
       function geometry(size, { hasRing = false, hue = 0, ringWidth = 26, ringGap = 14, ringPad = 4, triPad = 20 } = {}) {
         const scale = size / DISPLAY_SIZE;
@@ -928,7 +952,7 @@
       }
 
       attachDrag(pickerStage, pickerBody, state.picker, {
-        onHue: h => { state.hue = h; repaintPicker(); syncHueInput(); onHueChanged(); },
+        onHue: h => { state.hue = quantizeHue(h); syncHueInput(); onHueChanged(); },
         onTri: (w, b) => { state.picker.w = w; state.picker.b = b; updatePickerCursors(); updatePickerReadout(); },
       });
 
@@ -1015,7 +1039,7 @@
           const my = (ev.clientY - r.top) / r.height * quantBody.height;
           const g = state.quant.geo;
           const angle = Math.atan2(-(my - g.cy), mx - g.cx) * 180 / Math.PI;
-          state.hue = (angle + 360) % 360;
+          state.hue = quantizeHue(angle);
           syncHueInput();
           onHueChanged();
         };
@@ -1058,8 +1082,10 @@
         const cols = N + 1, rows = N + 1;
         const grid = document.createElement("div");
         grid.className = "token-grid";
-        grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(44px, 1fr))`;
-        grid.style.gridTemplateRows    = `22px repeat(${rows}, minmax(44px, 1fr))`;
+        grid.style.gridTemplateColumns = `20px repeat(${cols}, minmax(24px, 1fr))`;
+        grid.style.gridTemplateRows    = `16px repeat(${rows}, minmax(24px, 1fr))`;
+        grid.style.maxHeight = "100%";
+        grid.style.height = "100%";
 
         // header
         const corner = document.createElement("div");
@@ -1167,7 +1193,7 @@
         // Draw arcs as SVG paths so they anti-alias nicely.
         const svg = arcSvg;
         svg.innerHTML = "";
-        const svgSize = 460;
+        const svgSize = 300;
         const scaleFactor = svgSize / arcBody.width;
 
         const s = strat();
@@ -1365,7 +1391,7 @@
       }
 
       hueInput.addEventListener("input", () => {
-        state.hue = +hueInput.value;
+        state.hue = quantizeHue(+hueInput.value);
         syncHueInput();
         onHueChanged();
       });
@@ -1389,6 +1415,16 @@
           state.scheme = btn.dataset.value;
           setSegActive(btn.parentElement, state.scheme);
           onSchemeChanged();
+        });
+      });
+      document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.nHues = +btn.dataset.value;
+          setSegActive(btn.parentElement, state.nHues);
+          // Snap current hue to the new quantization.
+          state.hue = quantizeHue(state.hue);
+          syncHueInput();
+          onHueChanged();
         });
       });
 
