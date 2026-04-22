@@ -389,6 +389,55 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
     </section>
 
     <!-- ════════════════════════════════════════════════════════
+         3b. Perceptually uniform picker (OKLCH)
+    ═════════════════════════════════════════════════════════ -->
+
+    <section>
+      <h2><span class="num">3b.</span>Perceptually uniform picker</h2>
+
+      <p>
+        Same triangle, same hue ring, same <code>(W, B, C)</code>
+        ternary — but interpolation happens in <strong>OKLCH</strong>
+        instead of HWB. Each interior point is
+        <code>L = w·1 + b·0 + c·L*</code> and <code>C = c·C*</code>
+        where <code>(L*, C*)</code> is a display-safe peak for the
+        pure hue. The final pixel is
+        <code>oklch(L, C, hue)</code>.
+      </p>
+      <p>
+        Visually the midtones don't collapse toward black the way
+        sRGB HWB does. Equal barycentric distance now corresponds to
+        equal <em>perceived</em> distance, which is the property we
+        actually want when reasoning about contrast.
+      </p>
+
+      <div class="tri-row">
+        <div class="tri-stage" id="ok-stage" style="width: 420px; height: 420px;">
+          <canvas class="tri" id="ok-canvas" width="420" height="420"></canvas>
+          <div class="tri-overlay" id="ok-overlay">
+            <span class="tri-vertex-label" data-vertex="W">W</span>
+            <span class="tri-vertex-label" data-vertex="B">B</span>
+            <span class="tri-vertex-label" data-vertex="C">C</span>
+            <div class="tri-cursor" id="ok-cursor"></div>
+            <div class="hue-cursor" id="ok-hue-cursor"></div>
+          </div>
+        </div>
+        <div class="tri-controls">
+          <dl class="tri-value-grid">
+            <dt>hue</dt><dd id="ok-h">162°</dd>
+            <dt>W</dt><dd id="ok-w">—</dd>
+            <dt>B</dt><dd id="ok-b">—</dd>
+            <dt>C</dt><dd id="ok-c">—</dd>
+            <dt>L</dt><dd id="ok-L">—</dd>
+            <dt>C (chroma)</dt><dd id="ok-Cval">—</dd>
+            <dt>css</dt><dd id="ok-css">—</dd>
+          </dl>
+          <div class="tri-sample" id="ok-sample"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
          4. Constrained picker
     ═════════════════════════════════════════════════════════ -->
 
@@ -488,6 +537,33 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return [min, 1 - max];
       }
 
+      // OKLab → linear sRGB matrix (Björn Ottosson). L in [0,1].
+      function oklchToSrgb(L, C, H) {
+        const hRad = H * Math.PI / 180;
+        const a = C * Math.cos(hRad);
+        const b = C * Math.sin(hRad);
+
+        const lp = L + 0.3963377774 * a + 0.2158037573 * b;
+        const mp = L - 0.1055613458 * a - 0.0638541728 * b;
+        const sp = L - 0.0894841775 * a - 1.2914855480 * b;
+
+        const l = lp * lp * lp;
+        const m = mp * mp * mp;
+        const s = sp * sp * sp;
+
+        let r_ = +4.0767245293 * l - 3.3072168827 * m + 0.2307590544 * s;
+        let g_ = -1.2681437731 * l + 2.6093323231 * m - 0.3411344290 * s;
+        let b_ = -0.0041119885 * l - 0.7034763098 * m + 1.7068625689 * s;
+
+        return [linearToSrgb(r_), linearToSrgb(g_), linearToSrgb(b_)];
+      }
+
+      function linearToSrgb(c) {
+        const cc = Math.max(0, Math.min(1, c));
+        if (cc <= 0.0031308) return 12.92 * cc;
+        return 1.055 * Math.pow(cc, 1 / 2.4) - 0.055;
+      }
+
       // Read sRGB bytes the browser renders for any CSS color.
       // Single shared 1x1 canvas keeps this cheap.
       const probeCanvas = document.createElement("canvas");
@@ -569,6 +645,56 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
                 const wc = Math.max(0, w);
                 const bc = Math.max(0, b);
                 rgb = hwbToRgb(hue, wc, bc);
+              }
+            }
+
+            if (rgb) {
+              const i = (y * width + x) * 4;
+              data[i]     = Math.round(rgb[0] * 255);
+              data[i + 1] = Math.round(rgb[1] * 255);
+              data[i + 2] = Math.round(rgb[2] * 255);
+              data[i + 3] = 255;
+            }
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+        return geo;
+      }
+
+      // Peak lightness and chroma for the C vertex. Tuned to stay
+      // mostly within sRGB across hues; out-of-gamut points get
+      // clamped. A hue-aware peak lookup would be more faithful.
+      const L_PEAK = 0.65;
+      const C_PEAK = 0.22;
+
+      function paintStageOklch(canvas, hue, opts = {}) {
+        const ctx = canvas.getContext("2d");
+        const { width, height } = canvas;
+        const img = ctx.createImageData(width, height);
+        const data = img.data;
+        const geo = geometry(width, opts);
+        const { cx, cy, ringInner, ringOuter, verts } = geo;
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const dx = x - cx;
+            const dy = y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            let rgb = null;
+
+            if (opts.hasRing && dist >= ringInner && dist <= ringOuter) {
+              const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+              const pixelHue = (angle + 360) % 360;
+              rgb = oklchToSrgb(L_PEAK, C_PEAK, pixelHue);
+            } else if (dist <= geo.triR + 1) {
+              const [w, b, c] = barycentric(x, y, verts);
+              if (w >= -0.002 && b >= -0.002 && c >= -0.002) {
+                const wc = Math.max(0, w);
+                const bc = Math.max(0, b);
+                const cc = Math.max(0, c);
+                const L = wc + cc * L_PEAK;   // bc contributes 0
+                const C = cc * C_PEAK;
+                rgb = oklchToSrgb(L, C, hue);
               }
             }
 
@@ -693,6 +819,100 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       });
 
       repaintGen();
+
+      // ═══ Section 3b — perceptually uniform (OKLCH) picker ═════
+
+      const okCanvas    = document.getElementById("ok-canvas");
+      const okOverlay   = document.getElementById("ok-overlay");
+      const okCursor    = document.getElementById("ok-cursor");
+      const okHueCursor = document.getElementById("ok-hue-cursor");
+      const okSample    = document.getElementById("ok-sample");
+
+      let okState = { h: 162, w: 0.333, b: 0.333, geo: null };
+
+      function repaintOk() {
+        okState.geo = paintStageOklch(okCanvas, okState.h, { hasRing: true });
+        placeVertexLabels(okOverlay, okCanvas, okState.geo.verts);
+        updateOkCursors();
+        updateOkReadout();
+      }
+
+      function updateOkReadout() {
+        const { h, w, b } = okState;
+        const c = 1 - w - b;
+        const L = w + c * L_PEAK;
+        const C = c * C_PEAK;
+        document.getElementById("ok-h").textContent = `${h.toFixed(0)}°`;
+        document.getElementById("ok-w").textContent = w.toFixed(2);
+        document.getElementById("ok-b").textContent = b.toFixed(2);
+        document.getElementById("ok-c").textContent = c.toFixed(2);
+        document.getElementById("ok-L").textContent = `${(L * 100).toFixed(1)}%`;
+        document.getElementById("ok-Cval").textContent = C.toFixed(3);
+        const css = `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${h.toFixed(0)})`;
+        document.getElementById("ok-css").textContent = css;
+        okSample.style.background = css;
+      }
+
+      function updateOkCursors() {
+        const { h, w, b, geo } = okState;
+        const c = 1 - w - b;
+        const [px, py] = fromBarycentric(w, b, c, geo.verts);
+        const size = okCanvas.width;
+        okCursor.style.left = (px / size * 100) + "%";
+        okCursor.style.top  = (py / size * 100) + "%";
+
+        const ringMid = (geo.ringInner + geo.ringOuter) / 2;
+        const rad = h * Math.PI / 180;
+        const hx = geo.cx + ringMid * Math.cos(rad);
+        const hy = geo.cy - ringMid * Math.sin(rad);
+        okHueCursor.style.left = (hx / size * 100) + "%";
+        okHueCursor.style.top  = (hy / size * 100) + "%";
+      }
+
+      function pickOk(evt) {
+        const rect = okCanvas.getBoundingClientRect();
+        const x = (evt.clientX - rect.left) / rect.width * okCanvas.width;
+        const y = (evt.clientY - rect.top) / rect.height * okCanvas.height;
+        const geo = okState.geo;
+        const dx = x - geo.cx, dy = y - geo.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) {
+          const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+          okState.h = (angle + 360) % 360;
+          repaintOk();
+          return "ring";
+        }
+
+        const [w, b, c] = barycentric(x, y, geo.verts);
+        if (w >= -0.01 && b >= -0.01 && c >= -0.01) {
+          okState.w = Math.max(0, Math.min(1, w));
+          okState.b = Math.max(0, Math.min(1, b));
+          if (okState.w + okState.b > 1) {
+            const s = okState.w + okState.b;
+            okState.w /= s; okState.b /= s;
+          }
+          updateOkCursors();
+          updateOkReadout();
+          return "tri";
+        }
+        return null;
+      }
+
+      okCanvas.addEventListener("pointerdown", e => {
+        const target = pickOk(e);
+        if (!target) return;
+        okCanvas.setPointerCapture(e.pointerId);
+        const move = ev => pickOk(ev);
+        const up = () => {
+          okCanvas.removeEventListener("pointermove", move);
+          okCanvas.removeEventListener("pointerup", up);
+        };
+        okCanvas.addEventListener("pointermove", move);
+        okCanvas.addEventListener("pointerup", up);
+      });
+
+      repaintOk();
 
       // ═══ Section 4 — constrained picker ═══════════════════════
 
