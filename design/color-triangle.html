@@ -1897,16 +1897,15 @@
         const cols = N + 1, rows = N + 1;
         const grid = document.createElement("div");
         grid.className = "token-grid";
-        grid.style.gridTemplateColumns = `20px repeat(${cols}, minmax(0, 1fr))`;
+        grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(0, 1fr))`;
         grid.style.gridTemplateRows    = `16px repeat(${rows}, minmax(0, 1fr))`;
         grid.style.flex = "1 1 auto";
         grid.style.minHeight = "0";
         grid.style.minWidth = "0";
 
-        // header
+        // empty corner spacer
         const corner = document.createElement("div");
         corner.className = "axis-label";
-        corner.textContent = "k\\i";
         grid.appendChild(corner);
         for (let i = 0; i < cols; i++) {
           const hdr = document.createElement("div");
