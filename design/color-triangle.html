@@ -739,23 +739,35 @@ N = 8 →  45</pre>
         const k_m = -0.1055613458 * a - 0.0638541728 * b;
         const k_s = -0.0894841775 * a - 1.2914855480 * b;
 
-        const l_ = 1 + S * k_l;
-        const m_ = 1 + S * k_m;
-        const s_ = 1 + S * k_s;
-        const l = l_ * l_ * l_;
-        const m = m_ * m_ * m_;
-        const s = s_ * s_ * s_;
-        const l_dS = 3 * k_l * l_ * l_;
-        const m_dS = 3 * k_m * m_ * m_;
-        const s_dS = 3 * k_s * s_ * s_;
-        const l_dS2 = 6 * k_l * k_l * l_;
-        const m_dS2 = 6 * k_m * k_m * m_;
-        const s_dS2 = 6 * k_s * k_s * s_;
+        // Björn's article quotes one Halley step as sufficient,
+        // but at hues right on the component-boundary (e.g. ~265°
+        // where the "red" and "green" polynomials disagree) one
+        // step leaves a small jump. A few more iterations pin S to
+        // the true root and make the ring smooth across the
+        // boundary. Halley converges on the zero of `f` (the
+        // selected channel's linear-sRGB value), which is where
+        // the channel leaves the [0, 1] gamut.
+        for (let it = 0; it < 4; it++) {
+          const l_ = 1 + S * k_l;
+          const m_ = 1 + S * k_m;
+          const s_ = 1 + S * k_s;
+          const l = l_ * l_ * l_;
+          const m = m_ * m_ * m_;
+          const s = s_ * s_ * s_;
+          const l_dS = 3 * k_l * l_ * l_;
+          const m_dS = 3 * k_m * m_ * m_;
+          const s_dS = 3 * k_s * s_ * s_;
+          const l_dS2 = 6 * k_l * k_l * l_;
+          const m_dS2 = 6 * k_m * k_m * m_;
+          const s_dS2 = 6 * k_s * k_s * s_;
 
-        const f   = wl * l    + wm * m    + ws * s;
-        const f1  = wl * l_dS + wm * m_dS + ws * s_dS;
-        const f2  = wl * l_dS2 + wm * m_dS2 + ws * s_dS2;
-        S = S - (f * f1) / (f1 * f1 - 0.5 * f * f2);
+          const f   = wl * l    + wm * m    + ws * s;
+          const f1  = wl * l_dS + wm * m_dS + ws * s_dS;
+          const f2  = wl * l_dS2 + wm * m_dS2 + ws * s_dS2;
+          const denom = f1 * f1 - 0.5 * f * f2;
+          if (Math.abs(denom) < 1e-20) break;
+          S = S - (f * f1) / denom;
+        }
         return S;
       }
 
