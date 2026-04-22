@@ -87,6 +87,24 @@
       .control input[type=range] {
         width: 200px;
       }
+
+      .inline-controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .inline-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .inline-control__label {
+        font-size: 9.5px;
+        font-weight: var(--weight-medium);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary);
+      }
       .hue-readout {
         font-size: 11px;
         font-variant-numeric: tabular-nums;
@@ -337,20 +355,8 @@
         </div>
 
         <div class="control">
-          <div class="control__label">Hue <span id="hue-readout" class="hue-readout">162°</span></div>
-          <input type="range" id="hue-input" min="0" max="360" value="162" step="1">
-        </div>
-
-        <div class="control">
-          <div class="control__label">Hue steps</div>
-          <div class="seg" data-decision="nHues">
-            <button data-value="0" aria-pressed="true">cont.</button>
-            <button data-value="4">4</button>
-            <button data-value="6">6</button>
-            <button data-value="8">8</button>
-            <button data-value="12">12</button>
-            <button data-value="16">16</button>
-          </div>
+          <div class="control__label">Hue <span id="hue-readout" class="hue-readout">180°</span></div>
+          <input type="range" id="hue-input" min="0" max="360" value="180" step="1">
         </div>
 
         <div class="control">
@@ -358,18 +364,10 @@
           <div class="seg" data-decision="N">
             <button data-value="3">3</button>
             <button data-value="4">4</button>
-            <button data-value="5" aria-pressed="true">5</button>
+            <button data-value="5">5</button>
             <button data-value="6">6</button>
             <button data-value="8">8</button>
-          </div>
-        </div>
-
-        <div class="control">
-          <div class="control__label">Naming</div>
-          <div class="seg" data-decision="scheme">
-            <button data-value="cl" aria-pressed="true">c-l</button>
-            <button data-value="wb">w-b</button>
-            <button data-value="num">XY</button>
+            <button data-value="10" aria-pressed="true">10</button>
           </div>
         </div>
       </div>
@@ -377,12 +375,12 @@
 
     <main>
 
-      <!-- 1. Picker -->
+      <!-- 1. Continuous picker -->
       <section>
-        <h2><span class="num">1.</span>Picker</h2>
+        <h2><span class="num">1.</span>Continuous picker</h2>
         <p>
           Drag the triangle for (W, B, C); drag the ring for hue.
-          The C vertex tracks the selected hue.
+          No quantization; the C vertex tracks the selected hue.
         </p>
 
         <div class="tri-row">
@@ -407,9 +405,23 @@
       <section>
         <h2><span class="num">2.</span>Quantized picker</h2>
         <p>
-          Only the ternary-grid points at resolution N are
-          clickable.
+          Only the ternary-grid points at resolution N and the hue
+          angles at the chosen step count are clickable.
         </p>
+
+        <div class="inline-controls">
+          <div class="inline-control">
+            <span class="inline-control__label">Hue steps</span>
+            <div class="seg" data-decision="nHues">
+              <button data-value="0">cont.</button>
+              <button data-value="4">4</button>
+              <button data-value="6">6</button>
+              <button data-value="8">8</button>
+              <button data-value="12">12</button>
+              <button data-value="16" aria-pressed="true">16</button>
+            </div>
+          </div>
+        </div>
 
         <div class="tri-row">
           <div class="tri-stage" id="quant-stage">
@@ -434,6 +446,18 @@
           Rows = chroma band k, cols = lightness index i. Top-right
           = white, top-left = black, bottom-left = pure hue.
         </p>
+
+        <div class="inline-controls">
+          <div class="inline-control">
+            <span class="inline-control__label">Naming</span>
+            <div class="seg" data-decision="scheme">
+              <button data-value="cl" aria-pressed="true">c-l</button>
+              <button data-value="wb">w-b</button>
+              <button data-value="num">XY</button>
+            </div>
+          </div>
+        </div>
+
         <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
       </section>
 
@@ -450,6 +474,7 @@
           <div class="tri-stage" id="arc-stage">
             <canvas class="tri-body" id="arc-body" width="300" height="300" style="position: absolute; inset: 0;"></canvas>
             <svg class="tri-overlay" id="arc-svg" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"></svg>
+            <div class="tri-overlay-rotating" id="arc-dots-overlay"></div>
           </div>
           <div class="arc-scales" id="arc-scales"></div>
         </div>
@@ -465,11 +490,11 @@
       const state = {
         space:  "oklch",
         hue:    180,
-        nHues:  0,    // 0 = continuous; >0 = quantized to that many hues
-        N:      5,
+        nHues:  16,   // 0 = continuous; >0 = quantized to that many hues (tile 2 only)
+        N:      10,
         scheme: "cl",
         picker: { w: 0.333, b: 0.333, geo: null },
-        quant:  { i: 2, k: 2, geo: null },
+        quant:  { i: 5, k: 5, geo: null },
       };
 
       function quantizeHue(h) {
@@ -965,7 +990,8 @@
       }
 
       attachDrag(pickerStage, pickerBody, state.picker, {
-        onHue: h => { state.hue = quantizeHue(h); syncHueInput(); onHueChanged(); },
+        // Tile 1 is the continuous picker — never snap.
+        onHue: h => { state.hue = ((h % 360) + 360) % 360; syncHueInput(); onHueChanged(); },
         onTri: (w, b) => { state.picker.w = w; state.picker.b = b; updatePickerCursors(); updatePickerReadout(); },
       });
 
@@ -1121,7 +1147,7 @@
       function tokenName(i, j, k, N) {
         if (state.scheme === "cl")  return `c${k}-l${i}`;
         if (state.scheme === "wb")  return `w${i}b${j}`;
-        if (state.scheme === "num") return `${k}${i}`;
+        if (state.scheme === "num") return `${k}-${i}`;
         return `c${k}-l${i}`;
       }
 
@@ -1184,6 +1210,7 @@
 
       const arcBody = document.getElementById("arc-body");
       const arcSvg  = document.getElementById("arc-svg");
+      const arcDotsOverlay = document.getElementById("arc-dots-overlay");
       const arcScalesTarget = document.getElementById("arc-scales");
       const ARC_COUNT = 5;
 
@@ -1211,32 +1238,48 @@
         return [w0 * scale, b0 * scale, c];
       }
 
-      // Arc length integration (numeric) in barycentric space for
-      // uniform-along-arc sampling.
-      function arcSamples(peak, N) {
-        const segs = 400;
+      // Arc length integration (numeric) in barycentric space.
+      // Always include the black endpoint (t=0), the peak midpoint
+      // (t=0.5) and the white endpoint (t=1); the remaining N−2
+      // interior samples are split evenly (by arc length) between
+      // the two halves. Off-parity N still gets a midpoint.
+      function halfArcSamples(peak, from, to, count) {
+        const segs = 200;
         const pts = [];
         let len = 0;
-        let prev = arcBary(0, peak);
-        pts.push({ t: 0, s: 0, bary: prev });
+        let prev = arcBary(from, peak);
+        pts.push({ t: from, s: 0, bary: prev });
         for (let i = 1; i <= segs; i++) {
-          const t = i / segs;
+          const t = from + (to - from) * i / segs;
           const cur = arcBary(t, peak);
           len += Math.hypot(cur[0] - prev[0], cur[1] - prev[1], cur[2] - prev[2]);
           pts.push({ t, s: len, bary: cur });
           prev = cur;
         }
-        // Sample N+1 points at equal arc-length spans.
-        const out = [];
-        for (let i = 0; i <= N; i++) {
-          const target = (i / N) * len;
+        const result = [];
+        for (let i = 0; i < count; i++) {
+          const target = ((i + 1) / (count + 1)) * len;
           let j = 0;
           while (j < pts.length - 1 && pts[j + 1].s < target) j++;
           const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
           const frac = (b.s - a.s) > 0 ? (target - a.s) / (b.s - a.s) : 0;
           const t = a.t + (b.t - a.t) * frac;
-          out.push({ t, bary: arcBary(t, peak) });
+          result.push({ t, bary: arcBary(t, peak) });
         }
+        return result;
+      }
+
+      function arcSamples(peak, N) {
+        // Total samples = N+1: black + peak + white + (N-2) interior.
+        const out = [];
+        out.push({ t: 0, bary: arcBary(0, peak) });
+        const interior = Math.max(0, N - 2);
+        const leftCount  = Math.floor(interior / 2);
+        const rightCount = interior - leftCount;
+        for (const p of halfArcSamples(peak, 0, 0.5, leftCount))  out.push(p);
+        out.push({ t: 0.5, bary: arcBary(0.5, peak) });
+        for (const p of halfArcSamples(peak, 0.5, 1.0, rightCount)) out.push(p);
+        out.push({ t: 1, bary: arcBary(1, peak) });
         return out;
       }
 
@@ -1247,8 +1290,11 @@
         // and apply the same CSS rotation so arcs and dots land on
         // the rendered triangle edges.
         paintBody(arcBody, state.hue);
-        arcBody.style.transform = `rotate(${-state.hue}deg)`;
-        arcSvg.style.transform  = `rotate(${-state.hue}deg)`;
+        const rot = `rotate(${-state.hue}deg)`;
+        arcBody.style.transform        = rot;
+        arcSvg.style.transform         = rot;
+        arcDotsOverlay.style.transform = rot;
+        arcDotsOverlay.innerHTML = "";
 
         const width = arcBody.width;
         // Use the same geometry paintBody uses so the SVG overlay
@@ -1293,19 +1339,18 @@
           const pts = arcSamples(peak, state.N);
           arcData.push({ peak, points: pts });
 
-          // Dots.
+          // Dots — match tile 1 / tile 2 cursor style (HTML divs
+          // in the rotating overlay, hollow with white border and
+          // dark outer shadow).
           for (const { bary } of pts) {
             const [px, py] = fromBarycentric(bary[0], bary[1], bary[2], verts);
-            const sx = px * scaleFactor;
-            const sy = py * scaleFactor;
-            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", sx);
-            dot.setAttribute("cy", sy);
-            dot.setAttribute("r", "4");
-            dot.setAttribute("fill", "oklch(95% 0 0)");
-            dot.setAttribute("stroke", "oklch(10% 0 0)");
-            dot.setAttribute("stroke-width", "1");
-            svg.appendChild(dot);
+            const dot = document.createElement("span");
+            dot.className = "quant-dot";
+            dot.style.left = (px / width * 100) + "%";
+            dot.style.top  = (py / width * 100) + "%";
+            dot.style.pointerEvents = "none";
+            dot.style.cursor = "default";
+            arcDotsOverlay.appendChild(dot);
           }
         }
 
@@ -1457,7 +1502,8 @@
       }
 
       hueInput.addEventListener("input", () => {
-        state.hue = quantizeHue(+hueInput.value);
+        // Header slider is continuous — tile 2 applies its own snap.
+        state.hue = +hueInput.value % 360;
         syncHueInput();
         onHueChanged();
       });
