@@ -286,12 +286,14 @@
         pointer-events: auto;
         cursor: pointer;
       }
-      .quant-dot[data-peer-hover] {
+      .quant-dot[data-peer-hover],
+      .quant-dot[data-arc-peer-hover] {
         outline: 2px solid oklch(100% 0 0);
         outline-offset: 2px;
         z-index: 10;
       }
-      .token-grid .cell[data-peer-hover] {
+      .token-grid .cell[data-peer-hover],
+      .arc-swatch[data-arc-peer-hover] {
         outline: 2px solid oklch(100% 0 0);
         outline-offset: -1px;
         z-index: 10;
@@ -1880,6 +1882,18 @@
           e.setAttribute("data-peer-hover", ""),
         );
       }
+      // Same idea for tile 2: hovering a dot on the triangle or a
+      // swatch in the ramp grid highlights its (arc, stop) peer.
+      function setArcPeerHover(a, j) {
+        document.querySelectorAll("[data-arc-peer-hover]").forEach(e =>
+          e.removeAttribute("data-arc-peer-hover"),
+        );
+        if (a == null) return;
+        const sel = `[data-arc-a="${a}"][data-arc-j="${j}"]`;
+        document.querySelectorAll(sel).forEach(e =>
+          e.setAttribute("data-arc-peer-hover", ""),
+        );
+      }
 
       function tokenName(i, j, k, N) {
         const iPct = pctLabel(Math.round((i / N) * 100));
@@ -2079,7 +2093,10 @@
 
           // Dots — filled with the exact sample color and wrapped
           // in the shared .quant-dot white-border/dark-shadow style.
-          for (const { bary } of pts) {
+          // Hover correlates with the matching ramp swatch via
+          // data-arc-a / data-arc-j.
+          for (let j = 0; j < pts.length; j++) {
+            const { bary } = pts[j];
             const [px, py] = fromBarycentric(bary[0], bary[1], bary[2], verts);
             const rgb = s.atBary(state.hue, bary[0], bary[1], bary[2]);
             const dot = document.createElement("span");
@@ -2087,8 +2104,11 @@
             dot.style.left = (px / width * 100) + "%";
             dot.style.top  = (py / width * 100) + "%";
             dot.style.background = cssFromRgb(rgb);
-            dot.style.pointerEvents = "none";
             dot.style.cursor = "default";
+            dot.dataset.arcA = a;
+            dot.dataset.arcJ = j;
+            dot.addEventListener("mouseenter", () => setArcPeerHover(a, j));
+            dot.addEventListener("mouseleave", () => setArcPeerHover(null));
             arcDotsOverlay.appendChild(dot);
           }
         }
@@ -2122,6 +2142,10 @@
             sw.textContent = posPct.toString().padStart(2, "0");
             const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
             sw.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
+            sw.dataset.arcA = a;
+            sw.dataset.arcJ = j;
+            sw.addEventListener("mouseenter", () => setArcPeerHover(a, j));
+            sw.addEventListener("mouseleave", () => setArcPeerHover(null));
             arcScalesTarget.appendChild(sw);
           }
         }
