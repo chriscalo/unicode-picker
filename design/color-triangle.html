@@ -89,6 +89,18 @@
         background: var(--color-text-primary);
         color: var(--color-bg-base);
       }
+      .ease-input {
+        width: 140px;
+        margin: 0;
+      }
+      .ease-read {
+        color: var(--color-text-secondary);
+        font-family: var(--font-ui);
+        font-variant-numeric: tabular-nums;
+        font-size: 9.5px;
+        margin-left: 4px;
+      }
+
       .inline-controls {
         display: flex;
         gap: 12px;
@@ -447,6 +459,19 @@
           </div>
         </div>
 
+        <div class="control">
+          <div class="control__label">Tint curve <span id="ease-w-read" class="ease-read">0</span></div>
+          <input type="range" id="ease-w" class="ease-input" min="-1" max="1" step="0.05" value="0">
+        </div>
+        <div class="control">
+          <div class="control__label">Shade curve <span id="ease-b-read" class="ease-read">0</span></div>
+          <input type="range" id="ease-b" class="ease-input" min="-1" max="1" step="0.05" value="0">
+        </div>
+        <div class="control">
+          <div class="control__label">Pure curve <span id="ease-c-read" class="ease-read">0</span></div>
+          <input type="range" id="ease-c" class="ease-input" min="-1" max="1" step="0.05" value="0">
+        </div>
+
       </div>
     </header>
 
@@ -605,7 +630,38 @@
         scheme: "cl",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 5, k: 5, geo: null },
+        // Per-axis easing curves on the barycentric weights,
+        // stored per color-space. Values in [-1, 1]:
+        //   0  → linear (no easing)
+        //   + → ease-out (fast toward the corner, slow settle)
+        //   − → ease-in  (slow start, fast finish)
+        // Applied as gamma = 2^(−v·2), i.e. v=1→γ=0.25, v=-1→γ=4.
+        easing: {},
       };
+
+      function getEasing() {
+        return state.easing[state.space] || (state.easing[state.space] = { w: 0, b: 0, c: 0 });
+      }
+
+      // Apply the active space's easing to a barycentric triple,
+      // then renormalise so w + b + c = 1.
+      function easeBary(w, b, c) {
+        const e = getEasing();
+        const gW = Math.pow(2, -e.w * 2);
+        const gB = Math.pow(2, -e.b * 2);
+        const gC = Math.pow(2, -e.c * 2);
+        let wE = Math.pow(Math.max(0, w), gW);
+        let bE = Math.pow(Math.max(0, b), gB);
+        let cE = Math.pow(Math.max(0, c), gC);
+        const sum = wE + bE + cE;
+        if (sum > 1e-9) { wE /= sum; bE /= sum; cE /= sum; }
+        return [wE, bE, cE];
+      }
+
+      function atBaryEased(hue, w, b, c) {
+        const [wE, bE, cE] = easeBary(w, b, c);
+        return strat().atBary(hue, wE, bE, cE);
+      }
 
       function quantizeHue(h) {
         if (!state.nHues) return ((h % 360) + 360) % 360;
@@ -1545,6 +1601,14 @@
         const { width, height } = canvas;
         const geo = geoOverride || geometry(width, { hasRing: true, hue: 0 });
         const { cx, cy, triR, verts } = geo;
+        // Precompute easing gammas for this paint so the inner
+        // loop stays tight.
+        const easeRec = getEasing();
+        const gW = Math.pow(2, -easeRec.w * 2);
+        const gB = Math.pow(2, -easeRec.b * 2);
+        const gC = Math.pow(2, -easeRec.c * 2);
+        const needsEase =
+          easeRec.w !== 0 || easeRec.b !== 0 || easeRec.c !== 0;
         ctx.clearRect(0, 0, width, height);
 
         const yMin = Math.max(0, Math.floor(cy - triR - 1));
@@ -1573,9 +1637,16 @@
             const b = a2 * dx + b2 * dy;
             const c = 1 - w - b;
             if (w < -0.002 || b < -0.002 || c < -0.002) continue;
-            const wc = Math.max(0, w);
-            const bc = Math.max(0, b);
-            const cc = Math.max(0, c);
+            let wc = Math.max(0, w);
+            let bc = Math.max(0, b);
+            let cc = Math.max(0, c);
+            if (needsEase) {
+              wc = Math.pow(wc, gW);
+              bc = Math.pow(bc, gB);
+              cc = Math.pow(cc, gC);
+              const sm = wc + bc + cc;
+              if (sm > 1e-9) { wc /= sm; bc /= sm; cc /= sm; }
+            }
             const rgb = s.atBary(hue, wc, bc, cc);
             const i = ((y - yMin) * boxW + (x - xMin)) * 4;
             data[i]     = Math.round(rgb[0] * 255);
@@ -1622,7 +1693,7 @@
         const s = strat();
         pickerCursor.style.left = (px / size * 100) + "%";
         pickerCursor.style.top  = (py / size * 100) + "%";
-        pickerCursor.style.background = cssFromRgb(s.atBary(state.hue, w, b, c));
+        pickerCursor.style.background = cssFromRgb(atBaryEased(state.hue, w, b, c));
         const ringMid = (geo.ringInner + geo.ringOuter) / 2;
         const rad = state.hue * Math.PI / 180;
         pickerHueCursor.style.left = ((geo.cx + ringMid * Math.cos(rad)) / size * 100) + "%";
@@ -1634,7 +1705,7 @@
         const c = 1 - w - b;
         const rows = strat().readout(state.hue, w, b);
         pickerReadouts.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
-        const rgb = strat().atBary(state.hue, w, b, c);
+        const rgb = atBaryEased(state.hue, w, b, c);
         pickerSample.style.background = cssFromRgb(rgb);
       }
 
@@ -1675,7 +1746,7 @@
             const j = N - i - k;
             const w = i / N, b = j / N, c = k / N;
             const [px, py] = fromBarycentric(w, b, c, geo.verts);
-            const rgb = strat().atBary(state.hue, w, b, c);
+            const rgb = atBaryEased(state.hue, w, b, c);
             const dot = document.createElement("span");
             dot.className = "quant-dot";
             dot.style.left = (px / size * 100) + "%";
@@ -1756,7 +1827,7 @@
           ...strat().readout(state.hue, w, b),
         ];
         quantReadouts.innerHTML = rows.map(([key, v]) => `<dt>${key}</dt><dd>${v}</dd>`).join("");
-        const rgb = strat().atBary(state.hue, w, b, c);
+        const rgb = atBaryEased(state.hue, w, b, c);
         quantSample.style.background = cssFromRgb(rgb);
       }
 
@@ -1943,7 +2014,7 @@
             }
             const j = N - i - k;
             const w = i / N, b = j / N, c = k / N;
-            const rgb = s.atBary(hue, w, b, c);
+            const rgb = atBaryEased(hue, w, b, c);
             cell.style.background = cssFromRgb(rgb);
             cell.textContent = tokenName(i, j, k, N);
             const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
@@ -2098,7 +2169,7 @@
           for (let j = 0; j < pts.length; j++) {
             const { bary } = pts[j];
             const [px, py] = fromBarycentric(bary[0], bary[1], bary[2], verts);
-            const rgb = s.atBary(state.hue, bary[0], bary[1], bary[2]);
+            const rgb = atBaryEased(state.hue, bary[0], bary[1], bary[2]);
             const dot = document.createElement("span");
             dot.className = "quant-dot";
             dot.style.left = (px / width * 100) + "%";
@@ -2134,7 +2205,7 @@
           for (let j = 0; j < points.length; j++) {
             const { bary } = points[j];
             const [w, b, c] = bary;
-            const rgb = s.atBary(state.hue, w, b, c);
+            const rgb = atBaryEased(state.hue, w, b, c);
             const sw = document.createElement("div");
             sw.className = "arc-swatch";
             sw.style.background = cssFromRgb(rgb);
@@ -2262,6 +2333,7 @@
       }
 
       function onSpaceChanged() {
+        syncEaseInputs();
         repaintPicker();
         repaintQuant();
         renderGrid();
@@ -2343,6 +2415,34 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
           renderArcs();
         });
       });
+
+      const easeW = document.getElementById("ease-w");
+      const easeB = document.getElementById("ease-b");
+      const easeC = document.getElementById("ease-c");
+      const easeWRead = document.getElementById("ease-w-read");
+      const easeBRead = document.getElementById("ease-b-read");
+      const easeCRead = document.getElementById("ease-c-read");
+
+      function syncEaseInputs() {
+        const e = getEasing();
+        easeW.value = String(e.w);
+        easeB.value = String(e.b);
+        easeC.value = String(e.c);
+        easeWRead.textContent = e.w.toFixed(2);
+        easeBRead.textContent = e.b.toFixed(2);
+        easeCRead.textContent = e.c.toFixed(2);
+      }
+      function onEaseChanged(axis, v) {
+        getEasing()[axis] = v;
+        syncEaseInputs();
+        repaintPicker();
+        repaintQuant();
+        renderGrid();
+        renderArcs();
+      }
+      easeW.addEventListener("input", () => onEaseChanged("w", +easeW.value));
+      easeB.addEventListener("input", () => onEaseChanged("b", +easeB.value));
+      easeC.addEventListener("input", () => onEaseChanged("c", +easeC.value));
       document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
         btn.addEventListener("click", () => {
           state.nHues = +btn.dataset.value;
@@ -2357,6 +2457,7 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
       // Initial paint
       // ═══════════════════════════════════════════════════════════
 
+      syncEaseInputs();
       repaintPicker();
       repaintQuant();
       renderGrid();
