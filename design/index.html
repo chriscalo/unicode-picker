@@ -166,8 +166,15 @@
         flex-direction: column;
         gap: 4px;
         min-width: 0;
+        width: fit-content;
       }
+      /* Label shouldn't force container width. width:0 makes its
+         max-content drop to 0 (so .control sizes to .seg/.swatches);
+         min-width:100% then stretches it to the container width so
+         the text can wrap naturally at spaces if it overflows. */
       .control__label {
+        width: 0;
+        min-width: 100%;
         font-size: 9.5px;
         font-weight: 600;
         letter-spacing: 0.14em;
