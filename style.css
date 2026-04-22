@@ -139,10 +139,10 @@
     --color-success:        var(--color-accent);
     --color-success-text:   var(--color-accent-text);
 
-    /* Glyph panel — subtle contrast layer over any bg */
+    /* Glyph panel — faint accent wash behind the character */
     --color-glyph-bg:
       color-mix(in oklab,
-        var(--color-text-primary) 12%,
+        var(--color-accent) 6%,
         transparent);
 
     /* Component-specific */
