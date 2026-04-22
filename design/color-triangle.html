@@ -228,29 +228,65 @@
         font-size: var(--text-sm);
       }
 
-      .token-table {
+      .token-grid {
         display: grid;
-        grid-template-columns: 18px auto auto auto;
-        column-gap: 12px;
-        row-gap: 2px;
-        font-size: var(--text-xs);
+        gap: 6px;
         font-family: var(--font-ui);
         font-variant-numeric: tabular-nums;
+        margin-top: 16px;
       }
-      .token-table .th {
-        font-weight: var(--weight-medium);
+      .token-grid .cell {
+        aspect-ratio: 1;
+        border-radius: 6px;
+        border: 1px solid var(--color-border-subtle);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: var(--color-text-primary);
+        cursor: default;
+      }
+      .token-grid .cell[data-empty] {
+        border: 0;
+        background: transparent;
+      }
+      .token-grid .cell[data-dark] { color: oklch(95% 0 0); }
+      .token-grid .cell[data-light] { color: oklch(15% 0 0); }
+      .token-grid .axis-label {
+        font-size: 9.5px;
         color: var(--color-text-secondary);
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        font-size: 9.5px;
-        padding-bottom: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      .token-table .sw {
-        width: 14px;
-        height: 14px;
-        border-radius: 3px;
+      .token-grid .axis-label--row { justify-content: flex-end; padding-right: 4px; }
+      .scheme-tabs {
+        display: inline-flex;
+        gap: 0;
         border: 1px solid var(--color-border-subtle);
-        align-self: center;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 16px;
+        margin-bottom: 10px;
+      }
+      .scheme-tabs button {
+        appearance: none;
+        font: inherit;
+        font-size: 11px;
+        padding: 5px 10px;
+        background: transparent;
+        border: 0;
+        border-right: 1px solid var(--color-border-subtle);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+      }
+      .scheme-tabs button:last-child { border-right: 0; }
+      .scheme-tabs button[aria-pressed="true"] {
+        background: var(--color-text-primary);
+        color: var(--color-bg-base);
       }
 
       .pair-grid {
@@ -664,24 +700,46 @@ N = 8 →  45</pre>
         </div>
       </div>
 
-      <h3>Token table</h3>
-      <div id="quant-list" style="margin-top: 8px;"></div>
-
-      <h3>Naming</h3>
+      <h3>2D grid</h3>
       <p>
-        Two readable schemes on top of the ternary address:
+        The ternary grid flattens onto a right-triangular region of
+        a rectangular grid: rows = chroma band
+        <code>k</code> (how vivid), columns = "lightness index"
+        <code>i</code> (weight toward white). The remaining weight
+        <code>j = N − i − k</code> is the weight toward black.
+        Top-right corner is <strong>white</strong>, top-left is
+        <strong>black</strong>, bottom-left is the <strong>pure
+        hue</strong>. Every row is a dark→light ramp at that chroma
+        level.
       </p>
-      <pre>{scale}-w{i}b{j}        e.g.  surface-w4b0  (pure white tint)
-                             accent-w0b0   (pure hue)
-                             accent-w2b2   (dusty mid-tone)
 
-{scale}-N{k}-w{i}       e.g.  surface-4-w4   (i=4 of the low-C band)
-                             accent-0-w0    (max-C corner)</pre>
-      <p>
-        Scheme A gives every cell a globally-unique two-number name.
-        Scheme B groups cells by their C row (constant <code>k</code>),
-        matching how stepped 1D scales work today.
-      </p>
+      <div class="scheme-tabs" role="tablist">
+        <button data-scheme="cl"  aria-pressed="true">c{k}-l{i}</button>
+        <button data-scheme="wb"  aria-pressed="false">w{i}b{j}</button>
+        <button data-scheme="num" aria-pressed="false">two-digit</button>
+      </div>
+
+      <div id="quant-list"></div>
+
+      <h3>Naming schemes</h3>
+      <p>Three readings of the same <code>(i, j, k)</code> address:</p>
+      <pre><strong>A. {scale}-c{k}-l{i}</strong>   chroma band + lightness index
+                          surface-c0-l{N}  = white
+                          surface-c0-l0    = black
+                          surface-c{N}-l0  = pure hue
+                          accent-c3-l2     = mid chroma, slightly light
+
+<strong>B. {scale}-w{i}b{j}</strong>    ternary address (W weight, B weight)
+                          c is implicit: c = N − i − j
+                          surface-w{N}b0   = white
+                          surface-w0b{N}   = black
+                          accent-w0b0      = pure hue
+
+<strong>C. {scale}-{k}{i}</strong>      compact two-digit
+                          surface-0{N}     = white  (c=0, l=N)
+                          surface-00       = black
+                          surface-{N}0     = pure hue
+                          accent-32        = mid chroma, slightly light</pre>
     </section>
 
     <script type="module">
@@ -1776,58 +1834,96 @@ N = 8 →  45</pre>
         quantHueCursor.style.top  = (hy / size * 100) + "%";
       }
 
+      let quantScheme = "cl";
+
+      function tokenName(r, N) {
+        if (quantScheme === "cl")  return `c${r.k}-l${r.i}`;
+        if (quantScheme === "wb")  return `w${r.i}b${r.j}`;
+        if (quantScheme === "num") return `${r.k}${r.i}`;
+        return `c${r.k}-l${r.i}`;
+      }
+
       function renderGrid() {
         const { N, h, geo } = quantState;
         const verts = geo.verts;
         const size = quantCanvas.width;
 
-        // Remove previous dots (keep nothing — overlay is dots-only).
+        // Dots on the triangle (rotating overlay, canonical frame).
         quantBodyOverlay.innerHTML = "";
-
-        const rows = [];
-        for (let i = N; i >= 0; i--) {
-          for (let j = 0; j <= N - i; j++) {
-            const k = N - i - j;
-            const w = i / N, b = j / N, c = k / N;
-            rows.push({ i, j, k, w, b, c });
+        const cells = [];
+        for (let k = 0; k <= N; k++) {
+          for (let i = 0; i <= N - k; i++) {
+            const j = N - i - k;
+            cells.push({ i, j, k, w: i / N, b: j / N, c: k / N });
           }
         }
-
-        // Place dots in the rotating overlay (canonical frame).
-        for (const r of rows) {
+        for (const r of cells) {
           const [px, py] = fromBarycentric(r.w, r.b, r.c, verts);
           const dot = document.createElement("span");
           dot.className = "quant-dot";
           dot.style.left = (px / size * 100) + "%";
           dot.style.top  = (py / size * 100) + "%";
-          dot.title = `w${r.i} b${r.j} c${r.k}`;
+          dot.title = tokenName(r, N);
           quantBodyOverlay.appendChild(dot);
         }
 
-        // Token table. Uses the quant peaks (fixed L, per-hue
-        // max-C-at-L) so same (i,j,k) = same L across hues.
+        // 2D grid. Rows = k (chroma band, 0 at top), cols = i
+        // (lightness index). Cells with i + k > N are hidden.
+        // Top-right = white, top-left = black, bottom-left = pure.
         const [Lp, Cp] = quantPeaks(h);
-        const thead = `
-          <div class="token-table">
-            <span class="th"></span>
-            <span class="th">address</span>
-            <span class="th">W/B/C</span>
-            <span class="th">oklch</span>
-        `;
-        let html = thead;
-        for (const r of rows) {
-          const L = r.w + r.c * Lp;
-          const C = r.c * Cp;
-          const css = `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${h.toFixed(0)})`;
-          html += `
-            <span class="sw" style="background:${css}"></span>
-            <span>w${r.i}b${r.j}c${r.k}</span>
-            <span>${r.w.toFixed(2)} / ${r.b.toFixed(2)} / ${r.c.toFixed(2)}</span>
-            <span>${(L * 100).toFixed(0)}%, ${C.toFixed(2)}, ${h.toFixed(0)}°</span>
-          `;
+        const cellMap = Object.fromEntries(
+          cells.map(c => [`${c.k}-${c.i}`, c]),
+        );
+
+        const cols = N + 1;
+        const rows = N + 1;
+        const grid = document.createElement("div");
+        grid.className = "token-grid";
+        grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(46px, 1fr))`;
+        grid.style.gridTemplateRows    = `22px repeat(${rows}, minmax(46px, 1fr))`;
+        grid.style.maxWidth = "560px";
+
+        // header row — lightness labels
+        const corner = document.createElement("div");
+        corner.className = "axis-label";
+        corner.textContent = "k\\i";
+        grid.appendChild(corner);
+        for (let i = 0; i < cols; i++) {
+          const hdr = document.createElement("div");
+          hdr.className = "axis-label";
+          hdr.textContent = i;
+          grid.appendChild(hdr);
         }
-        html += `</div>`;
-        quantList.innerHTML = html;
+
+        for (let k = 0; k < rows; k++) {
+          const rowLabel = document.createElement("div");
+          rowLabel.className = "axis-label axis-label--row";
+          rowLabel.textContent = k;
+          grid.appendChild(rowLabel);
+          for (let i = 0; i < cols; i++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            const key = `${k}-${i}`;
+            if (!cellMap[key]) {
+              cell.setAttribute("data-empty", "");
+              grid.appendChild(cell);
+              continue;
+            }
+            const r = cellMap[key];
+            const L = r.w + r.c * Lp;
+            const C = r.c * Cp;
+            const css = `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${quantState.h.toFixed(0)})`;
+            cell.style.background = css;
+            cell.textContent = tokenName(r, N);
+            // Text color contrast heuristic: L>0.55 → dark ink; else → light ink.
+            cell.setAttribute(L > 0.55 ? "data-light" : "data-dark", "");
+            cell.title = `(i=${r.i}, j=${r.j}, k=${r.k})  ${css}`;
+            grid.appendChild(cell);
+          }
+        }
+
+        quantList.innerHTML = "";
+        quantList.appendChild(grid);
       }
 
       function repaintQuantBody() {
@@ -1857,6 +1953,16 @@ N = 8 →  45</pre>
         quantState.N = +quantNSelect.value;
         renderGrid();
         updateQuantReadout();
+      });
+
+      document.querySelectorAll(".scheme-tabs button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".scheme-tabs button").forEach(b => {
+            b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+          });
+          quantScheme = btn.dataset.scheme;
+          renderGrid();
+        });
       });
 
       // Reuse attachPickerDrag for the hue ring. The quant picker
