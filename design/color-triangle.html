@@ -1782,6 +1782,9 @@
           renderQuantDots();
           updateQuantReadout();
         }
+        // Mirror the peer-hover link during drag — the tile-4 grid
+        // cell that matches the currently-snapped dot stays lit.
+        setPeerHover(bestI, bestK);
       }
 
       quantStage.addEventListener("pointerdown", e => {
@@ -1835,6 +1838,7 @@
           quantStage.removeEventListener("pointerup", up);
           quantStage.removeEventListener("pointercancel", up);
           if (target === "ring") onDragEnd();
+          if (target === "tri") setPeerHover(null);
         };
 
         // Initial snap.
