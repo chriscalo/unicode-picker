@@ -413,6 +413,7 @@
           <div class="seg" data-decision="space">
             <button data-value="hwb">HWB (sRGB)</button>
             <button data-value="oklch" aria-pressed="true">OKLCH</button>
+            <button data-value="okhsl">OKHSL</button>
             <button data-value="hsluv">HSLuv</button>
           </div>
         </div>
@@ -838,6 +839,82 @@
         return out;
       })();
 
+      // — OKHSL (Björn Ottosson, 2021) — HSL built on OKLab so the
+      // colours are OKLab-perceptually-uniform in lightness *and*
+      // the saturation axis passes through a visually-plausible
+      // mid point (s=0.5 looks half-saturated, unlike linear-C).
+      const OKHSL_K1 = 0.206, OKHSL_K2 = 0.03;
+      const OKHSL_K3 = (1 + OKHSL_K1) / (1 + OKHSL_K2);
+      function okhslToeInv(x) {
+        return (x * x + OKHSL_K1 * x) / (OKHSL_K3 * (x + OKHSL_K2));
+      }
+      function okhslMaxCAtL(L, hue) {
+        let lo = 0, hi = 0.5;
+        for (let i = 0; i < 24; i++) {
+          const m = (lo + hi) / 2;
+          const [r, g, b] = oklchToLinearRgb(L, m, hue);
+          if (r >= 0 && r <= 1 && g >= 0 && g <= 1 && b >= 0 && b <= 1) lo = m;
+          else hi = m;
+        }
+        return lo;
+      }
+      function okhslCusp(a, b) {
+        const S = findMaxSaturation(a, b);
+        const k_l =  0.3963377774 * a + 0.2158037573 * b;
+        const k_m = -0.1055613458 * a - 0.0638541728 * b;
+        const k_s = -0.0894841775 * a - 1.2914855480 * b;
+        const l_ = 1 + S * k_l, m_ = 1 + S * k_m, s_ = 1 + S * k_s;
+        const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+        const rgbMax = Math.max(
+          +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        );
+        const L_cusp = Math.cbrt(1 / rgbMax);
+        return { L: L_cusp, C: L_cusp * S };
+      }
+      function okhslGetSTMid(a, b) {
+        const S = 0.11516993 + 1 / (
+          +7.44778970 + 4.15901240 * b
+          + a * (-2.19557347 + 1.75198401 * b
+            + a * (-2.13704948 - 10.02301043 * b
+              + a * (-4.24894561 + 5.38770819 * b + 4.69891013 * a))));
+        const T = 0.11239642 + 1 / (
+          +1.61320320 - 0.68124379 * b
+          + a * (+0.40370612 + 0.90148123 * b
+            + a * (-0.27087943 + 0.61223990 * b
+              + a * (+0.00299215 - 0.45399568 * b - 0.14661872 * a))));
+        return { S, T };
+      }
+      function okhslToLinearRgb(h, s, l) {
+        if (l >= 1) return [1, 1, 1];
+        if (l <= 0) return [0, 0, 0];
+        const hRad = h * Math.PI / 180;
+        const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
+        const L = okhslToeInv(l);
+        const cusp = okhslCusp(a_, b_);
+        const STmax = { S: cusp.C / cusp.L, T: cusp.C / (1 - cusp.L) };
+        const STmid = okhslGetSTMid(a_, b_);
+        const C_max = okhslMaxCAtL(L, h);
+        const k = C_max / Math.min(L * STmax.S, (1 - L) * STmax.T);
+        const C_a = L * STmid.S, C_b = (1 - L) * STmid.T;
+        const C_mid = 0.9 * k * Math.sqrt(Math.sqrt(1 / (1 / (C_a ** 4) + 1 / (C_b ** 4))));
+        const C_0 = Math.sqrt(1 / (1 / ((L * 0.4) ** 2) + 1 / (((1 - L) * 0.8) ** 2)));
+        const mid = 0.8, mi = 1.25;
+        let C;
+        if (s < mid) {
+          const t = mi * s, k_1 = mid * C_0, k_2 = 1 - k_1 / C_mid;
+          C = t * k_1 / (1 - k_2 * t);
+        } else {
+          const t = (s - mid) / (1 - mid);
+          const k_0 = C_mid;
+          const k_1 = (1 - mid) * C_mid * C_mid * mi * mi / C_0;
+          const k_2 = 1 - k_1 / (C_max - C_mid);
+          C = k_0 + t * k_1 / (1 - k_2 * t);
+        }
+        return oklchToLinearRgb(L, C, h);
+      }
+
       // ═══════════════════════════════════════════════════════════
       // Color-space strategy
       // ═══════════════════════════════════════════════════════════
@@ -893,6 +970,55 @@
               ["L*",     `${(L*100).toFixed(1)}%`],
               ["chroma", C.toFixed(3)],
               ["css",    `oklch(${(L*100).toFixed(1)}% ${C.toFixed(3)} ${hue.toFixed(0)})`],
+            ];
+          },
+        },
+        okhsl: {
+          label: "OKHSL",
+          ringAt(hue) {
+            // OKHSL ring: s=1 at each hue's toe-adjusted cusp L.
+            const hRad = hue * Math.PI / 180;
+            const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
+            const cusp = okhslCusp(a_, b_);
+            // toe(L_cusp)
+            const toeL = 0.5 * (OKHSL_K3 * cusp.L - OKHSL_K1
+              + Math.sqrt((OKHSL_K3 * cusp.L - OKHSL_K1) ** 2
+                + 4 * OKHSL_K2 * OKHSL_K3 * cusp.L));
+            const [r, g, bl] = okhslToLinearRgb(hue, 1, toeL);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          atBary(hue, w, b, c) {
+            // s = pure weight, l = perceptual blend of white and
+            // cusp-lightness: w·1 + b·0 + c·toe(L_cusp).
+            const hRad = hue * Math.PI / 180;
+            const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
+            const cusp = okhslCusp(a_, b_);
+            const toeL = 0.5 * (OKHSL_K3 * cusp.L - OKHSL_K1
+              + Math.sqrt((OKHSL_K3 * cusp.L - OKHSL_K1) ** 2
+                + 4 * OKHSL_K2 * OKHSL_K3 * cusp.L));
+            const l = w + c * toeL;
+            const s = c;
+            const [r, g, bl] = okhslToLinearRgb(hue, s, l);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const hRad = hue * Math.PI / 180;
+            const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
+            const cusp = okhslCusp(a_, b_);
+            const toeL = 0.5 * (OKHSL_K3 * cusp.L - OKHSL_K1
+              + Math.sqrt((OKHSL_K3 * cusp.L - OKHSL_K1) ** 2
+                + 4 * OKHSL_K2 * OKHSL_K3 * cusp.L));
+            const l = w + c * toeL;
+            const s = c;
+            return [
+              ["hue",    `${hue.toFixed(0)}°`],
+              ["tint",   w.toFixed(2)],
+              ["shade",  b.toFixed(2)],
+              ["pure",   c.toFixed(2)],
+              ["L",      `${(l*100).toFixed(1)}%`],
+              ["sat.",   `${(s*100).toFixed(1)}%`],
+              ["css",    `okhsl(${hue.toFixed(0)} ${(s*100).toFixed(0)}% ${(l*100).toFixed(0)}%)`],
             ];
           },
         },
