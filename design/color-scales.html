@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <title>Color scales</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+      body {
+        padding: 32px;
+        overflow: auto;
+      }
+
+      h1 {
+        font-size: var(--text-lg);
+        font-weight: var(--weight-medium);
+        margin-bottom: 4px;
+      }
+      .subtitle {
+        color: var(--color-text-secondary);
+        font-size: var(--text-xs);
+        margin-bottom: 28px;
+      }
+
+      .params {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 16px;
+        row-gap: 4px;
+        margin-bottom: 32px;
+        font-size: var(--text-xs);
+        color: var(--color-text-secondary);
+      }
+      .params dt {
+        font-weight: var(--weight-medium);
+        color: var(--color-text-primary);
+      }
+      .params code {
+        font-family: var(--font-ui);
+      }
+
+      .theme-block {
+        margin-bottom: 40px;
+      }
+      .theme-block h2 {
+        font-size: var(--text-base);
+        font-weight: var(--weight-medium);
+        margin-bottom: 12px;
+      }
+
+      .scales {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .scale {
+        background: var(--color-bg-panel);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-md);
+        padding: 16px;
+      }
+      .scale h3 {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        margin-bottom: 12px;
+      }
+      .scale h3 code {
+        color: var(--color-text-secondary);
+        font-weight: var(--weight-regular);
+        margin-left: 8px;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: auto 42px 1fr 1fr;
+        column-gap: 12px;
+        row-gap: 2px;
+        align-items: center;
+        font-size: 11px;
+        font-family: var(--font-ui);
+      }
+      .steps .head {
+        font-size: 9.5px;
+        font-weight: var(--weight-medium);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary);
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--color-border-subtle);
+        margin-bottom: 4px;
+      }
+
+      .swatch {
+        width: 100%;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-subtle);
+      }
+      .step-num {
+        font-weight: var(--weight-medium);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      .step-meta {
+        color: var(--color-text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .step-role {
+        color: var(--color-text-secondary);
+      }
+
+      .semantic {
+        margin-top: 40px;
+      }
+      .semantic h2 {
+        font-size: var(--text-base);
+        font-weight: var(--weight-medium);
+        margin-bottom: 12px;
+      }
+      .semantic-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 12px;
+      }
+      .semantic-row {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 10px;
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-panel);
+      }
+      .semantic-chip {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-subtle);
+      }
+      .semantic-label {
+        font-size: 11px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .semantic-label code {
+        color: var(--color-text-secondary);
+        font-size: 10px;
+      }
+
+      /* Force per-theme blocks to render with that theme regardless of
+         the page's active theme. Scoping by attribute means each block
+         exposes its own --step-* values. */
+      .theme-block[data-theme="dark"]  { color-scheme: dark; }
+      .theme-block[data-theme="light"] { color-scheme: light; }
+
+      .theme-block[data-theme="light"] {
+        --step-1:  99%;
+        --step-2:  96%;
+        --step-3:  92%;
+        --step-4:  88%;
+        --step-5:  82%;
+        --step-6:  72%;
+        --step-7:  58%;
+        --step-8:  46%;
+        --step-9:  38%;
+        --step-10: 28%;
+        --step-11: 20%;
+        --step-12: 12%;
+      }
+      .theme-block[data-theme="dark"] {
+        --step-1:  10%;
+        --step-2:  14%;
+        --step-3:  20%;
+        --step-4:  26%;
+        --step-5:  32%;
+        --step-6:  40%;
+        --step-7:  50%;
+        --step-8:  62%;
+        --step-9:  72%;
+        --step-10: 80%;
+        --step-11: 88%;
+        --step-12: 95%;
+      }
+
+      /* Each theme block carries its own bg/text so the scales inside
+         render against the paper/ink of that theme. */
+      .theme-block[data-theme="dark"] {
+        background: oklch(10% 0 0);
+        color: oklch(95% 0 0);
+      }
+      .theme-block[data-theme="light"] {
+        background: oklch(99% 0 0);
+        color: oklch(12% 0 0);
+      }
+      .theme-block {
+        padding: 24px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border-subtle);
+      }
+    </style>
+  </head>
+  <body>
+
+    <h1>Color scales</h1>
+    <p class="subtitle">
+      Two scales, 12 shared lightness steps, per-step chroma curve.
+      Each cell is <code>oklch(L, chroma × step-multiplier, hue)</code>.
+    </p>
+
+    <dl class="params">
+      <dt>Surface hue</dt>       <dd><code>162°</code></dd>
+      <dt>Surface chroma</dt>    <dd><code>0.010</code> (× per-step multiplier)</dd>
+      <dt>Accent hue</dt>        <dd><code>162°</code></dd>
+      <dt>Accent chroma</dt>     <dd><code>0.070</code> (× per-step multiplier)</dd>
+      <dt>Step-N chroma mult</dt><dd><code>0.30, 0.40, 0.55, 0.70, 0.80, 0.90, 0.95, 1.00, 1.00, 0.90, 0.70, 0.50</code></dd>
+    </dl>
+
+    <div class="theme-block" data-theme="dark">
+      <h2>Dark theme</h2>
+      <div class="scales" id="scales-dark"></div>
+    </div>
+
+    <div class="theme-block" data-theme="light">
+      <h2>Light theme</h2>
+      <div class="scales" id="scales-light"></div>
+    </div>
+
+    <div class="semantic">
+      <h2>Semantic mapping</h2>
+      <p class="subtitle">
+        Each UI role picks one <code>(scale, step)</code>.
+      </p>
+      <div class="semantic-grid" id="semantic-grid"></div>
+    </div>
+
+    <script type="module">
+      const STEPS = [
+        { n: 1,  darkL: 10, lightL: 99, cMult: 0.30, role: "app bg" },
+        { n: 2,  darkL: 14, lightL: 96, cMult: 0.40, role: "raised panel" },
+        { n: 3,  darkL: 20, lightL: 92, cMult: 0.55, role: "panel / input bg" },
+        { n: 4,  darkL: 26, lightL: 88, cMult: 0.70, role: "hover" },
+        { n: 5,  darkL: 32, lightL: 82, cMult: 0.80, role: "subtle border" },
+        { n: 6,  darkL: 40, lightL: 72, cMult: 0.90, role: "" },
+        { n: 7,  darkL: 50, lightL: 58, cMult: 0.95, role: "strong border" },
+        { n: 8,  darkL: 62, lightL: 46, cMult: 1.00, role: "" },
+        { n: 9,  darkL: 72, lightL: 38, cMult: 1.00, role: "solid accent / tertiary text" },
+        { n: 10, darkL: 80, lightL: 28, cMult: 0.90, role: "" },
+        { n: 11, darkL: 88, lightL: 20, cMult: 0.70, role: "secondary text" },
+        { n: 12, darkL: 95, lightL: 12, cMult: 0.50, role: "primary text" },
+      ];
+
+      const SCALES = [
+        { name: "surface", varName: "--surface", hue: 162, chroma: 0.010 },
+        { name: "accent",  varName: "--accent",  hue: 162, chroma: 0.070 },
+      ];
+
+      const SEMANTIC = [
+        ["--color-bg-base",        "surface",  1],
+        ["--color-bg-raised",      "surface",  2],
+        ["--color-bg-panel",       "surface",  3],
+        ["--color-bg-hover",       "surface",  4],
+        ["--color-input-bg",       "surface",  4],
+        ["--color-border-subtle",  "surface",  5],
+        ["--color-border-strong",  "surface",  7],
+        ["--color-text-tertiary",  "surface",  9],
+        ["--color-text-secondary", "surface", 11],
+        ["--color-text-primary",   "surface", 12],
+        ["--color-accent-subtle",  "accent",   3],
+        ["--color-accent",         "accent",   9],
+        ["--color-accent-text",    "surface",  1],
+      ];
+
+      function renderScaleTable(theme, scale) {
+        const wrap = document.createElement("div");
+        wrap.className = "scale";
+        wrap.innerHTML = `
+          <h3>
+            ${scale.name}
+            <code>h ${scale.hue}°, c ${scale.chroma}</code>
+          </h3>
+          <div class="steps">
+            <div class="head">n</div>
+            <div class="head"></div>
+            <div class="head">oklch</div>
+            <div class="head">role</div>
+          </div>
+        `;
+        const grid = wrap.querySelector(".steps");
+        for (const s of STEPS) {
+          const L = theme === "dark" ? s.darkL : s.lightL;
+          const c = +(scale.chroma * s.cMult).toFixed(4);
+          const color = `oklch(${L}% ${c} ${scale.hue})`;
+          grid.insertAdjacentHTML("beforeend", `
+            <div class="step-num">${s.n}</div>
+            <div class="swatch" style="background:${color}"></div>
+            <div class="step-meta">L ${L}% · C ${c.toFixed(3)} · H ${scale.hue}°</div>
+            <div class="step-role">${s.role}</div>
+          `);
+        }
+        return wrap;
+      }
+
+      for (const theme of ["dark", "light"]) {
+        const host = document.getElementById(`scales-${theme}`);
+        for (const scale of SCALES) {
+          host.appendChild(renderScaleTable(theme, scale));
+        }
+      }
+
+      const sem = document.getElementById("semantic-grid");
+      for (const [token, scaleName, step] of SEMANTIC) {
+        const row = document.createElement("div");
+        row.className = "semantic-row";
+        row.innerHTML = `
+          <div class="semantic-chip" style="background: var(${"--" + scaleName + "-" + step})"></div>
+          <div class="semantic-label">
+            <div>${token}</div>
+            <code>${scaleName}-${step}</code>
+          </div>
+        `;
+        sem.appendChild(row);
+      }
+    </script>
+  </body>
+</html>
