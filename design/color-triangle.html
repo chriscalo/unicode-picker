@@ -110,7 +110,8 @@
         pointer-events: none;
       }
 
-      .tri-cursor {
+      .tri-cursor,
+      .hue-cursor {
         position: absolute;
         width: 14px;
         height: 14px;
@@ -119,6 +120,11 @@
         box-shadow: 0 0 0 1px oklch(10% 0 0);
         transform: translate(-50%, -50%);
         pointer-events: none;
+      }
+      .hue-cursor {
+        width: 18px;
+        height: 18px;
+        border-width: 3px;
       }
 
       .tri-controls {
@@ -353,25 +359,23 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       <h2><span class="num">3.</span>General picker</h2>
 
       <p>
-        Click anywhere in the triangle. Move the hue slider to see
-        the same triangle at a different hue. Coordinates update live.
+        Drag inside the equilateral triangle to set
+        <code>(W, B, C)</code>. Drag on the ring to set the hue.
+        Coordinates update live.
       </p>
 
       <div class="tri-row">
-        <div class="tri-stage" id="gen-stage">
-          <canvas class="tri" id="gen-canvas" width="340" height="340"></canvas>
-          <div class="tri-overlay">
-            <span class="tri-vertex-label" style="left: 50%; top: 2px; transform: translateX(-50%);">W</span>
-            <span class="tri-vertex-label" style="left: 50%; top: calc(100% - 22px); transform: translateX(-50%);">B</span>
-            <span class="tri-vertex-label" style="right: 2px; top: 50%; transform: translateY(-50%);">C</span>
-            <div class="tri-cursor" id="gen-cursor" style="left: 50%; top: 50%;"></div>
+        <div class="tri-stage" id="gen-stage" style="width: 420px; height: 420px;">
+          <canvas class="tri" id="gen-canvas" width="420" height="420"></canvas>
+          <div class="tri-overlay" id="gen-overlay">
+            <span class="tri-vertex-label" data-vertex="W">W</span>
+            <span class="tri-vertex-label" data-vertex="B">B</span>
+            <span class="tri-vertex-label" data-vertex="C">C</span>
+            <div class="tri-cursor" id="gen-cursor"></div>
+            <div class="hue-cursor" id="gen-hue-cursor"></div>
           </div>
         </div>
         <div class="tri-controls">
-          <div>
-            <div class="tri-row-label">Hue</div>
-            <input type="range" id="gen-hue" min="0" max="360" value="162">
-          </div>
           <dl class="tri-value-grid">
             <dt>hue</dt><dd id="gen-h">162°</dd>
             <dt>W</dt><dd id="gen-w">—</dd>
@@ -401,7 +405,11 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       <div class="tri-row" style="margin-top: 18px;">
         <div class="tri-stage" id="surface-stage">
           <canvas class="tri" id="surface-canvas" width="340" height="340"></canvas>
-          <div class="tri-overlay" id="surface-overlay"></div>
+          <div class="tri-overlay" id="surface-overlay">
+            <span class="tri-vertex-label" data-vertex="W">W</span>
+            <span class="tri-vertex-label" data-vertex="B">B</span>
+            <span class="tri-vertex-label" data-vertex="C">C</span>
+          </div>
         </div>
         <div class="tri-controls">
           <div class="tri-row-label">Surface scale — h 162°, c 0.010</div>
@@ -412,7 +420,11 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       <div class="tri-row" style="margin-top: 28px;">
         <div class="tri-stage" id="accent-stage">
           <canvas class="tri" id="accent-canvas" width="340" height="340"></canvas>
-          <div class="tri-overlay" id="accent-overlay"></div>
+          <div class="tri-overlay" id="accent-overlay">
+            <span class="tri-vertex-label" data-vertex="W">W</span>
+            <span class="tri-vertex-label" data-vertex="B">B</span>
+            <span class="tri-vertex-label" data-vertex="C">C</span>
+          </div>
         </div>
         <div class="tri-controls">
           <div class="tri-row-label">Accent scale — h 162°, c 0.070</div>
@@ -492,17 +504,26 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       // ═══ Triangle geometry ════════════════════════════════════
       //
-      // Vertices: W at top, B at bottom, C at right. This is the
-      // orientation from the Hugo Daniel article and reads as
-      // "lightness from top to bottom, colorfulness rightward".
+      // Equilateral triangle pointing right. Vertices placed on a
+      // circle of radius `triR` centered in the canvas, at angles
+      // 0° (C, east), 120° (W, upper-left), 240° (B, lower-left)
+      // in math convention (screen-y flipped).
 
-      function triangleVertices(size) {
-        const pad = 18;
-        return {
-          W: [size / 2,        pad],
-          B: [size / 2,        size - pad],
-          C: [size - pad,      size / 2],
-        };
+      const ANGLES = { C: 0, W: 120, B: 240 };
+
+      function geometry(size, { hasRing = false } = {}) {
+        const cx = size / 2, cy = size / 2;
+        const ringOuter = hasRing ? size / 2 - 6 : 0;
+        const ringWidth = 20;
+        const ringInner = hasRing ? ringOuter - ringWidth : 0;
+        const ringGap   = hasRing ? 12 : 0;
+        const triR      = hasRing ? ringInner - ringGap : size / 2 - 14;
+        const verts = {};
+        for (const [k, deg] of Object.entries(ANGLES)) {
+          const r = deg * Math.PI / 180;
+          verts[k] = [cx + triR * Math.cos(r), cy - triR * Math.sin(r)];
+        }
+        return { cx, cy, ringInner, ringOuter, triR, verts };
       }
 
       function barycentric(x, y, verts) {
@@ -523,69 +544,144 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return [w * x1 + b * x2 + c * x3, w * y1 + b * y2 + c * y3];
       }
 
-      function paintTriangle(canvas, hue) {
+      function paintStage(canvas, hue, opts = {}) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
         const img = ctx.createImageData(width, height);
         const data = img.data;
-        const verts = triangleVertices(width);
+        const geo = geometry(width, opts);
+        const { cx, cy, ringInner, ringOuter, verts } = geo;
+
         for (let y = 0; y < height; y++) {
           for (let x = 0; x < width; x++) {
-            const [w, b, c] = barycentric(x, y, verts);
-            if (w >= 0 && b >= 0 && c >= 0) {
-              const [r, gc, bl] = hwbToRgb(hue, w, b);
+            const dx = x - cx;
+            const dy = y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            let rgb = null;
+
+            if (opts.hasRing && dist >= ringInner && dist <= ringOuter) {
+              const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+              const pixelHue = (angle + 360) % 360;
+              rgb = hsvToRgb(pixelHue, 1, 1);
+            } else if (dist <= geo.triR + 1) {
+              const [w, b, c] = barycentric(x, y, verts);
+              if (w >= -0.002 && b >= -0.002 && c >= -0.002) {
+                const wc = Math.max(0, w);
+                const bc = Math.max(0, b);
+                rgb = hwbToRgb(hue, wc, bc);
+              }
+            }
+
+            if (rgb) {
               const i = (y * width + x) * 4;
-              data[i]     = Math.round(r  * 255);
-              data[i + 1] = Math.round(gc * 255);
-              data[i + 2] = Math.round(bl * 255);
+              data[i]     = Math.round(rgb[0] * 255);
+              data[i + 1] = Math.round(rgb[1] * 255);
+              data[i + 2] = Math.round(rgb[2] * 255);
               data[i + 3] = 255;
             }
           }
         }
         ctx.putImageData(img, 0, 0);
+        return geo;
+      }
+
+      function placeVertexLabels(overlay, canvas, verts) {
+        const pxToPct = v => (v / canvas.width) * 100;
+        const OFFSETS = {
+          W: { dx: -18, dy: -18 },
+          B: { dx: -18, dy: 18 },
+          C: { dx: 18,  dy: 0 },
+        };
+        for (const [k, v] of Object.entries(verts)) {
+          const label = overlay.querySelector(`[data-vertex="${k}"]`);
+          if (!label) continue;
+          const { dx, dy } = OFFSETS[k];
+          label.style.left = `${pxToPct(v[0] + dx)}%`;
+          label.style.top  = `${pxToPct(v[1] + dy)}%`;
+          label.style.transform = "translate(-50%, -50%)";
+        }
       }
 
       // ═══ Section 3 — general picker ═══════════════════════════
 
-      const genCanvas = document.getElementById("gen-canvas");
-      const genCursor = document.getElementById("gen-cursor");
-      const genSample = document.getElementById("gen-sample");
-      const genHue    = document.getElementById("gen-hue");
-      const genVerts  = triangleVertices(genCanvas.width);
+      const genCanvas    = document.getElementById("gen-canvas");
+      const genOverlay   = document.getElementById("gen-overlay");
+      const genCursor    = document.getElementById("gen-cursor");
+      const genHueCursor = document.getElementById("gen-hue-cursor");
+      const genSample    = document.getElementById("gen-sample");
 
-      let genState = { h: +genHue.value, w: 0.333, b: 0.333 };
+      let genState = { h: 162, w: 0.333, b: 0.333, geo: null };
 
-      function updateGen() {
+      function repaintGen() {
+        genState.geo = paintStage(genCanvas, genState.h, { hasRing: true });
+        placeVertexLabels(genOverlay, genCanvas, genState.geo.verts);
+        updateGenCursors();
+        updateGenReadout();
+      }
+
+      function updateGenReadout() {
         const { h, w, b } = genState;
         const c = 1 - w - b;
-        document.getElementById("gen-h").textContent = `${h}°`;
+        document.getElementById("gen-h").textContent = `${h.toFixed(0)}°`;
         document.getElementById("gen-w").textContent = w.toFixed(2);
         document.getElementById("gen-b").textContent = b.toFixed(2);
         document.getElementById("gen-c").textContent = c.toFixed(2);
-        const css = `hwb(${h} ${(w * 100).toFixed(1)}% ${(b * 100).toFixed(1)}%)`;
+        const css = `hwb(${h.toFixed(0)} ${(w * 100).toFixed(1)}% ${(b * 100).toFixed(1)}%)`;
         document.getElementById("gen-css").textContent = css;
         genSample.style.background = css;
+      }
 
-        const [px, py] = fromBarycentric(w, b, c, genVerts);
-        const rect = genCanvas.getBoundingClientRect();
-        // Canvas internal coords == displayed coords since width:100% with matching internal width.
-        genCursor.style.left = (px / genCanvas.width * 100) + "%";
-        genCursor.style.top  = (py / genCanvas.height * 100) + "%";
+      function updateGenCursors() {
+        const { h, w, b, geo } = genState;
+        const c = 1 - w - b;
+        const [px, py] = fromBarycentric(w, b, c, geo.verts);
+        const size = genCanvas.width;
+        genCursor.style.left = (px / size * 100) + "%";
+        genCursor.style.top  = (py / size * 100) + "%";
+
+        const ringMid = (geo.ringInner + geo.ringOuter) / 2;
+        const rad = h * Math.PI / 180;
+        const hx = geo.cx + ringMid * Math.cos(rad);
+        const hy = geo.cy - ringMid * Math.sin(rad);
+        genHueCursor.style.left = (hx / size * 100) + "%";
+        genHueCursor.style.top  = (hy / size * 100) + "%";
       }
 
       function pickGen(evt) {
         const rect = genCanvas.getBoundingClientRect();
         const x = (evt.clientX - rect.left) / rect.width * genCanvas.width;
         const y = (evt.clientY - rect.top) / rect.height * genCanvas.height;
-        const [w, b, c] = barycentric(x, y, genVerts);
-        if (w < 0 || b < 0 || c < 0) return;
-        genState.w = w;
-        genState.b = b;
-        updateGen();
+        const geo = genState.geo;
+        const dx = x - geo.cx, dy = y - geo.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) {
+          // Ring: set hue from angle
+          const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+          genState.h = (angle + 360) % 360;
+          repaintGen();
+          return "ring";
+        }
+
+        // Triangle: set (w, b) from barycentric
+        const [w, b, c] = barycentric(x, y, geo.verts);
+        if (w >= -0.01 && b >= -0.01 && c >= -0.01) {
+          genState.w = Math.max(0, Math.min(1, w));
+          genState.b = Math.max(0, Math.min(1, b));
+          if (genState.w + genState.b > 1) {
+            const s = genState.w + genState.b;
+            genState.w /= s; genState.b /= s;
+          }
+          updateGenCursors();
+          updateGenReadout();
+          return "tri";
+        }
+        return null;
       }
 
       genCanvas.addEventListener("pointerdown", e => {
-        pickGen(e);
+        const target = pickGen(e);
+        if (!target) return;
         genCanvas.setPointerCapture(e.pointerId);
         const move = ev => pickGen(ev);
         const up = () => {
@@ -596,14 +692,7 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         genCanvas.addEventListener("pointerup", up);
       });
 
-      genHue.addEventListener("input", () => {
-        genState.h = +genHue.value;
-        paintTriangle(genCanvas, genState.h);
-        updateGen();
-      });
-
-      paintTriangle(genCanvas, genState.h);
-      updateGen();
+      repaintGen();
 
       // ═══ Section 4 — constrained picker ═══════════════════════
 
@@ -631,8 +720,9 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const canvas = document.getElementById(`${scale.name}-canvas`);
         const overlay = document.getElementById(`${scale.name}-overlay`);
         const list = document.getElementById(`${scale.name}-list`);
-        const verts = triangleVertices(canvas.width);
-        paintTriangle(canvas, scale.hue);
+        const geo = paintStage(canvas, scale.hue);
+        const verts = geo.verts;
+        placeVertexLabels(overlay, canvas, verts);
 
         list.innerHTML = `
           <dl class="tri-value-grid">
