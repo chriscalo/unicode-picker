@@ -281,7 +281,35 @@ fails the lightness-uniformity test.
 4. Keep the ternary-grid naming from §2 of the triangle doc —
    `(i, j, k)` maps cleanly onto HSLuv's `(L, S)` ramp.
 
-## 7. Task list
+## 7. Open questions
+
+- **Evaluate more color spaces in the workbench.** OKLCH reads nicely
+  muted; HWB is vibrant when you want that; HSLuv came out muddy and
+  unusable. Candidates to add to the color-space seg:
+  - **OKHSL / OKHSV** (Björn Ottosson) — HSL/HSV-shaped interfaces
+    on top of OKLab. Direct replacement for HSLuv with a better
+    perceptual basis; likely cleaner than HSLuv.
+  - **HCT** (Hue-Chroma-Tone; Google Material You) — already
+    battle-tested for UI tokens, specifically tuned for
+    lightness-uniform palettes.
+  - **Jzazbz / JzCzHz** — perceptually uniform HDR-ready space
+    (Safdar et al.); known to have good hue linearity.
+  - **CIELCH(ab)** — the classic LCh on Lab (vs. HSLuv's LCh on
+    Luv). Often looks closer to OKLCH in character.
+  - **HPLuv** — HSLuv's pastel-only sibling (guaranteed
+    perceptual uniformity but lower chroma ceiling).
+- **Hue-angle names in the quantized picker.** Each color space's
+  0° is a different colour (HSL red, OKLCH reddish-pink, HSLuv
+  its own offset). Generate per-space hue-name labels at each
+  quantized step — e.g. "red 0°", "orange 22°", "yellow 60°" —
+  rather than just a bare degree reading.
+- **Info tooltips aren't firing.** The ⓘ spans use `title=""` but
+  tooltips are slow / inconsistent across browsers. Replace with
+  a CSS-only hover popover (absolute-positioned div revealed on
+  :hover/:focus-within) so the explanation text shows up
+  reliably.
+
+## 8. Task list
 
 
 

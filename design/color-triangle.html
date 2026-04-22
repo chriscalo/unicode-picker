@@ -292,11 +292,16 @@ h2 .info {
 
       .arcs-layout {
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
         gap: 12px;
-        align-items: start;
+        align-items: stretch;
         min-height: 0;
+        min-width: 0;
         flex: 1 1 0;
+      }
+      #arc-stage {
+        align-self: center;
       }
       .arc-scales {
         display: grid;
@@ -844,10 +849,10 @@ h2 .info {
 
       const DISPLAY_SIZE = 300;
 
-      function geometry(size, { hasRing = false, hue = 0, flipped = false, ringWidth = 26, ringGap = 14, ringPad = 4, triPad = 20 } = {}) {
+      function geometry(size, { hasRing = false, hue = 0, flipped = false, ringWidth = 26, ringGap = 14, ringPad = 4, triPad = 20, cyShift = 0 } = {}) {
         const scale = size / DISPLAY_SIZE;
         const px = v => v * scale;
-        const cx = size / 2, cy = size / 2;
+        const cx = size / 2, cy = size / 2 + cyShift;
         const ringOuter = hasRing ? size / 2 - px(ringPad) : 0;
         const ringInner = hasRing ? ringOuter - px(ringWidth) : 0;
         const gap = hasRing ? px(ringGap) : 0;
@@ -1311,8 +1316,15 @@ h2 .info {
         // No CSS rotation — the triangle doesn't follow the hue.
         // Only the color interpolation uses state.hue.
         const width = arcBody.width;
+        // Tile 4 has no ring, so skip the ring allotment and give
+        // the triangle the full stage radius. The triangle is
+        // inscribed in a circle whose centre is the centroid, so
+        // its bounding box sits asymmetrically top-heavy; shift
+        // cy down by R/4 so the bbox is vertically centred.
+        const probe = geometry(width, { triPad: 6 });
         const geoTile4 = geometry(width, {
-          hasRing: true, hue: 90, flipped: true,
+          hasRing: false, hue: 90, flipped: true,
+          triPad: 6, cyShift: probe.triR / 4,
         });
         paintBody(arcBody, state.hue, geoTile4);
         arcBody.style.transform        = "";
