@@ -366,11 +366,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       <div class="tri-row">
         <div class="tri-stage" id="gen-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri" id="gen-canvas" width="420" height="420"></canvas>
+          <canvas class="tri" id="gen-canvas" width="840" height="840"></canvas>
           <div class="tri-overlay" id="gen-overlay">
-            <span class="tri-vertex-label" data-vertex="W">W</span>
-            <span class="tri-vertex-label" data-vertex="B">B</span>
-            <span class="tri-vertex-label" data-vertex="C">C</span>
             <div class="tri-cursor" id="gen-cursor"></div>
             <div class="hue-cursor" id="gen-hue-cursor"></div>
           </div>
@@ -413,11 +410,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       <div class="tri-row">
         <div class="tri-stage" id="ok-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri" id="ok-canvas" width="420" height="420"></canvas>
+          <canvas class="tri" id="ok-canvas" width="840" height="840"></canvas>
           <div class="tri-overlay" id="ok-overlay">
-            <span class="tri-vertex-label" data-vertex="W">W</span>
-            <span class="tri-vertex-label" data-vertex="B">B</span>
-            <span class="tri-vertex-label" data-vertex="C">C</span>
             <div class="tri-cursor" id="ok-cursor"></div>
             <div class="hue-cursor" id="ok-hue-cursor"></div>
           </div>
@@ -453,12 +447,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       <div class="tri-row" style="margin-top: 18px;">
         <div class="tri-stage" id="surface-stage">
-          <canvas class="tri" id="surface-canvas" width="340" height="340"></canvas>
-          <div class="tri-overlay" id="surface-overlay">
-            <span class="tri-vertex-label" data-vertex="W">W</span>
-            <span class="tri-vertex-label" data-vertex="B">B</span>
-            <span class="tri-vertex-label" data-vertex="C">C</span>
-          </div>
+          <canvas class="tri" id="surface-canvas" width="680" height="680"></canvas>
+          <div class="tri-overlay" id="surface-overlay"></div>
         </div>
         <div class="tri-controls">
           <div class="tri-row-label">Surface scale — h 162°, c 0.010</div>
@@ -468,12 +458,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       <div class="tri-row" style="margin-top: 28px;">
         <div class="tri-stage" id="accent-stage">
-          <canvas class="tri" id="accent-canvas" width="340" height="340"></canvas>
-          <div class="tri-overlay" id="accent-overlay">
-            <span class="tri-vertex-label" data-vertex="W">W</span>
-            <span class="tri-vertex-label" data-vertex="B">B</span>
-            <span class="tri-vertex-label" data-vertex="C">C</span>
-          </div>
+          <canvas class="tri" id="accent-canvas" width="680" height="680"></canvas>
+          <div class="tri-overlay" id="accent-overlay"></div>
         </div>
         <div class="tri-controls">
           <div class="tri-row-label">Accent scale — h 162°, c 0.070</div>
@@ -580,22 +566,22 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       // ═══ Triangle geometry ════════════════════════════════════
       //
-      // Equilateral triangle pointing right. Vertices placed on a
-      // circle of radius `triR` centered in the canvas, at angles
-      // 0° (C, east), 120° (W, upper-left), 240° (B, lower-left)
-      // in math convention (screen-y flipped).
+      // Equilateral triangle with the C vertex anchored to the
+      // current hue's angular position. W and B sit 120° ahead and
+      // behind on the same circle. Rotating with hue keeps the
+      // "pure color" corner pointing at the same spot on the
+      // imagined / rendered ring.
 
-      const ANGLES = { C: 0, W: 120, B: 240 };
-
-      function geometry(size, { hasRing = false } = {}) {
+      function geometry(size, { hasRing = false, hue = 0 } = {}) {
         const cx = size / 2, cy = size / 2;
         const ringOuter = hasRing ? size / 2 - 6 : 0;
-        const ringWidth = 20;
+        const ringWidth = 72;
         const ringInner = hasRing ? ringOuter - ringWidth : 0;
-        const ringGap   = hasRing ? 12 : 0;
-        const triR      = hasRing ? ringInner - ringGap : size / 2 - 14;
+        const ringGap   = hasRing ? 20 : 0;
+        const triR      = hasRing ? ringInner - ringGap : size / 2 - 20;
+        const angles = { C: hue, W: hue + 120, B: hue + 240 };
         const verts = {};
-        for (const [k, deg] of Object.entries(ANGLES)) {
+        for (const [k, deg] of Object.entries(angles)) {
           const r = deg * Math.PI / 180;
           verts[k] = [cx + triR * Math.cos(r), cy - triR * Math.sin(r)];
         }
@@ -625,7 +611,7 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const { width, height } = canvas;
         const img = ctx.createImageData(width, height);
         const data = img.data;
-        const geo = geometry(width, opts);
+        const geo = geometry(width, { ...opts, hue });
         const { cx, cy, ringInner, ringOuter, verts } = geo;
 
         for (let y = 0; y < height; y++) {
@@ -672,7 +658,7 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const { width, height } = canvas;
         const img = ctx.createImageData(width, height);
         const data = img.data;
-        const geo = geometry(width, opts);
+        const geo = geometry(width, { ...opts, hue });
         const { cx, cy, ringInner, ringOuter, verts } = geo;
 
         for (let y = 0; y < height; y++) {
@@ -711,19 +697,19 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return geo;
       }
 
-      function placeVertexLabels(overlay, canvas, verts) {
-        const pxToPct = v => (v / canvas.width) * 100;
-        const OFFSETS = {
-          W: { dx: -18, dy: -18 },
-          B: { dx: -18, dy: 18 },
-          C: { dx: 18,  dy: 0 },
-        };
+      function placeVertexLabels(overlay, canvas, geo) {
+        const OUTWARD = 20;
+        const { cx, cy, verts } = geo;
         for (const [k, v] of Object.entries(verts)) {
           const label = overlay.querySelector(`[data-vertex="${k}"]`);
           if (!label) continue;
-          const { dx, dy } = OFFSETS[k];
-          label.style.left = `${pxToPct(v[0] + dx)}%`;
-          label.style.top  = `${pxToPct(v[1] + dy)}%`;
+          const dx = v[0] - cx;
+          const dy = v[1] - cy;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const lx = v[0] + (dx / len) * OUTWARD;
+          const ly = v[1] + (dy / len) * OUTWARD;
+          label.style.left = `${(lx / canvas.width) * 100}%`;
+          label.style.top  = `${(ly / canvas.height) * 100}%`;
           label.style.transform = "translate(-50%, -50%)";
         }
       }
@@ -740,7 +726,6 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       function repaintGen() {
         genState.geo = paintStage(genCanvas, genState.h, { hasRing: true });
-        placeVertexLabels(genOverlay, genCanvas, genState.geo.verts);
         updateGenCursors();
         updateGenReadout();
       }
@@ -773,49 +758,71 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         genHueCursor.style.top  = (hy / size * 100) + "%";
       }
 
-      function pickGen(evt) {
-        const rect = genCanvas.getBoundingClientRect();
-        const x = (evt.clientX - rect.left) / rect.width * genCanvas.width;
-        const y = (evt.clientY - rect.top) / rect.height * genCanvas.height;
-        const geo = genState.geo;
+      function canvasXY(evt, canvas) {
+        const rect = canvas.getBoundingClientRect();
+        return [
+          (evt.clientX - rect.left) / rect.width * canvas.width,
+          (evt.clientY - rect.top) / rect.height * canvas.height,
+        ];
+      }
+
+      function hitTest(x, y, geo) {
         const dx = x - geo.cx, dy = y - geo.cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) {
-          // Ring: set hue from angle
-          const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-          genState.h = (angle + 360) % 360;
-          repaintGen();
-          return "ring";
-        }
-
-        // Triangle: set (w, b) from barycentric
+        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) return "ring";
         const [w, b, c] = barycentric(x, y, geo.verts);
-        if (w >= -0.01 && b >= -0.01 && c >= -0.01) {
-          genState.w = Math.max(0, Math.min(1, w));
-          genState.b = Math.max(0, Math.min(1, b));
-          if (genState.w + genState.b > 1) {
-            const s = genState.w + genState.b;
-            genState.w /= s; genState.b /= s;
-          }
-          updateGenCursors();
-          updateGenReadout();
-          return "tri";
-        }
+        if (w >= -0.01 && b >= -0.01 && c >= -0.01) return "tri";
         return null;
       }
 
-      genCanvas.addEventListener("pointerdown", e => {
-        const target = pickGen(e);
-        if (!target) return;
-        genCanvas.setPointerCapture(e.pointerId);
-        const move = ev => pickGen(ev);
-        const up = () => {
-          genCanvas.removeEventListener("pointermove", move);
-          genCanvas.removeEventListener("pointerup", up);
-        };
-        genCanvas.addEventListener("pointermove", move);
-        genCanvas.addEventListener("pointerup", up);
+      function applyRing(state, x, y, repaint) {
+        const dx = x - state.geo.cx, dy = y - state.geo.cy;
+        const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+        state.h = (angle + 360) % 360;
+        repaint();
+      }
+
+      function applyTri(state, x, y, updateCursors, updateReadout) {
+        const [w, b, c] = barycentric(x, y, state.geo.verts);
+        state.w = Math.max(0, Math.min(1, w));
+        state.b = Math.max(0, Math.min(1, b));
+        if (state.w + state.b > 1) {
+          const s = state.w + state.b;
+          state.w /= s; state.b /= s;
+        }
+        updateCursors();
+        updateReadout();
+      }
+
+      function attachPickerDrag(canvas, state, hooks) {
+        canvas.addEventListener("pointerdown", e => {
+          const [x, y] = canvasXY(e, canvas);
+          const target = hitTest(x, y, state.geo);
+          if (!target) return;
+          canvas.setPointerCapture(e.pointerId);
+
+          const dispatch = ev => {
+            const [mx, my] = canvasXY(ev, canvas);
+            if (target === "ring") applyRing(state, mx, my, hooks.repaint);
+            else applyTri(state, mx, my, hooks.updateCursors, hooks.updateReadout);
+          };
+
+          dispatch(e);
+          const up = () => {
+            canvas.removeEventListener("pointermove", dispatch);
+            canvas.removeEventListener("pointerup", up);
+            canvas.removeEventListener("pointercancel", up);
+          };
+          canvas.addEventListener("pointermove", dispatch);
+          canvas.addEventListener("pointerup", up);
+          canvas.addEventListener("pointercancel", up);
+        });
+      }
+
+      attachPickerDrag(genCanvas, genState, {
+        repaint: repaintGen,
+        updateCursors: updateGenCursors,
+        updateReadout: updateGenReadout,
       });
 
       repaintGen();
@@ -832,7 +839,6 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
 
       function repaintOk() {
         okState.geo = paintStageOklch(okCanvas, okState.h, { hasRing: true });
-        placeVertexLabels(okOverlay, okCanvas, okState.geo.verts);
         updateOkCursors();
         updateOkReadout();
       }
@@ -869,47 +875,10 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         okHueCursor.style.top  = (hy / size * 100) + "%";
       }
 
-      function pickOk(evt) {
-        const rect = okCanvas.getBoundingClientRect();
-        const x = (evt.clientX - rect.left) / rect.width * okCanvas.width;
-        const y = (evt.clientY - rect.top) / rect.height * okCanvas.height;
-        const geo = okState.geo;
-        const dx = x - geo.cx, dy = y - geo.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) {
-          const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-          okState.h = (angle + 360) % 360;
-          repaintOk();
-          return "ring";
-        }
-
-        const [w, b, c] = barycentric(x, y, geo.verts);
-        if (w >= -0.01 && b >= -0.01 && c >= -0.01) {
-          okState.w = Math.max(0, Math.min(1, w));
-          okState.b = Math.max(0, Math.min(1, b));
-          if (okState.w + okState.b > 1) {
-            const s = okState.w + okState.b;
-            okState.w /= s; okState.b /= s;
-          }
-          updateOkCursors();
-          updateOkReadout();
-          return "tri";
-        }
-        return null;
-      }
-
-      okCanvas.addEventListener("pointerdown", e => {
-        const target = pickOk(e);
-        if (!target) return;
-        okCanvas.setPointerCapture(e.pointerId);
-        const move = ev => pickOk(ev);
-        const up = () => {
-          okCanvas.removeEventListener("pointermove", move);
-          okCanvas.removeEventListener("pointerup", up);
-        };
-        okCanvas.addEventListener("pointermove", move);
-        okCanvas.addEventListener("pointerup", up);
+      attachPickerDrag(okCanvas, okState, {
+        repaint: repaintOk,
+        updateCursors: updateOkCursors,
+        updateReadout: updateOkReadout,
       });
 
       repaintOk();
@@ -942,7 +911,6 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const list = document.getElementById(`${scale.name}-list`);
         const geo = paintStage(canvas, scale.hue);
         const verts = geo.verts;
-        placeVertexLabels(overlay, canvas, verts);
 
         list.innerHTML = `
           <dl class="tri-value-grid">
