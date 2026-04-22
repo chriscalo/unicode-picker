@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8">
-    <title>Color system workbench</title>
+    <title>Color System Designer</title>
     <link rel="stylesheet" href="/style.css">
     <style>
       html {
@@ -16,7 +16,11 @@
         display: flex;
         flex-direction: column;
         min-height: 0;
-        background: oklch(22% 0 0);
+        background: oklch(32% 0 0);
+      }
+
+      header.workbench {
+        background: oklch(32% 0 0) !important;
       }
 
       header.workbench {
@@ -282,6 +286,16 @@
         pointer-events: auto;
         cursor: pointer;
       }
+      .quant-dot[data-peer-hover] {
+        outline: 2px solid oklch(100% 0 0);
+        outline-offset: 2px;
+        z-index: 10;
+      }
+      .token-grid .cell[data-peer-hover] {
+        outline: 2px solid oklch(100% 0 0);
+        outline-offset: -1px;
+        z-index: 10;
+      }
       .hue-step-dot[data-tooltip]::after {
         content: attr(data-tooltip);
         position: absolute;
@@ -414,7 +428,7 @@
   <body>
 
     <header class="workbench">
-      <h1>Color system workbench</h1>
+      <h1>Color System Designer</h1>
 
       <div class="controls">
         <div class="control">
@@ -1666,6 +1680,8 @@
             dot.style.top  = (py / size * 100) + "%";
             dot.style.background = cssFromRgb(rgb);
             dot.title = tokenName(i, j, k, N);
+            dot.dataset.cellI = i;
+            dot.dataset.cellK = k;
             if (i === quant.i && k === quant.k) dot.setAttribute("aria-selected", "true");
             dot.addEventListener("click", () => {
               state.quant.i = i;
@@ -1673,6 +1689,8 @@
               renderQuantDots();
               updateQuantReadout();
             });
+            dot.addEventListener("mouseenter", () => setPeerHover(i, k));
+            dot.addEventListener("mouseleave", () => setPeerHover(null));
             quantBodyOverlay.appendChild(dot);
           }
         }
@@ -1844,6 +1862,21 @@
         return v.toString().padStart(2, "0");
       }
 
+      // Cross-tile highlight: hovering a cell in either the
+      // quantized picker (tile 3) or the tonal grid (tile 4)
+      // marks the matching (i, k) cell in the other tile with
+      // `data-peer-hover`, so the correspondence is visible.
+      function setPeerHover(i, k) {
+        document.querySelectorAll("[data-peer-hover]").forEach(e =>
+          e.removeAttribute("data-peer-hover"),
+        );
+        if (i == null) return;
+        const sel = `[data-cell-i="${i}"][data-cell-k="${k}"]`;
+        document.querySelectorAll(sel).forEach(e =>
+          e.setAttribute("data-peer-hover", ""),
+        );
+      }
+
       function tokenName(i, j, k, N) {
         const iPct = pctLabel(Math.round((i / N) * 100));
         const jPct = pctLabel(Math.round((j / N) * 100));
@@ -1899,6 +1932,10 @@
             const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
             cell.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
             cell.title = tokenName(i, j, k, N);
+            cell.dataset.cellI = i;
+            cell.dataset.cellK = k;
+            cell.addEventListener("mouseenter", () => setPeerHover(i, k));
+            cell.addEventListener("mouseleave", () => setPeerHover(null));
             grid.appendChild(cell);
           }
         }
