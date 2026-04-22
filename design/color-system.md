@@ -286,22 +286,13 @@ fails the lightness-uniformity test.
 - **Evaluate more color spaces in the workbench.** OKLCH reads
   nicely muted; HWB is vibrant when you want that; HSLuv came
   out muddy and unusable. Candidates:
-  - [x] **OKHSL** (Björn Ottosson) — HSL-shaped interface on
-    OKLab, added to the workbench. Cleaner than HSLuv because
-    it's built on OKLab rather than CIELUV; s=0.5 feels half-
-    saturated (OKHSL's non-linear C curve) rather than linearly
-    interpolated chroma.
-  - [ ] **OKHSV** — Björn's sibling space; value axis instead
-    of lightness. Likely adds little beyond OKHSL.
-  - [ ] **HCT** (Hue-Chroma-Tone; Google Material You) — already
-    battle-tested for UI tokens, specifically tuned for
-    lightness-uniform palettes. CAM16-UCS basis.
-  - [ ] **Jzazbz / JzCzHz** — perceptually uniform HDR-ready
-    space (Safdar et al.); known to have good hue linearity.
-  - [ ] **CIELCH(ab)** — the classic LCh on Lab (vs. HSLuv's LCh
-    on Luv). Often looks closer to OKLCH in character.
-  - [ ] **HPLuv** — HSLuv's pastel-only sibling; guaranteed
-    perceptual uniformity but lower chroma ceiling.
+  - [x] **OKHSL** — HSL-shaped interface on OKLab.
+  - [x] **OKHSV** — value axis instead of lightness.
+  - [x] **CIELCH(ab)** — classic LCh on CIE 1976 L*a*b*.
+  - [x] **Jzazbz / JzCzHz** — perceptually-uniform HDR space.
+  - [x] **HPLuv** — pastel-only HSLuv (uniform chroma ceiling).
+  - [ ] **HCT** (Hue-Chroma-Tone; Google Material You) — the
+    remaining candidate. CAM16-UCS basis, substantial port.
 - **Hue-angle names in the quantized picker.** Each color space's
   0° is a different colour (HSL red, OKLCH reddish-pink, HSLuv
   its own offset). Generate per-space hue-name labels at each
