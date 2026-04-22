@@ -109,6 +109,43 @@
         color: var(--color-text-secondary);
       }
 
+      .plane-head,
+      .plane-row {
+        display: grid;
+        grid-template-columns: 60px repeat(var(--cols), 1fr);
+        gap: 2px;
+        align-items: center;
+      }
+      .plane-head { margin-bottom: 2px; }
+      .plane-corner,
+      .plane-colhead,
+      .plane-rowhead {
+        font-size: 9.5px;
+        font-family: var(--font-ui);
+        color: var(--color-text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .plane-colhead { text-align: center; }
+      .plane-rowhead {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        padding-right: 6px;
+      }
+      .plane-rowhead em {
+        font-style: normal;
+        color: var(--color-text-tertiary);
+      }
+      .plane-cell {
+        height: 22px;
+        border-radius: 2px;
+        border: 1px solid var(--color-border-subtle);
+      }
+      .plane-cell--token {
+        outline: 2px solid var(--color-text-primary);
+        outline-offset: -1px;
+      }
+
       .semantic {
         margin-top: 40px;
       }
@@ -227,6 +264,26 @@
       <div class="scales" id="scales-light"></div>
     </div>
 
+    <div class="theme-block" data-theme="dark">
+      <h2>L × C plane (dark theme)</h2>
+      <p class="subtitle">
+        Rows = L steps. Cols = chroma levels (absolute, not scaled by
+        the step multiplier). Dots mark where today's 12 tokens land —
+        everything else is the colorfulness axis the current system
+        can't address per-mark.
+      </p>
+      <div class="scales" id="plane-dark"></div>
+    </div>
+
+    <div class="theme-block" data-theme="light">
+      <h2>L × C plane (light theme)</h2>
+      <p class="subtitle">
+        Same grid, inverted L table. The 12 current tokens trace the
+        same curve — theme flip moves them together.
+      </p>
+      <div class="scales" id="plane-light"></div>
+    </div>
+
     <div class="semantic">
       <h2>Semantic mapping</h2>
       <p class="subtitle">
@@ -306,6 +363,50 @@
         const host = document.getElementById(`scales-${theme}`);
         for (const scale of SCALES) {
           host.appendChild(renderScaleTable(theme, scale));
+        }
+      }
+
+      const CHROMA_LEVELS = [0, 0.01, 0.02, 0.04, 0.07, 0.10, 0.14, 0.18, 0.22];
+
+      function renderPlane(theme, scale) {
+        const wrap = document.createElement("div");
+        wrap.className = "scale";
+        wrap.innerHTML = `
+          <h3>${scale.name} <code>h ${scale.hue}°</code></h3>
+          <div class="plane-head"></div>
+          <div class="plane"></div>
+        `;
+        const head = wrap.querySelector(".plane-head");
+        const grid = wrap.querySelector(".plane");
+        grid.style.setProperty("--cols", CHROMA_LEVELS.length);
+
+        head.innerHTML = `<span class="plane-corner">L \\ C</span>` +
+          CHROMA_LEVELS.map(c => `<span class="plane-colhead">${c.toFixed(2)}</span>`).join("");
+
+        for (const s of STEPS) {
+          const L = theme === "dark" ? s.darkL : s.lightL;
+          const tokenC = +(scale.chroma * s.cMult).toFixed(4);
+          const row = document.createElement("div");
+          row.className = "plane-row";
+          row.innerHTML = `<span class="plane-rowhead">${s.n} <em>${L}%</em></span>`;
+          for (const c of CHROMA_LEVELS) {
+            const color = `oklch(${L}% ${c} ${scale.hue})`;
+            const isToken = Math.abs(c - tokenC) < 0.004;
+            row.insertAdjacentHTML("beforeend", `
+              <span class="plane-cell${isToken ? " plane-cell--token" : ""}"
+                    style="background:${color}"
+                    title="L ${L}% · C ${c} · H ${scale.hue}°"></span>
+            `);
+          }
+          grid.appendChild(row);
+        }
+        return wrap;
+      }
+
+      for (const theme of ["dark", "light"]) {
+        const host = document.getElementById(`plane-${theme}`);
+        for (const scale of SCALES) {
+          host.appendChild(renderPlane(theme, scale));
         }
       }
 

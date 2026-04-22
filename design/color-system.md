@@ -33,6 +33,12 @@ Twelve **lightness steps** shared by both scales:
 Step 1 always means "furthest from content" and step 12 always means
 "highest contrast against bg", regardless of theme.
 
+> **Why 12?** Inherited from the Radix palette convention. It's not a
+> property of the system — 10 (decimal) or 100 (percent-style) would
+> read more naturally. Revisit once we know if colorfulness becomes
+> an independent axis; if so, we may end up picking an L resolution
+> that multiplies cleanly against a C resolution.
+
 A **per-step chroma multiplier** (`--step-N-c`) runs over the scale's
 base chroma: 0.30 at step 1, peaking at 1.00 around step 8-9, tapering
 to 0.50 at step 12. Keeps near-paper and near-ink readings calm and the
@@ -188,12 +194,31 @@ Cheap to try. Builds intuition before we commit to a refactor.
 
 ---
 
-## 5. Next steps
+## 5. Confirmed from the first pass
 
-1. Build the visualizer (Option C) first — draw the triangle for each
-   scale, plot the 12 steps on it, label them, and overlay the typical
-   bg/text pairs. This is read-only, gives us shared vocabulary, and
-   tells us whether Option A or B is the right move.
-2. Revisit Q4 with the triangle in hand — find real UI marks that
-   want independent L-contrast and chroma.
-3. Decide A vs. B based on (1) + (2).
+- **Inverting the L table for the theme flip works.** Step 1 is "app
+  bg" in both themes without moving any semantic token. Keep.
+- **Colorfulness is missing as an independent axis.** Seeing the 12
+  steps laid out side-by-side makes it obvious that every swatch on
+  a given scale collapses onto one (L, C) curve. There's no cell of
+  the (L × C) plane that says "same L as panel, more saturated" or
+  "text-primary L, but calmer than the step's default chroma."
+- **Step count (12) is arbitrary.** Borrowed from Radix; not a
+  property of the system. 10 or 100 would read more naturally. Park
+  this until we know whether the model becomes (scale, L, C) — the
+  right L resolution depends on whether C is a second axis.
+
+## 6. Next steps
+
+1. **Extend the visualizer to show the full (L × C) plane** for each
+   scale / theme. Rows = L steps, cols = chroma levels. Overlay the
+   current 12 tokens on it. This makes the missing axis concrete and
+   gives us something to point at when deciding how much C resolution
+   we actually need.
+2. **Revisit Q4 with the grid in hand.** For each real UI mark, ask:
+   does it want an L that's off the current curve's default C? Log the
+   answers — that's the evidence base for Option A vs B.
+3. **Decide Option A (per-mark chroma lever on top of today's model)
+   vs Option B (reparameterize in HWB).** A is lower-risk but keeps
+   the step index as the organizing idea; B matches the mental model
+   but is a bigger refactor.
