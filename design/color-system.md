@@ -208,7 +208,82 @@ Cheap to try. Builds intuition before we commit to a refactor.
   this until we know whether the model becomes (scale, L, C) — the
   right L resolution depends on whether C is a second axis.
 
-## 6. Task list
+## 6. Color-space assessment for a UI color system
+
+We've built three triangle pickers at `design/color-triangle.html` —
+HWB (sRGB), OKLCH (smoothed cusp), and HSLuv. With the explicit goal
+being **lightness perceptual uniformity** plus a coherent palette
+system, here's how they score.
+
+### Criteria
+
+1. **Lightness is perceptually uniform.** Equal ΔL looks equally
+   different in brightness — required.
+2. **Smooth across hues.** Max-saturation sweeps (e.g. the hue
+   ring) have no visible kinks; adjacent hues don't suddenly jump
+   in lightness or chroma.
+3. **Cross-hue saturation consistency.** "Saturation N at hue A"
+   looks as saturated as "saturation N at hue B" — critical for a
+   palette where you pick, say, S=80 accents across all brand hues.
+4. **Reach.** You can address near-gamut colors without the space
+   clipping or muting them.
+5. **Authoring model.** The (H, X, Y) tuple maps cleanly to the
+   way designers think about color (hue, how light, how colorful).
+
+### Scorecard
+
+| Criterion                 | HWB                     | OKLCH (cusp)              | HSLuv                 |
+|---------------------------|-------------------------|---------------------------|-----------------------|
+| L perceptual uniformity   | ✗ (HSV V, not L\*)      | ✓ (CAM-derived L)         | ✓ (CIE L\*)           |
+| Smooth ring               | ✓ (by HSV construction) | ✗ raw / ✓ smoothed σ=5°   | ✓ (by normalisation)  |
+| Cross-hue sat consistency | ✗ (C varies with hue)   | ✗ (C varies with hue)     | ✓ (S normalised)      |
+| Gamut reach               | ✓ full sRGB             | ~ (smoothing costs ~0%)   | ✓ full sRGB (on face) |
+| Authoring model           | ~ (non-uniform L)       | ~ (unbounded C is weird)  | ✓ (HSL, bounded)      |
+
+### Verdict
+
+**For UI color-system authoring: HSLuv.**
+
+- It's *lightness-uniform* (CIE L\*), which is the stated requirement.
+- Saturation is *normalised per hue* — `S = 80` is equally "far toward
+  the gamut" at any hue, so your palette reads consistently across brand
+  hues without a chroma table per hue.
+- The ring is smooth by construction; no cube-corner artefacts to
+  smooth away after the fact.
+- `(H, S, L)` matches what designers already type.
+- You give up perfect `a*/b*` perceptual uniformity (OKLab beats
+  CIELUV there), but that mainly matters for *gradients* and *color-
+  difference metrics*, not for picking a coherent UI palette.
+
+**Keep OKLCH around for:**
+
+- Color gradients where the perceived rate of change matters.
+- Algorithmic color math (mixing, contrast ratios, accessibility
+  scoring) — OKLab's `ΔE = √(ΔL² + Δa² + Δb²)` is the modern default.
+- Places where you need the actual gamut cusp (e.g. "the most
+  saturated blue possible on this display"); HSLuv can't express
+  that directly because its `L=60` is a fixed slice, not the cusp
+  L for the hue.
+
+**Don't use HWB for system construction.** It's useful only as a
+writing syntax for designers who already know their hue/whiteness/
+blackness mental model — the underlying math is HSV-derived and
+fails the lightness-uniformity test.
+
+### Practical recipe for this app
+
+1. Author tokens in HSLuv `(H, S, L)`. One lightness ladder (say
+   `L ∈ {12, 20, 28, 38, 50, 62, 72, 80, 88, 92, 96, 99}`) works at
+   any hue because L is uniform.
+2. For each role, pick `(S, L)`. The scale token is `(scale-hue, S, L)`.
+3. At compile / render time, HSLuv → sRGB. Optionally round-trip
+   through OKLab to compute contrast ratios when needed.
+4. Keep the ternary-grid naming from §2 of the triangle doc —
+   `(i, j, k)` maps cleanly onto HSLuv's `(L, S)` ramp.
+
+## 7. Task list
+
+
 
 - [x] **Visualizer: named + numbered scales per theme.**
   `design/color-scales.html`, both scales × both themes, with step
