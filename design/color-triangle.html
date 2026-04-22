@@ -2,79 +2,124 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8">
-    <title>BWC triangle — exploration</title>
+    <title>Color system workbench</title>
     <link rel="stylesheet" href="/style.css">
     <style>
       body {
-        padding: 32px 40px;
+        padding: 0;
         overflow: auto;
-        max-width: 1200px;
-        margin: 0 auto;
       }
 
-      h1 {
+      header.workbench {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--color-bg-base);
+        border-bottom: 1px solid var(--color-border-subtle);
+        padding: 20px 32px 16px;
+      }
+      header.workbench h1 {
         font-size: var(--text-lg);
         font-weight: var(--weight-medium);
-        margin-bottom: 6px;
+        margin-bottom: 2px;
       }
-      .lede {
+      header.workbench .lede {
         color: var(--color-text-secondary);
         font-size: var(--text-xs);
-        margin-bottom: 32px;
+        margin-bottom: 14px;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, auto));
+        column-gap: 24px;
+        row-gap: 10px;
+        align-items: end;
+      }
+      .control {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .control__label {
+        font-size: 9.5px;
+        font-weight: var(--weight-medium);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary);
+      }
+      .seg {
+        display: inline-flex;
+        align-self: flex-start;
+        border: 1px solid var(--color-border-subtle);
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--color-bg-panel);
+      }
+      .seg button {
+        appearance: none;
+        font: inherit;
+        font-size: 11px;
+        padding: 5px 10px;
+        background: transparent;
+        border: 0;
+        border-right: 1px solid var(--color-border-subtle);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .seg button:last-child { border-right: 0; }
+      .seg button:hover {
+        color: var(--color-text-primary);
+        background: var(--color-bg-hover);
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--color-text-primary);
+        color: var(--color-bg-base);
+      }
+      .control input[type=range] {
+        width: 260px;
+      }
+      .hue-readout {
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-secondary);
+      }
+
+      main {
+        padding: 20px 32px 60px;
+        max-width: 1280px;
       }
 
       section {
-        margin-top: 44px;
-        padding-top: 28px;
+        margin-top: 36px;
+        padding-top: 24px;
         border-top: 1px solid var(--color-border-subtle);
       }
       section:first-of-type {
         border-top: 0;
-        padding-top: 0;
+        padding-top: 8px;
       }
       h2 {
         font-size: var(--text-base);
         font-weight: var(--weight-medium);
-        margin-bottom: 6px;
+        margin-bottom: 4px;
       }
       h2 .num {
         display: inline-block;
         width: 1.5em;
         color: var(--color-text-tertiary);
       }
-      h3 {
-        font-size: var(--text-sm);
-        font-weight: var(--weight-medium);
-        margin-top: 20px;
-        margin-bottom: 6px;
-      }
-      p {
-        font-size: var(--text-sm);
-        line-height: 1.55;
-        margin-bottom: 12px;
-        max-width: 70ch;
-      }
-      ul, ol {
-        font-size: var(--text-sm);
-        line-height: 1.55;
-        margin-bottom: 12px;
-        padding-left: 20px;
-      }
-      code, pre {
-        font-family: var(--font-ui);
-        font-size: 0.88em;
-      }
-      pre {
-        background: var(--color-bg-panel);
-        border: 1px solid var(--color-border-subtle);
-        border-radius: var(--radius-sm);
-        padding: 12px 14px;
-        overflow: auto;
-        line-height: 1.5;
+      section > p {
+        color: var(--color-text-secondary);
+        font-size: var(--text-xs);
+        margin-bottom: 14px;
         max-width: 70ch;
       }
 
-      /* Triangles */
+      /* ── picker stage ─────────────────────────────────────── */
+
       .tri-row {
         display: grid;
         grid-template-columns: auto 1fr;
@@ -83,41 +128,25 @@
       }
       .tri-stage {
         position: relative;
-        width: 340px;
-        height: 340px;
+        width: 420px;
+        height: 420px;
       }
-      canvas.tri,
       canvas.tri-body,
       canvas.tri-ring {
         display: block;
         width: 100%;
         height: 100%;
-      }
-      canvas.tri-body,
-      canvas.tri-ring,
-      .tri-overlay-rotating {
         position: absolute;
         inset: 0;
-      }
-      .tri-overlay-rotating {
-        pointer-events: none;
       }
       .tri-overlay {
         position: absolute;
         inset: 0;
         pointer-events: none;
       }
-      .tri-vertex-label {
+      .tri-overlay-rotating {
         position: absolute;
-        font-size: 10px;
-        font-weight: var(--weight-medium);
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--color-text-primary);
-        background: var(--color-bg-panel);
-        border: 1px solid var(--color-border-subtle);
-        border-radius: var(--radius-sm);
-        padding: 2px 6px;
+        inset: 0;
         pointer-events: none;
       }
 
@@ -133,125 +162,65 @@
         pointer-events: none;
       }
 
-      .tri-controls {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        min-width: 0;
-      }
-      .tri-row-label {
-        font-size: 9.5px;
-        font-weight: var(--weight-medium);
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--color-text-secondary);
-      }
-      .tri-value-grid {
+      .readouts {
         display: grid;
         grid-template-columns: auto 1fr;
-        column-gap: 10px;
+        column-gap: 12px;
         row-gap: 2px;
         font-size: var(--text-xs);
         font-family: var(--font-ui);
         font-variant-numeric: tabular-nums;
+        max-width: 280px;
       }
-      .tri-value-grid dt {
-        color: var(--color-text-secondary);
-      }
-      .tri-sample {
+      .readouts dt { color: var(--color-text-secondary); }
+      .swatch-sample {
         height: 48px;
+        margin-top: 12px;
         border-radius: var(--radius-sm);
         border: 1px solid var(--color-border-subtle);
       }
 
-      input[type=range] {
-        width: 100%;
-      }
-
-      .token-dot {
+      .quant-dot {
         position: absolute;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         border: 1.5px solid oklch(95% 0 0);
         box-shadow: 0 0 0 1px oklch(10% 0 0);
         transform: translate(-50%, -50%);
         pointer-events: auto;
-        cursor: help;
+        cursor: pointer;
       }
-      .token-dot[data-scale="accent"] {
-        border-color: oklch(10% 0 0);
-        box-shadow: 0 0 0 1px oklch(95% 0 0);
-      }
-
-      .legend {
-        display: flex;
-        gap: 18px;
-        align-items: center;
-        font-size: var(--text-xs);
-        color: var(--color-text-secondary);
-        margin-top: 8px;
-      }
-      .legend-swatch {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
+      .quant-dot[aria-selected="true"] {
+        width: 18px;
+        height: 18px;
+        border-width: 3px;
       }
 
-      .quant-dot {
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        border: 2px solid oklch(95% 0 0);
-        box-shadow: 0 0 0 1px oklch(10% 0 0);
-        transform: translate(-50%, -50%);
-        pointer-events: auto;
-        cursor: help;
-      }
-
-      .quant-controls {
-        display: flex;
-        gap: 16px;
-        align-items: baseline;
-        margin-bottom: 12px;
-      }
-      .quant-controls label {
-        font-size: var(--text-xs);
-        color: var(--color-text-secondary);
-      }
-      .quant-controls select {
-        font: inherit;
-        font-size: var(--text-sm);
-      }
+      /* ── 2D grid ──────────────────────────────────────────── */
 
       .token-grid {
         display: grid;
         gap: 6px;
         font-family: var(--font-ui);
         font-variant-numeric: tabular-nums;
-        margin-top: 16px;
+        max-width: 720px;
       }
       .token-grid .cell {
         aspect-ratio: 1;
         border-radius: 6px;
         border: 1px solid var(--color-border-subtle);
-        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 10px;
-        color: var(--color-text-primary);
         cursor: default;
       }
       .token-grid .cell[data-empty] {
         border: 0;
         background: transparent;
       }
-      .token-grid .cell[data-dark] { color: oklch(95% 0 0); }
+      .token-grid .cell[data-dark]  { color: oklch(95% 0 0); }
       .token-grid .cell[data-light] { color: oklch(15% 0 0); }
       .token-grid .axis-label {
         font-size: 9.5px;
@@ -263,491 +232,229 @@
         justify-content: center;
       }
       .token-grid .axis-label--row { justify-content: flex-end; padding-right: 4px; }
-      .scheme-tabs {
-        display: inline-flex;
-        gap: 0;
-        border: 1px solid var(--color-border-subtle);
-        border-radius: 4px;
-        overflow: hidden;
-        margin-top: 16px;
-        margin-bottom: 10px;
+
+      /* ── arcs ─────────────────────────────────────────────── */
+
+      .arcs-layout {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px;
+        align-items: start;
       }
-      .scheme-tabs button {
-        appearance: none;
-        font: inherit;
-        font-size: 11px;
-        padding: 5px 10px;
-        background: transparent;
-        border: 0;
-        border-right: 1px solid var(--color-border-subtle);
+      .arc-scales {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .arc-scale {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .arc-scale-label {
+        font-size: 10px;
         color: var(--color-text-secondary);
-        cursor: pointer;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
       }
-      .scheme-tabs button:last-child { border-right: 0; }
-      .scheme-tabs button[aria-pressed="true"] {
-        background: var(--color-text-primary);
-        color: var(--color-bg-base);
+      .arc-scale-ramp {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        gap: 2px;
+      }
+      .arc-swatch {
+        aspect-ratio: 1;
+        border-radius: 3px;
+        border: 1px solid var(--color-border-subtle);
       }
 
-      .pair-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 10px;
-        margin-top: 12px;
-      }
-      .pair {
+      pre {
+        font-family: var(--font-ui);
+        font-size: 11px;
+        line-height: 1.55;
+        background: var(--color-bg-panel);
         border: 1px solid var(--color-border-subtle);
         border-radius: var(--radius-sm);
         padding: 10px 12px;
-        font-size: var(--text-xs);
+        max-width: 70ch;
+        overflow: auto;
       }
-      .pair .swatch-pair {
-        height: 44px;
-        border-radius: var(--radius-sm);
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: var(--text-base);
-      }
+      code { font-family: var(--font-ui); font-size: 0.9em; }
     </style>
   </head>
   <body>
 
-    <h1>BWC triangle — exploration</h1>
-    <p class="lede">
-      Working through the fixed-hue black / white / color triangle
-      as a mental model, a naming scheme, a general color picker,
-      and a constrained picker for our tokens.
-    </p>
-
-    <!-- ════════════════════════════════════════════════════════
-         1. The math
-    ═════════════════════════════════════════════════════════ -->
-
-    <section>
-      <h2><span class="num">1.</span>The math</h2>
-
-      <p>
-        Pick a hue and freeze it. Every color at that hue is a mix
-        of <strong>white</strong>, <strong>black</strong>, and the
-        <strong>pure hue</strong>. Call those three primaries
-        <code>W</code>, <code>B</code>, <code>C</code> (for
-        <em>whiteness</em>, <em>blackness</em>, <em>colorfulness</em>).
-        Any color is a weighted sum:
-      </p>
-      <pre>color = W · white + B · black + C · pure_hue
-W + B + C = 1   (normalized)</pre>
-
-      <p>
-        Three weights summing to 1 means only two are independent.
-        That's why a triangle (a 2D simplex) is the right picture —
-        points inside it address every possible mix by their
-        <strong>barycentric coordinates</strong>
-        <code>(w, b, c)</code>.
+    <header class="workbench">
+      <h1>Color system workbench</h1>
+      <p class="lede">
+        Controls pick the color space, the canonical hue slice, the
+        quantization resolution, and the naming scheme. Everything
+        below updates live.
       </p>
 
-      <p>
-        This is Alvy Ray Smith's <strong>HWB</strong> model (1996),
-        reachable from HSV by:
-      </p>
-      <pre>W = (1 - S) · V
-B = 1 - V
-C = 1 - W - B = S · V</pre>
-
-      <p>
-        CSS exposes it as <code>hwb(h w% b%)</code>. The browser does
-        the conversion for us when we render.
-      </p>
-
-      <h3>Barycentric coordinates</h3>
-      <p>
-        Pick three triangle vertices <code>V_W</code>,
-        <code>V_B</code>, <code>V_C</code>. Any point
-        <code>P = (x, y)</code> inside has unique
-        <code>(w, b, c)</code> with <code>w + b + c = 1</code>
-        satisfying <code>P = w · V_W + b · V_B + c · V_C</code>.
-        Solving gives a small linear system (one determinant, two
-        ratios). Go look at <code>barycentric()</code> in the script.
-      </p>
-
-      <h3>sRGB vs perceptual</h3>
-      <p>
-        CSS <code>hwb()</code> is sRGB-based (derived from HSV). It's
-        geometrically elegant but <em>not</em> perceptually uniform —
-        equal steps in W don't look equally different. Our current
-        system uses <strong>OKLCH</strong>, which is perceptually
-        uniform but unbounded in C (real displays clip).
-      </p>
-      <p>
-        For this exploration we use CSS <code>hwb()</code> directly
-        so the math and the picture line up. If we commit to this
-        model for tokens we'd likely still <em>store</em> values in
-        OKLCH for perceptual cadence and just <em>name</em> them in
-        W/B/C terms.
-      </p>
-    </section>
-
-    <!-- ════════════════════════════════════════════════════════
-         2. Naming
-    ═════════════════════════════════════════════════════════ -->
-
-    <section>
-      <h2><span class="num">2.</span>As a naming convention</h2>
-
-      <p>
-        If every mark is <code>(scale, w, b)</code> (with
-        <code>c = 1 - w - b</code> implied), tokens name themselves
-        after their position on the triangle. Grid-style — pick a
-        resolution, quantize, and you get a finite palette.
-      </p>
-
-      <h3>Proposal A — round W/B to tenths</h3>
-      <pre>{scale}-w{W×10}-b{B×10}
-
-surface-w9-b0   paper   (near-pure white, zero black, zero color)
-surface-w0-b9   ink     (pure ink)
-surface-w0-b3   mid-grey
-accent-w0-b2    deep brand
-accent-w0-b0    pure accent at that hue
-accent-w3-b0    tinted accent (washed toward white)</pre>
-      <p>
-        Readable, names are addresses. The bounded grid (11×11 with
-        <code>w + b ≤ 10</code>) gives <strong>66</strong> legal
-        cells, which is larger than we probably need.
-      </p>
-
-      <h3>Proposal B — named anchors on a rough grid</h3>
-      <pre>{scale}-bg     =  w9,b0   (theme flips to w0,b9)
-{scale}-bg+1   =  w8,b0
-{scale}-ink    =  w0,b9   (theme flips to w9,b0)
-{scale}-ink-1  =  w0,b8
-{scale}-tint-3 =  w6,b0   (mostly white with some color)
-{scale}-full   =  w0,b0   (pure hue)</pre>
-      <p>
-        Fewer, meaningful names. Less flexible per-mark but much
-        easier to adopt without a dictionary.
-      </p>
-
-      <h3>Where contrast pairs live geometrically</h3>
-      <ul>
-        <li><strong>White on black</strong> — W corner on B corner.</li>
-        <li><strong>Black on white</strong> — B corner on W corner.</li>
-        <li><strong>Color on white</strong> — C corner on W corner.</li>
-        <li><strong>Color on black</strong> — C corner on B corner.</li>
-        <li><strong>White on color</strong> — W corner on C corner.</li>
-        <li><strong>Black on color</strong> — B corner on C corner.</li>
-      </ul>
-      <p>
-        Every classical contrast pair is literally "one corner on
-        another." The empty center is where UI mostly lives —
-        dialled-down tints, subtle borders, calmer accent text.
-      </p>
-    </section>
-
-    <!-- ════════════════════════════════════════════════════════
-         3. General picker
-    ═════════════════════════════════════════════════════════ -->
-
-    <section>
-      <h2><span class="num">3.</span>General picker</h2>
-
-      <p>
-        Drag inside the equilateral triangle to set
-        <code>(W, B, C)</code>. Drag on the ring to set the hue.
-        Coordinates update live.
-      </p>
-
-      <div class="tri-row">
-        <div class="tri-stage" id="gen-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri-ring" id="gen-ring-canvas" width="840" height="840"></canvas>
-          <canvas class="tri-body" id="gen-canvas" width="420" height="420"></canvas>
-          <div class="tri-overlay tri-overlay-rotating" id="gen-body-overlay">
-            <div class="tri-cursor" id="gen-cursor"></div>
-          </div>
-          <div class="tri-overlay" id="gen-overlay">
-            <div class="hue-cursor" id="gen-hue-cursor"></div>
+      <div class="controls">
+        <div class="control">
+          <div class="control__label">Color space</div>
+          <div class="seg" data-decision="space">
+            <button data-value="hwb">HWB (sRGB)</button>
+            <button data-value="oklch" aria-pressed="true">OKLCH</button>
+            <button data-value="hsluv">HSLuv</button>
           </div>
         </div>
-        <div class="tri-controls">
-          <dl class="tri-value-grid">
-            <dt>hue</dt><dd id="gen-h">162°</dd>
-            <dt>W</dt><dd id="gen-w">—</dd>
-            <dt>B</dt><dd id="gen-b">—</dd>
-            <dt>C</dt><dd id="gen-c">—</dd>
-            <dt>css</dt><dd id="gen-css">—</dd>
-          </dl>
-          <div class="tri-sample" id="gen-sample"></div>
+
+        <div class="control">
+          <div class="control__label">Hue <span id="hue-readout" class="hue-readout">162°</span></div>
+          <input type="range" id="hue-input" min="0" max="359" value="162">
         </div>
-      </div>
-    </section>
 
-    <!-- ════════════════════════════════════════════════════════
-         3b. Perceptually uniform picker (OKLCH)
-    ═════════════════════════════════════════════════════════ -->
-
-    <section>
-      <h2><span class="num">3b.</span>Perceptually uniform picker</h2>
-
-      <p>
-        Same triangle, same hue ring, same <code>(W, B, C)</code>
-        ternary — but interpolation happens in <strong>OKLCH</strong>
-        instead of HWB. Each interior point is
-        <code>L = w·1 + b·0 + c·L*</code> and <code>C = c·C*</code>
-        where <code>(L*, C*)</code> is a display-safe peak for the
-        pure hue. The final pixel is
-        <code>oklch(L, C, hue)</code>.
-      </p>
-      <p>
-        Visually the midtones don't collapse toward black the way
-        sRGB HWB does. Equal barycentric distance now corresponds to
-        equal <em>perceived</em> distance, which is the property we
-        actually want when reasoning about contrast.
-      </p>
-
-      <div class="tri-row">
-        <div class="tri-stage" id="ok-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri-ring" id="ok-ring-canvas" width="840" height="840"></canvas>
-          <canvas class="tri-body" id="ok-canvas" width="420" height="420"></canvas>
-          <div class="tri-overlay tri-overlay-rotating" id="ok-body-overlay">
-            <div class="tri-cursor" id="ok-cursor"></div>
-          </div>
-          <div class="tri-overlay" id="ok-overlay">
-            <div class="hue-cursor" id="ok-hue-cursor"></div>
+        <div class="control">
+          <div class="control__label">Resolution N</div>
+          <div class="seg" data-decision="N">
+            <button data-value="3">3</button>
+            <button data-value="4">4</button>
+            <button data-value="5" aria-pressed="true">5</button>
+            <button data-value="6">6</button>
+            <button data-value="8">8</button>
           </div>
         </div>
-        <div class="tri-controls">
-          <dl class="tri-value-grid">
-            <dt>hue</dt><dd id="ok-h">162°</dd>
-            <dt>W</dt><dd id="ok-w">—</dd>
-            <dt>B</dt><dd id="ok-b">—</dd>
-            <dt>C</dt><dd id="ok-c">—</dd>
-            <dt>L</dt><dd id="ok-L">—</dd>
-            <dt>C (chroma)</dt><dd id="ok-Cval">—</dd>
-            <dt>css</dt><dd id="ok-css">—</dd>
-          </dl>
-          <div class="tri-sample" id="ok-sample"></div>
-        </div>
-      </div>
-    </section>
 
-    <!-- ════════════════════════════════════════════════════════
-         3c. HSLuv picker
-    ═════════════════════════════════════════════════════════ -->
-
-    <section>
-      <h2><span class="num">3c.</span>HSLuv picker</h2>
-
-      <p>
-        <a href="https://www.hsluv.org/">HSLuv</a> is Alexei
-        Boronine's human-friendly HSL. It's built on CIELUV rather
-        than OKLab, so it's only <em>lightness</em>-uniform rather
-        than fully perceptually uniform — but its saturation is
-        <em>normalized</em> to the sRGB gamut per hue, which means
-        <code>S = 100</code> always means "on the gamut boundary",
-        whatever the hue. That guarantees a smooth ring by
-        construction: no cube corners to crash into.
-      </p>
-      <p>
-        Triangle: <code>W</code> at (L=100, S=0, H), <code>B</code>
-        at (L=0, S=0, H), <code>C</code> at (L=60, S=100, H). The
-        ring shows S=100 at L=60.
-      </p>
-
-      <div class="tri-row">
-        <div class="tri-stage" id="hsluv-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri-ring" id="hsluv-ring-canvas" width="840" height="840"></canvas>
-          <canvas class="tri-body" id="hsluv-canvas" width="420" height="420"></canvas>
-          <div class="tri-overlay tri-overlay-rotating" id="hsluv-body-overlay">
-            <div class="tri-cursor" id="hsluv-cursor"></div>
-          </div>
-          <div class="tri-overlay" id="hsluv-overlay">
-            <div class="hue-cursor" id="hsluv-hue-cursor"></div>
+        <div class="control">
+          <div class="control__label">Naming</div>
+          <div class="seg" data-decision="scheme">
+            <button data-value="cl" aria-pressed="true">c-l</button>
+            <button data-value="wb">w-b</button>
+            <button data-value="num">XY</button>
           </div>
         </div>
-        <div class="tri-controls">
-          <dl class="tri-value-grid">
-            <dt>hue</dt><dd id="hsluv-h">162°</dd>
-            <dt>W</dt><dd id="hsluv-w">—</dd>
-            <dt>B</dt><dd id="hsluv-b">—</dd>
-            <dt>C</dt><dd id="hsluv-c">—</dd>
-            <dt>L</dt><dd id="hsluv-L">—</dd>
-            <dt>S</dt><dd id="hsluv-S">—</dd>
-            <dt>css</dt><dd id="hsluv-css">—</dd>
-          </dl>
-          <div class="tri-sample" id="hsluv-sample"></div>
-        </div>
       </div>
-    </section>
+    </header>
 
-    <!-- ════════════════════════════════════════════════════════
-         4. Constrained picker
-    ═════════════════════════════════════════════════════════ -->
+    <main>
 
-    <section>
-      <h2><span class="num">4.</span>Constrained picker — our tokens</h2>
+      <!-- 1. Picker -->
+      <section>
+        <h2><span class="num">1.</span>Picker</h2>
+        <p>
+          Triangle: drag inside to choose <code>(W, B, C)</code>.
+          Ring: drag to choose hue. C vertex always points at the
+          selected hue. Interpretation of the three vertices is
+          determined by the active color space.
+        </p>
 
-      <p>
-        The triangle is pinned to each scale's hue. Dots mark where
-        our 12 tokens land. The cluster along the W–B edge (zero C)
-        is the "mostly grey" side; deviations toward the C corner
-        show how colorful each token actually is.
-      </p>
-
-      <div class="tri-row" style="margin-top: 18px;">
-        <div class="tri-stage" id="surface-stage">
-          <canvas class="tri" id="surface-canvas" width="680" height="680"></canvas>
-          <div class="tri-overlay" id="surface-overlay"></div>
-        </div>
-        <div class="tri-controls">
-          <div class="tri-row-label">Surface scale — h 162°, c 0.010</div>
-          <div id="surface-list"></div>
-        </div>
-      </div>
-
-      <div class="tri-row" style="margin-top: 28px;">
-        <div class="tri-stage" id="accent-stage">
-          <canvas class="tri" id="accent-canvas" width="680" height="680"></canvas>
-          <div class="tri-overlay" id="accent-overlay"></div>
-        </div>
-        <div class="tri-controls">
-          <div class="tri-row-label">Accent scale — h 162°, c 0.070</div>
-          <div id="accent-list"></div>
-        </div>
-      </div>
-
-      <h3>Observations</h3>
-      <ul>
-        <li>
-          The surface scale lives almost entirely on the W–B edge
-          (C ≈ 0). The tiny chroma moves so little that the dots
-          read as a straight line. That's "greyscale" by
-          construction.
-        </li>
-        <li>
-          The accent scale bows out toward C, peaking around
-          step 8–9. Tokens at the extremes (1, 12) pull back toward
-          the W–B edge because of the per-step chroma taper.
-        </li>
-        <li>
-          The empty triangle interior on the accent side is the
-          unexplored design space — marks that are the same lightness
-          as today's tokens but meaningfully more or less colorful.
-        </li>
-      </ul>
-    </section>
-
-    <!-- ════════════════════════════════════════════════════════
-         5. Quantization
-    ═════════════════════════════════════════════════════════ -->
-
-    <section>
-      <h2><span class="num">5.</span>Quantizing the triangle</h2>
-
-      <p>
-        A 1D scale is just a ruler divided into N marked points. The
-        triangle is a 2-simplex — two degrees of freedom — so the
-        natural analogue is a <strong>ternary grid</strong>. At
-        resolution <code>N</code>, every token is a triple
-        <code>(i, j, k)</code> of non-negative integers with
-        <code>i + j + k = N</code>, interpreted as barycentric
-        weights <code>(W, B, C) = (i/N, j/N, k/N)</code>.
-      </p>
-      <p>
-        The grid has <code>(N+1)(N+2)/2</code> cells. A few sizes:
-      </p>
-      <pre>N = 3 →  10 tokens per hue
-N = 4 →  15
-N = 5 →  21
-N = 6 →  28
-N = 8 →  45</pre>
-      <p>
-        Color math runs in OKLCH for perceptually-uniform
-        lightness. The triangle's C vertex is fixed at
-        <code>L* = 0.55</code>, and for each hue we use the
-        max in-gamut <code>C*</code> at that <code>L*</code>.
-        Consequence: the same address <code>(i, j, k)</code>
-        resolves to the <em>same L</em> regardless of hue — only
-        the chroma changes across hues. That's the cross-hue
-        cadence you want for a design-system palette.
-      </p>
-
-      <div class="quant-controls">
-        <label>resolution <select id="quant-N">
-          <option value="3">N = 3 (10 tokens)</option>
-          <option value="4" selected>N = 4 (15 tokens)</option>
-          <option value="5">N = 5 (21 tokens)</option>
-          <option value="6">N = 6 (28 tokens)</option>
-          <option value="8">N = 8 (45 tokens)</option>
-        </select></label>
-      </div>
-
-      <div class="tri-row">
-        <div class="tri-stage" id="quant-stage" style="width: 420px; height: 420px;">
-          <canvas class="tri-ring" id="quant-ring-canvas" width="840" height="840"></canvas>
-          <canvas class="tri-body" id="quant-canvas" width="420" height="420"></canvas>
-          <div class="tri-overlay tri-overlay-rotating" id="quant-body-overlay"></div>
-          <div class="tri-overlay" id="quant-overlay">
-            <div class="hue-cursor" id="quant-hue-cursor"></div>
+        <div class="tri-row">
+          <div class="tri-stage" id="picker-stage">
+            <canvas class="tri-ring" id="picker-ring" width="840" height="840"></canvas>
+            <canvas class="tri-body" id="picker-body" width="420" height="420"></canvas>
+            <div class="tri-overlay-rotating" id="picker-body-overlay">
+              <div class="tri-cursor" id="picker-cursor"></div>
+            </div>
+            <div class="tri-overlay" id="picker-overlay">
+              <div class="hue-cursor" id="picker-hue-cursor"></div>
+            </div>
+          </div>
+          <div>
+            <dl class="readouts" id="picker-readouts"></dl>
+            <div class="swatch-sample" id="picker-sample"></div>
           </div>
         </div>
-        <div class="tri-controls">
-          <dl class="tri-value-grid">
-            <dt>hue</dt><dd id="quant-h">162°</dd>
-            <dt>N</dt><dd id="quant-N-readout">4</dd>
-            <dt>tokens</dt><dd id="quant-count">15</dd>
-          </dl>
+      </section>
+
+      <!-- 2. Quantized picker -->
+      <section>
+        <h2><span class="num">2.</span>Quantized picker</h2>
+        <p>
+          Same triangle, but only the ternary-grid points at
+          resolution <code>N</code> are clickable. Useful for
+          pinning down which quantized cell you actually want for a
+          role.
+        </p>
+
+        <div class="tri-row">
+          <div class="tri-stage" id="quant-stage">
+            <canvas class="tri-ring" id="quant-ring" width="840" height="840"></canvas>
+            <canvas class="tri-body" id="quant-body" width="420" height="420"></canvas>
+            <div class="tri-overlay-rotating" id="quant-body-overlay"></div>
+            <div class="tri-overlay" id="quant-overlay">
+              <div class="hue-cursor" id="quant-hue-cursor"></div>
+            </div>
+          </div>
+          <div>
+            <dl class="readouts" id="quant-readouts"></dl>
+            <div class="swatch-sample" id="quant-sample"></div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <h3>2D grid</h3>
-      <p>
-        The ternary grid flattens onto a right-triangular region of
-        a rectangular grid: rows = chroma band
-        <code>k</code> (how vivid), columns = "lightness index"
-        <code>i</code> (weight toward white). The remaining weight
-        <code>j = N − i − k</code> is the weight toward black.
-        Top-right corner is <strong>white</strong>, top-left is
-        <strong>black</strong>, bottom-left is the <strong>pure
-        hue</strong>. Every row is a dark→light ramp at that chroma
-        level.
-      </p>
+      <!-- 3. 2D grid -->
+      <section>
+        <h2><span class="num">3.</span>2D grid with names</h2>
+        <p>
+          Ternary grid flattened onto a rectangular grid: rows = chroma
+          band <code>k</code>, cols = lightness index <code>i</code>
+          (weight toward white). Top-left = black, top-right = white,
+          bottom-left = pure hue.
+        </p>
+        <div id="grid-target"></div>
+      </section>
 
-      <div class="scheme-tabs" role="tablist">
-        <button data-scheme="cl"  aria-pressed="true">c{k}-l{i}</button>
-        <button data-scheme="wb"  aria-pressed="false">w{i}b{j}</button>
-        <button data-scheme="num" aria-pressed="false">two-digit</button>
-      </div>
+      <!-- 4. Arc-based scales -->
+      <section>
+        <h2><span class="num">4.</span>Arc-based scales</h2>
+        <p>
+          Alternative quantization. Five arcs run black → max-C
+          midpoint → white, each at a different peak chroma (0% to
+          100% of the hue's gamut cusp). Every arc carries
+          <code>N+1</code> tokens spaced by arc length.
+        </p>
 
-      <div id="quant-list"></div>
+        <div class="arcs-layout">
+          <div class="tri-stage" id="arc-stage" style="width: 460px; height: 460px;">
+            <canvas class="tri-body" id="arc-body" width="460" height="460" style="position: absolute; inset: 0;"></canvas>
+            <svg class="tri-overlay" id="arc-svg" viewBox="0 0 460 460"></svg>
+          </div>
+          <div class="arc-scales" id="arc-scales"></div>
+        </div>
 
-      <h3>Naming schemes</h3>
-      <p>Three readings of the same <code>(i, j, k)</code> address:</p>
-      <pre><strong>A. {scale}-c{k}-l{i}</strong>   chroma band + lightness index
-                          surface-c0-l{N}  = white
-                          surface-c0-l0    = black
-                          surface-c{N}-l0  = pure hue
-                          accent-c3-l2     = mid chroma, slightly light
+        <p style="margin-top: 16px;">
+          Combining all five arcs gives
+          <code>5·(N+1)</code> tokens per hue — a longer but more
+          structured palette than the ternary grid. Each arc reads
+          as a familiar 1D scale, which maps cleanly onto existing
+          `scale-1…N` conventions.
+        </p>
+      </section>
 
-<strong>B. {scale}-w{i}b{j}</strong>    ternary address (W weight, B weight)
-                          c is implicit: c = N − i − j
-                          surface-w{N}b0   = white
-                          surface-w0b{N}   = black
-                          accent-w0b0      = pure hue
-
-<strong>C. {scale}-{k}{i}</strong>      compact two-digit
-                          surface-0{N}     = white  (c=0, l=N)
-                          surface-00       = black
-                          surface-{N}0     = pure hue
-                          accent-32        = mid chroma, slightly light</pre>
-    </section>
+    </main>
 
     <script type="module">
-      // ═══ Color math ═══════════════════════════════════════════
+      // ═══════════════════════════════════════════════════════════
+      // Shared state
+      // ═══════════════════════════════════════════════════════════
 
+      const state = {
+        space:  "oklch",
+        hue:    162,
+        N:      5,
+        scheme: "cl",
+        picker: { w: 0.333, b: 0.333, geo: null },
+        quant:  { i: 2, k: 2, geo: null },
+      };
+
+      // ═══════════════════════════════════════════════════════════
+      // Color math
+      // ═══════════════════════════════════════════════════════════
+
+      function linearToSrgb(c) {
+        const cc = Math.max(0, Math.min(1, c));
+        if (cc <= 0.0031308) return 12.92 * cc;
+        return 1.055 * Math.pow(cc, 1 / 2.4) - 0.055;
+      }
+
+      // — HSV / HWB — ------------------------------------------------
       function hsvToRgb(h, s, v) {
         const c = v * s;
-        const hh = (h % 360 + 360) % 360 / 60;
+        const hh = ((h % 360) + 360) % 360 / 60;
         const x = c * (1 - Math.abs(hh % 2 - 1));
         let r = 0, g = 0, b = 0;
         if      (hh < 1) { r = c; g = x; }
@@ -759,7 +466,6 @@ N = 8 →  45</pre>
         const m = v - c;
         return [r + m, g + m, b + m];
       }
-
       function hwbToRgb(h, w, b) {
         if (w + b >= 1) {
           const g = w / (w + b);
@@ -770,60 +476,23 @@ N = 8 →  45</pre>
         return hsvToRgb(h, s, v);
       }
 
-      function rgbToHwb(r, g, b) {
-        // r,g,b in [0,1]
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        return [min, 1 - max];
-      }
-
-      // OKLab → linear sRGB (Björn Ottosson, exact matrix). Returns
-      // unclamped linear RGB so callers can test gamut.
+      // — OKLCH — ----------------------------------------------------
       function oklchToLinearRgb(L, C, H) {
         const hRad = H * Math.PI / 180;
         const a = C * Math.cos(hRad);
         const b = C * Math.sin(hRad);
-
         const lp = L + 0.3963377774 * a + 0.2158037573 * b;
         const mp = L - 0.1055613458 * a - 0.0638541728 * b;
         const sp = L - 0.0894841775 * a - 1.2914855480 * b;
-
         const l = lp * lp * lp;
         const m = mp * mp * mp;
         const s = sp * sp * sp;
-
         return [
           +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
           -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
         ];
       }
-
-      function oklchToSrgb(L, C, H) {
-        const [r, g, b] = oklchToLinearRgb(L, C, H);
-        return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
-      }
-
-      function linearToSrgb(c) {
-        const cc = Math.max(0, Math.min(1, c));
-        if (cc <= 0.0031308) return 12.92 * cc;
-        return 1.055 * Math.pow(cc, 1 / 2.4) - 0.055;
-      }
-
-      function inSrgbGamut(L, C, H, epsilon = 0) {
-        const [r, g, b] = oklchToLinearRgb(L, C, H);
-        return r >= -epsilon && r <= 1 + epsilon
-            && g >= -epsilon && g <= 1 + epsilon
-            && b >= -epsilon && b <= 1 + epsilon;
-      }
-
-      // Max saturation S such that oklab(1, S·a, S·b) → linear sRGB
-      // stays in [0, 1]. Earlier I used Björn Ottosson's polynomial
-      // + Halley method, but its three-case branching
-      // (red / green / blue component) doesn't give a continuous S
-      // across case boundaries — leaving a visible jump in the ring
-      // around hue 265° where red→green flips. Bisection on
-      // min(r, g, b) ≥ 0 is monotone across hues, so it's smooth.
       function oklabUnitToLinearRgb(S, a, b) {
         const sa = S * a, sb = S * b;
         const l_ = 1 + 0.3963377774 * sa + 0.2158037573 * sb;
@@ -838,10 +507,7 @@ N = 8 →  45</pre>
           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
         ];
       }
-
       function findMaxSaturation(a, b) {
-        // S=0 → linear (1,1,1). As S grows, one channel falls to 0
-        // first. Bisection on "all channels ≥ 0".
         let lo = 0, hi = 2.0;
         for (let i = 0; i < 48; i++) {
           const mid = (lo + hi) / 2;
@@ -851,645 +517,83 @@ N = 8 →  45</pre>
         }
         return lo;
       }
-
-      function findCuspForHue(hue) {
+      function oklchCusp(hue) {
         const hRad = hue * Math.PI / 180;
         const a = Math.cos(hRad);
         const b = Math.sin(hRad);
         const S = findMaxSaturation(a, b);
-        // k_m and k_s fold the minus signs of the OKLab→LMS
-        // matrix rows into the constants, so the composition
-        // with L=1 is `1 + S * k_*` for all three channels.
         const k_l =  0.3963377774 * a + 0.2158037573 * b;
         const k_m = -0.1055613458 * a - 0.0638541728 * b;
         const k_s = -0.0894841775 * a - 1.2914855480 * b;
         const l_ = 1 + S * k_l;
         const m_ = 1 + S * k_m;
         const s_ = 1 + S * k_s;
-        const l = l_ * l_ * l_;
-        const m = m_ * m_ * m_;
-        const s = s_ * s_ * s_;
+        const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
         const rgbMax = Math.max(
           +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
           -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
         );
         const L_cusp = Math.cbrt(1 / rgbMax);
-        // Pull C in by a hair so on-boundary pixels don't clip.
         const C_cusp = L_cusp * S * 0.985;
         return [L_cusp, C_cusp];
       }
-
-      const CUSP_LUT_RAW = (() => {
+      const OKLCH_CUSP_RAW = (() => {
         const lut = new Array(361);
-        for (let h = 0; h <= 360; h++) lut[h] = findCuspForHue(h);
+        for (let h = 0; h <= 360; h++) lut[h] = oklchCusp(h);
         return lut;
       })();
+      const OKLCH_CUSP = smooth(OKLCH_CUSP_RAW, 5);
 
-      // The raw cusp has a real geometric kink at ~265° (sRGB's
-      // cube corner) — measured ΔE(264°→265°) is 8× mean. Gaussian
-      // smoothing on the LUT blurs the corner while preserving
-      // mean chroma; σ=5° takes the ratio from 7.9× down to 2.6×
-      // with no change in mean C (0.221 → 0.221). Practically
-      // full saturation, visibly smooth.
-      const CUSP_SIGMA_DEG = 5;
-      const CUSP_LUT = (() => {
-        const n = 361;
-        const half = Math.ceil(3 * CUSP_SIGMA_DEG);
+      function smooth(lut, sigma) {
+        const n = lut.length;
+        const half = Math.ceil(3 * sigma);
         const out = new Array(n);
         for (let i = 0; i < n; i++) {
-          let L = 0, C = 0, wSum = 0;
+          let a = 0, b = 0, wSum = 0;
           for (let j = -half; j <= half; j++) {
-            const w = Math.exp(-(j * j) / (2 * CUSP_SIGMA_DEG * CUSP_SIGMA_DEG));
-            // 360° wrap; entry 360 duplicates entry 0.
-            const k = ((i + j) % 360 + 360) % 360;
-            L += CUSP_LUT_RAW[k][0] * w;
-            C += CUSP_LUT_RAW[k][1] * w;
+            const w = Math.exp(-(j * j) / (2 * sigma * sigma));
+            const k = ((i + j) % (n - 1) + (n - 1)) % (n - 1);
+            a += lut[k][0] * w;
+            b += lut[k][1] * w;
             wSum += w;
           }
-          out[i] = [L / wSum, C / wSum];
+          out[i] = [a / wSum, b / wSum];
         }
         return out;
-      })();
-
-      // The cusp itself has a natural kink around hue 265° where
-      // sRGB's gamut surface transitions across a cube corner —
-      // measured ΔE(264°→265°) is 8× the mean. Fixing L and taking
-      // the max in-gamut chroma at that L flattens the derivative
-      // across hues (ratio drops to ~2.5×) and is visually smooth.
-      // Price: peak saturation dips a bit for hues whose cusp L is
-      // far from the chosen target.
-      function findMaxChromaAtL(L, hue) {
-        let lo = 0, hi = 0.5;
-        for (let i = 0; i < 24; i++) {
-          const mid = (lo + hi) / 2;
-          if (inSrgbGamut(L, mid, hue, 0.0005)) lo = mid;
-          else hi = mid;
-        }
-        return lo * 0.98;
       }
 
-      function buildMaxChromaLut(L) {
-        const lut = new Array(361);
-        for (let h = 0; h <= 360; h++) lut[h] = findMaxChromaAtL(L, h);
-        return lut;
-      }
-
-      const QUANT_L_TARGET  = 0.55;
-      const QUANT_C_LUT     = buildMaxChromaLut(QUANT_L_TARGET);
-
-      // OKLCH picker peaks come from the smoothed cusp LUT, so the
-      // C vertex at each hue is at (or just below) the sRGB gamut
-      // boundary while the ring sweep is visually smooth.
-      function pickerPeaks(hue) {
-        const h = ((hue % 360) + 360) % 360;
-        return CUSP_LUT[Math.round(h)];
-      }
-      function quantPeaks(hue) {
-        const h = ((hue % 360) + 360) % 360;
-        return [QUANT_L_TARGET, QUANT_C_LUT[Math.round(h)]];
-      }
-
-      function cusp(hue) {
-        const h = ((hue % 360) + 360) % 360;
-        return CUSP_LUT[Math.round(h)];
-      }
-
-      // Read sRGB bytes the browser renders for any CSS color.
-      // Single shared 1x1 canvas keeps this cheap.
-      const probeCanvas = document.createElement("canvas");
-      probeCanvas.width = probeCanvas.height = 1;
-      const probeCtx = probeCanvas.getContext("2d", { willReadFrequently: true });
-
-      function cssColorToRgb(css) {
-        probeCtx.clearRect(0, 0, 1, 1);
-        probeCtx.fillStyle = css;
-        probeCtx.fillRect(0, 0, 1, 1);
-        const d = probeCtx.getImageData(0, 0, 1, 1).data;
-        return [d[0] / 255, d[1] / 255, d[2] / 255];
-      }
-
-      // ═══ Triangle geometry ════════════════════════════════════
-      //
-      // Equilateral triangle with the C vertex anchored to the
-      // current hue's angular position. W and B sit 120° ahead and
-      // behind on the same circle. Rotating with hue keeps the
-      // "pure color" corner pointing at the same spot on the
-      // imagined / rendered ring.
-
-      // All layout constants are in CSS px; paint functions scale
-      // them to the canvas's internal resolution. This guarantees
-      // the ring canvas (2× internal) and the body canvas (1×)
-      // agree on where the ring band lives, so a cursor positioned
-      // from geometry sits exactly on the painted band.
-      const DISPLAY_SIZE = 420;
-
-      function geometry(size, { hasRing = false, hue = 0 } = {}) {
-        const scale = size / DISPLAY_SIZE;
-        const px = v => v * scale;
-        const cx = size / 2, cy = size / 2;
-        const ringOuter = hasRing ? size / 2 - px(4) : 0;
-        const ringWidth = px(26);
-        const ringInner = hasRing ? ringOuter - ringWidth : 0;
-        const ringGap   = hasRing ? px(14) : 0;
-        const triR      = hasRing ? ringInner - ringGap : size / 2 - px(20);
-        const angles = { C: hue, W: hue + 120, B: hue + 240 };
-        const verts = {};
-        for (const [k, deg] of Object.entries(angles)) {
-          const r = deg * Math.PI / 180;
-          verts[k] = [cx + triR * Math.cos(r), cy - triR * Math.sin(r)];
-        }
-        return { cx, cy, ringInner, ringOuter, triR, verts };
-      }
-
-      function barycentric(x, y, verts) {
-        const [x1, y1] = verts.W;
-        const [x2, y2] = verts.B;
-        const [x3, y3] = verts.C;
-        const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
-        const w = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / det;
-        const b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / det;
-        const c = 1 - w - b;
-        return [w, b, c];
-      }
-
-      function fromBarycentric(w, b, c, verts) {
-        const [x1, y1] = verts.W;
-        const [x2, y2] = verts.B;
-        const [x3, y3] = verts.C;
-        return [w * x1 + b * x2 + c * x3, w * y1 + b * y2 + c * y3];
-      }
-
-      // Paint the hue ring once. `peaksFor(hue)` returns
-      // [L, C] for the pixel at that hue. Callers pass the same
-      // peaks function they use for the body so ring and triangle
-      // stay visually consistent.
-      function paintRing(canvas, mode, peaksFor) {
-        const ctx = canvas.getContext("2d");
-        const { width, height } = canvas;
-        const geo = geometry(width, { hasRing: true });
-        const { cx, cy, ringInner, ringOuter } = geo;
-        const img = ctx.createImageData(width, height);
-        const data = img.data;
-
-        const rInnerSq = ringInner * ringInner;
-        const rOuterSq = ringOuter * ringOuter;
-        const yMin = Math.max(0, Math.floor(cy - ringOuter - 1));
-        const yMax = Math.min(height, Math.ceil(cy + ringOuter + 1));
-        const xMin = Math.max(0, Math.floor(cx - ringOuter - 1));
-        const xMax = Math.min(width, Math.ceil(cx + ringOuter + 1));
-
-        for (let y = yMin; y < yMax; y++) {
-          const dy = y - cy;
-          const dy2 = dy * dy;
-          for (let x = xMin; x < xMax; x++) {
-            const dx = x - cx;
-            const distSq = dx * dx + dy2;
-            if (distSq < rInnerSq || distSq > rOuterSq) continue;
-            const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-            const pixelHue = (angle + 360) % 360;
-            let rgb;
-            if (mode === "oklch") {
-              const [Lp, Cp] = peaksFor(pixelHue);
-              rgb = oklchToSrgb(Lp, Cp, pixelHue);
-            } else {
-              rgb = hsvToRgb(pixelHue, 1, 1);
-            }
-            const i = (y * width + x) * 4;
-            data[i]     = Math.round(rgb[0] * 255);
-            data[i + 1] = Math.round(rgb[1] * 255);
-            data[i + 2] = Math.round(rgb[2] * 255);
-            data[i + 3] = 255;
-          }
-        }
-        ctx.putImageData(img, 0, 0);
-      }
-
-      // Paint the triangle body in canonical orientation (C vertex
-      // east) with the actual hue. Called on each hue change; only
-      // iterates the triangle's bounding box. The canvas element
-      // gets transform: rotate() for visual orientation.
-      function paintBody(canvas, hue, mode, peaks) {
-        const ctx = canvas.getContext("2d");
-        const { width, height } = canvas;
-        const geo = geometry(width, { hasRing: true, hue: 0 });
-        const { cx, cy, triR, verts } = geo;
-
-        ctx.clearRect(0, 0, width, height);
-
-        const yMin = Math.max(0, Math.floor(cy - triR - 1));
-        const yMax = Math.min(height, Math.ceil(cy + triR + 1));
-        const xMin = Math.max(0, Math.floor(cx - triR - 1));
-        const xMax = Math.min(width, Math.ceil(cx + triR + 1));
-        const boxW = xMax - xMin;
-        const boxH = yMax - yMin;
-
-        const img = ctx.createImageData(boxW, boxH);
-        const data = img.data;
-
-        const [x1, y1] = verts.W;
-        const [x2, y2] = verts.B;
-        const [x3, y3] = verts.C;
-        const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
-        const invDet = 1 / det;
-        const a1 = (y2 - y3) * invDet;
-        const b1 = (x3 - x2) * invDet;
-        const a2 = (y3 - y1) * invDet;
-        const b2 = (x1 - x3) * invDet;
-
-        const [hueLpeak, hueCpeak] = peaks || cusp(hue);
-
-        for (let y = yMin; y < yMax; y++) {
-          const dy = y - y3;
-          for (let x = xMin; x < xMax; x++) {
-            const dx = x - x3;
-            const w = a1 * dx + b1 * dy;
-            const b = a2 * dx + b2 * dy;
-            const c = 1 - w - b;
-            if (w < -0.002 || b < -0.002 || c < -0.002) continue;
-            const wc = w < 0 ? 0 : w;
-            const bc = b < 0 ? 0 : b;
-            let rgb;
-            if (mode === "oklch") {
-              const cc = c < 0 ? 0 : c;
-              const L = wc + cc * hueLpeak;
-              const C = cc * hueCpeak;
-              rgb = oklchToSrgb(L, C, hue);
-            } else {
-              rgb = hwbToRgb(hue, wc, bc);
-            }
-            const i = ((y - yMin) * boxW + (x - xMin)) * 4;
-            data[i]     = Math.round(rgb[0] * 255);
-            data[i + 1] = Math.round(rgb[1] * 255);
-            data[i + 2] = Math.round(rgb[2] * 255);
-            data[i + 3] = 255;
-          }
-        }
-        ctx.putImageData(img, xMin, yMin);
-        return geo;
-      }
-
-      // Legacy single-canvas painter, used for the constrained
-      // pickers in section 4 (static, no hue-ring overlap).
-      function paintStage(canvas, hue, opts = {}) {
-        const ctx = canvas.getContext("2d");
-        const { width, height } = canvas;
-        const img = ctx.createImageData(width, height);
-        const data = img.data;
-        const geo = geometry(width, { ...opts, hue });
-        const { cx, cy, ringInner, ringOuter, verts } = geo;
-
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const dx = x - cx;
-            const dy = y - cy;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            let rgb = null;
-
-            if (opts.hasRing && dist >= ringInner && dist <= ringOuter) {
-              const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-              const pixelHue = (angle + 360) % 360;
-              rgb = hsvToRgb(pixelHue, 1, 1);
-            } else if (dist <= geo.triR + 1) {
-              const [w, b, c] = barycentric(x, y, verts);
-              if (w >= -0.002 && b >= -0.002 && c >= -0.002) {
-                const wc = Math.max(0, w);
-                const bc = Math.max(0, b);
-                rgb = hwbToRgb(hue, wc, bc);
-              }
-            }
-
-            if (rgb) {
-              const i = (y * width + x) * 4;
-              data[i]     = Math.round(rgb[0] * 255);
-              data[i + 1] = Math.round(rgb[1] * 255);
-              data[i + 2] = Math.round(rgb[2] * 255);
-              data[i + 3] = 255;
-            }
-          }
-        }
-        ctx.putImageData(img, 0, 0);
-        return geo;
-      }
-
-      // L_PEAK/C_PEAK are now per-hue — the (L*, C*) of the sRGB
-      // gamut cusp for that hue, computed in CUSP_LUT above. The
-      // legacy constants remain for any caller that still wants a
-      // safe universal fallback.
-      const L_PEAK = 0.65;
-      const C_PEAK = 0.22;
-
-      function placeVertexLabels(overlay, canvas, geo) {
-        const OUTWARD = 20;
-        const { cx, cy, verts } = geo;
-        for (const [k, v] of Object.entries(verts)) {
-          const label = overlay.querySelector(`[data-vertex="${k}"]`);
-          if (!label) continue;
-          const dx = v[0] - cx;
-          const dy = v[1] - cy;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          const lx = v[0] + (dx / len) * OUTWARD;
-          const ly = v[1] + (dy / len) * OUTWARD;
-          label.style.left = `${(lx / canvas.width) * 100}%`;
-          label.style.top  = `${(ly / canvas.height) * 100}%`;
-          label.style.transform = "translate(-50%, -50%)";
-        }
-      }
-
-      // ═══ Section 3 — general picker ═══════════════════════════
-
-      const genStage       = document.getElementById("gen-stage");
-      const genCanvas      = document.getElementById("gen-canvas");
-      const genRingCanvas  = document.getElementById("gen-ring-canvas");
-      const genBodyOverlay = document.getElementById("gen-body-overlay");
-      const genCursor      = document.getElementById("gen-cursor");
-      const genHueCursor   = document.getElementById("gen-hue-cursor");
-      const genSample      = document.getElementById("gen-sample");
-
-      let genState = { h: 162, w: 0.333, b: 0.333, geo: null, mode: "hwb" };
-
-      // Ring: paint once. Body: paint per hue at canonical, rotate
-      // the canvas + its overlay via CSS for orientation.
-      paintRing(genRingCanvas, "hwb");
-
-      function applyGenOrientation() {
-        const rot = `rotate(${-genState.h}deg)`;
-        genCanvas.style.transform = rot;
-        genBodyOverlay.style.transform = rot;
-      }
-
-      function repaintGenBody() {
-        genState.geo = paintBody(genCanvas, genState.h, genState.mode);
-      }
-
-      function onGenHueChange() {
-        repaintGenBody();
-        applyGenOrientation();
-        updateGenCursors();
-        updateGenReadout();
-      }
-
-      function repaintGen() {
-        onGenHueChange();
-      }
-
-      function updateGenReadout() {
-        const { h, w, b } = genState;
-        const c = 1 - w - b;
-        document.getElementById("gen-h").textContent = `${h.toFixed(0)}°`;
-        document.getElementById("gen-w").textContent = w.toFixed(2);
-        document.getElementById("gen-b").textContent = b.toFixed(2);
-        document.getElementById("gen-c").textContent = c.toFixed(2);
-        const css = `hwb(${h.toFixed(0)} ${(w * 100).toFixed(1)}% ${(b * 100).toFixed(1)}%)`;
-        document.getElementById("gen-css").textContent = css;
-        genSample.style.background = css;
-      }
-
-      function updateGenCursors() {
-        const { h, w, b, geo } = genState;
-        const c = 1 - w - b;
-        const [px, py] = fromBarycentric(w, b, c, geo.verts);
-        const size = genCanvas.width;
-        genCursor.style.left = (px / size * 100) + "%";
-        genCursor.style.top  = (py / size * 100) + "%";
-
-        const ringMid = (geo.ringInner + geo.ringOuter) / 2;
-        const rad = h * Math.PI / 180;
-        const hx = geo.cx + ringMid * Math.cos(rad);
-        const hy = geo.cy - ringMid * Math.sin(rad);
-        genHueCursor.style.left = (hx / size * 100) + "%";
-        genHueCursor.style.top  = (hy / size * 100) + "%";
-      }
-
-      function stageXY(evt, stage) {
-        const rect = stage.getBoundingClientRect();
-        return [
-          (evt.clientX - rect.left) / rect.width * stage.clientWidth,
-          (evt.clientY - rect.top) / rect.height * stage.clientHeight,
-        ];
-      }
-
-      function unrotate(dx, dy, hueDeg) {
-        // Apply +hue rotation in screen coords to undo the body's
-        // CSS rotate(-hue). Screen rotation by +H:
-        //   x' = x cos H - y sin H
-        //   y' = x sin H + y cos H
-        const rad = hueDeg * Math.PI / 180;
-        const cos = Math.cos(rad), sin = Math.sin(rad);
-        return [dx * cos - dy * sin, dx * sin + dy * cos];
-      }
-
-      function hitTest(sx, sy, state) {
-        const geo = state.geo;
-        const dx = sx - geo.cx, dy = sy - geo.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) return "ring";
-        // Triangle test: transform click back to canonical frame.
-        const [cdx, cdy] = unrotate(dx, dy, state.h);
-        const [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
-        if (w >= -0.01 && b >= -0.01 && c >= -0.01) return "tri";
-        return null;
-      }
-
-      function applyRingPick(state, sx, sy, onHueChange) {
-        const geo = state.geo;
-        const dx = sx - geo.cx, dy = sy - geo.cy;
-        const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-        state.h = (angle + 360) % 360;
-        onHueChange();
-      }
-
-      function applyTriPick(state, sx, sy, updateCursors, updateReadout) {
-        const geo = state.geo;
-        const dx = sx - geo.cx, dy = sy - geo.cy;
-        const [cdx, cdy] = unrotate(dx, dy, state.h);
-        const [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
-        state.w = Math.max(0, Math.min(1, w));
-        state.b = Math.max(0, Math.min(1, b));
-        if (state.w + state.b > 1) {
-          const s = state.w + state.b;
-          state.w /= s; state.b /= s;
-        }
-        updateCursors();
-        updateReadout();
-      }
-
-      function attachPickerDrag(stage, state, hooks) {
-        stage.addEventListener("pointerdown", e => {
-          const [x, y] = stageXY(e, stage);
-          const target = hitTest(x, y, state);
-          if (!target) return;
-          stage.setPointerCapture(e.pointerId);
-
-          let pendingEvt = null;
-          let rafId = null;
-          const flush = () => {
-            rafId = null;
-            if (!pendingEvt) return;
-            const ev = pendingEvt;
-            pendingEvt = null;
-            const [mx, my] = stageXY(ev, stage);
-            if (target === "ring") applyRingPick(state, mx, my, hooks.onHueChange);
-            else applyTriPick(state, mx, my, hooks.updateCursors, hooks.updateReadout);
-          };
-          const dispatch = ev => {
-            pendingEvt = ev;
-            if (rafId === null) rafId = requestAnimationFrame(flush);
-          };
-
-          // Initial click applies immediately.
-          const [mx0, my0] = [x, y];
-          if (target === "ring") applyRingPick(state, mx0, my0, hooks.onHueChange);
-          else applyTriPick(state, mx0, my0, hooks.updateCursors, hooks.updateReadout);
-
-          const up = () => {
-            if (rafId) cancelAnimationFrame(rafId);
-            stage.removeEventListener("pointermove", dispatch);
-            stage.removeEventListener("pointerup", up);
-            stage.removeEventListener("pointercancel", up);
-          };
-          stage.addEventListener("pointermove", dispatch);
-          stage.addEventListener("pointerup", up);
-          stage.addEventListener("pointercancel", up);
-        });
-      }
-
-      attachPickerDrag(genStage, genState, {
-        onHueChange: onGenHueChange,
-        updateCursors: updateGenCursors,
-        updateReadout: updateGenReadout,
-      });
-
-      repaintGen();
-
-      // ═══ Section 3b — perceptually uniform (OKLCH) picker ═════
-
-      const okStage       = document.getElementById("ok-stage");
-      const okCanvas      = document.getElementById("ok-canvas");
-      const okRingCanvas  = document.getElementById("ok-ring-canvas");
-      const okBodyOverlay = document.getElementById("ok-body-overlay");
-      const okCursor      = document.getElementById("ok-cursor");
-      const okHueCursor   = document.getElementById("ok-hue-cursor");
-      const okSample      = document.getElementById("ok-sample");
-
-      let okState = { h: 162, w: 0.333, b: 0.333, geo: null, mode: "oklch" };
-
-      paintRing(okRingCanvas, "oklch", pickerPeaks);
-
-      function applyOkOrientation() {
-        const rot = `rotate(${-okState.h}deg)`;
-        okCanvas.style.transform = rot;
-        okBodyOverlay.style.transform = rot;
-      }
-
-      function repaintOkBody() {
-        okState.geo = paintBody(okCanvas, okState.h, okState.mode, pickerPeaks(okState.h));
-      }
-
-      function repaintOk() {
-        repaintOkBody();
-        applyOkOrientation();
-        updateOkCursors();
-        updateOkReadout();
-      }
-
-      function updateOkReadout() {
-        const { h, w, b } = okState;
-        const c = 1 - w - b;
-        const [Lp, Cp] = pickerPeaks(h);
-        const L = w + c * Lp;
-        const C = c * Cp;
-        document.getElementById("ok-h").textContent = `${h.toFixed(0)}°`;
-        document.getElementById("ok-w").textContent = w.toFixed(2);
-        document.getElementById("ok-b").textContent = b.toFixed(2);
-        document.getElementById("ok-c").textContent = c.toFixed(2);
-        document.getElementById("ok-L").textContent = `${(L * 100).toFixed(1)}%`;
-        document.getElementById("ok-Cval").textContent = C.toFixed(3);
-        const css = `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${h.toFixed(0)})`;
-        document.getElementById("ok-css").textContent = css;
-        okSample.style.background = css;
-      }
-
-      function updateOkCursors() {
-        const { h, w, b, geo } = okState;
-        const c = 1 - w - b;
-        const [px, py] = fromBarycentric(w, b, c, geo.verts);
-        const size = okCanvas.width;
-        okCursor.style.left = (px / size * 100) + "%";
-        okCursor.style.top  = (py / size * 100) + "%";
-
-        const ringMid = (geo.ringInner + geo.ringOuter) / 2;
-        const rad = h * Math.PI / 180;
-        const hx = geo.cx + ringMid * Math.cos(rad);
-        const hy = geo.cy - ringMid * Math.sin(rad);
-        okHueCursor.style.left = (hx / size * 100) + "%";
-        okHueCursor.style.top  = (hy / size * 100) + "%";
-      }
-
-      function onOkHueChange() {
-        repaintOkBody();
-        applyOkOrientation();
-        updateOkCursors();
-        updateOkReadout();
-      }
-
-      attachPickerDrag(okStage, okState, {
-        onHueChange: onOkHueChange,
-        updateCursors: updateOkCursors,
-        updateReadout: updateOkReadout,
-      });
-
-      repaintOk();
-
-      // ═══ Section 3c — HSLuv picker ════════════════════════════
-      //
-      // Minimal HSLuv implementation based on the reference at
-      // hsluv.org. HSLuv saturation is normalised to the sRGB
-      // gamut per hue, so the ring at S=100 across all hues is
-      // smooth by construction — no cube corners to hit.
-
+      // — HSLuv — ----------------------------------------------------
       const M_XYZ = [
         [ 3.240969941904521, -1.537383177570093, -0.498610760293],
         [-0.969243636280879,  1.875967501507720,  0.041555057407176],
         [ 0.055630079696993, -0.203976958888970,  1.056971514242879],
       ];
-      const REF_U  = 0.19783000664283;
-      const REF_V  = 0.46831999493879;
-      const KAPPA  = 903.2962962;
+      const REF_U = 0.19783000664283;
+      const REF_V = 0.46831999493879;
+      const KAPPA = 903.2962962;
       const EPSILON = 0.0088564516;
 
-      function yToL(Y) {
-        if (Y <= EPSILON) return Y * KAPPA;
-        return 116 * Math.cbrt(Y) - 16;
-      }
       function lToY(L) {
         if (L <= 8) return L / KAPPA;
         const x = (L + 16) / 116;
         return x * x * x;
       }
-
-      // Bounds: six lines on the (U, V) plane for the given L such
-      // that intersecting them gives the gamut boundary at that L.
       function getBounds(L) {
         const sub1 = ((L + 16) ** 3) / 1560896;
         const sub2 = sub1 > EPSILON ? sub1 : L / KAPPA;
         const bounds = [];
         for (let c = 0; c < 3; c++) {
-          const m1 = M_XYZ[c][0];
-          const m2 = M_XYZ[c][1];
-          const m3 = M_XYZ[c][2];
+          const m1 = M_XYZ[c][0], m2 = M_XYZ[c][1], m3 = M_XYZ[c][2];
           for (let t = 0; t < 2; t++) {
             const top1 = (284517 * m1 - 94839 * m3) * sub2;
-            const top2 =
-              (838422 * m3 + 769860 * m2 + 731718 * m1) * L * sub2
-              - 769860 * t * L;
+            const top2 = (838422 * m3 + 769860 * m2 + 731718 * m1) * L * sub2 - 769860 * t * L;
             const bottom = (632260 * m3 - 126452 * m2) * sub2 + 126452 * t;
             bounds.push({ slope: top1 / bottom, intercept: top2 / bottom });
           }
         }
         return bounds;
       }
-
       function maxChromaForLH(L, H) {
         const hRad = H * Math.PI / 180;
         const bounds = getBounds(L);
@@ -1500,7 +604,6 @@ N = 8 →  45</pre>
         }
         return min;
       }
-
       function luvToXyz(L, U, V) {
         if (L === 0) return [0, 0, 0];
         const varU = U / (13 * L) + REF_U;
@@ -1510,7 +613,6 @@ N = 8 →  45</pre>
         const Z = (9 * Y - 15 * varV * Y - varV * X) / (3 * varV);
         return [X, Y, Z];
       }
-
       function xyzToLinearRgb(X, Y, Z) {
         return [
           M_XYZ[0][0] * X + M_XYZ[0][1] * Y + M_XYZ[0][2] * Z,
@@ -1518,7 +620,6 @@ N = 8 →  45</pre>
           M_XYZ[2][0] * X + M_XYZ[2][1] * Y + M_XYZ[2][2] * Z,
         ];
       }
-
       function hsluvToLinearRgb(H, S, L) {
         if (L > 99.9999999) return [1, 1, 1];
         if (L < 0.0000001) return [0, 0, 0];
@@ -1530,12 +631,6 @@ N = 8 →  45</pre>
         const [X, Y, Z] = luvToXyz(L, U, V);
         return xyzToLinearRgb(X, Y, Z);
       }
-
-      // For each hue, find the L that maximises chroma (HSLuv
-      // cusp L). Then Gaussian-smooth the LUT with σ=5° to blunt
-      // the sRGB cube-corner kink, same trick the OKLCH picker
-      // uses. Net result: C vertex reaches actual max saturation
-      // for its hue, ring stays smooth.
       function findHsluvCuspL(hue) {
         let bestL = 50, bestC = 0;
         for (let L = 1; L < 99; L += 0.5) {
@@ -1544,9 +639,12 @@ N = 8 →  45</pre>
         }
         return bestL;
       }
-      const HSLUV_CUSP_L_LUT = (() => {
-        const raw = new Array(361);
-        for (let h = 0; h <= 360; h++) raw[h] = findHsluvCuspL(h);
+      const HSLUV_CUSP_L_RAW = (() => {
+        const lut = new Array(361);
+        for (let h = 0; h <= 360; h++) lut[h] = findHsluvCuspL(h);
+        return lut;
+      })();
+      const HSLUV_CUSP_L = (() => {
         const sigma = 5;
         const half = Math.ceil(3 * sigma);
         const out = new Array(361);
@@ -1555,31 +653,166 @@ N = 8 →  45</pre>
           for (let j = -half; j <= half; j++) {
             const w = Math.exp(-(j * j) / (2 * sigma * sigma));
             const k = ((i + j) % 360 + 360) % 360;
-            sum += raw[k] * w;
+            sum += HSLUV_CUSP_L_RAW[k] * w;
             wSum += w;
           }
           out[i] = sum / wSum;
         }
         return out;
       })();
-      function hsluvCuspL(hue) {
-        const h = ((hue % 360) + 360) % 360;
-        return HSLUV_CUSP_L_LUT[Math.round(h)];
+
+      // ═══════════════════════════════════════════════════════════
+      // Color-space strategy
+      // ═══════════════════════════════════════════════════════════
+      //
+      // Each strategy exposes:
+      //   pureAtHue(hue) — RGB for the C vertex (fully saturated)
+      //   atBary(hue, w, b, c) — RGB for an arbitrary barycentric point
+      //   atStep(hue, t)  — RGB along the pure-color edge from
+      //                     black (t=0) to pure (t=0.5) to white (t=1)
+      //   arcPoint(hue, t, level) — RGB along arc `level` (0..1)
+      //   readout(hue, w, b, c) — labelled tuple for display
+
+      const STRATEGIES = {
+        hwb: {
+          label: "HWB",
+          ringAt(hue) { return hsvToRgb(hue, 1, 1); },
+          atBary(hue, w, b, c) { return hwbToRgb(hue, w, b); },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            return [
+              ["hue", `${hue.toFixed(0)}°`],
+              ["W",   w.toFixed(2)],
+              ["B",   b.toFixed(2)],
+              ["C",   c.toFixed(2)],
+              ["css", `hwb(${hue.toFixed(0)} ${(w*100).toFixed(1)}% ${(b*100).toFixed(1)}%)`],
+            ];
+          },
+        },
+        oklch: {
+          label: "OKLCH",
+          ringAt(hue) {
+            const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
+            const [r, g, b] = oklchToLinearRgb(Lp, Cp, hue);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+          },
+          atBary(hue, w, b, c) {
+            const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
+            const L = w + c * Lp;
+            const C = c * Cp;
+            const [r, gc, bl] = oklchToLinearRgb(L, C, hue);
+            return [linearToSrgb(r), linearToSrgb(gc), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
+            const L = w + c * Lp;
+            const C = c * Cp;
+            return [
+              ["hue", `${hue.toFixed(0)}°`],
+              ["W",   w.toFixed(2)],
+              ["B",   b.toFixed(2)],
+              ["C",   c.toFixed(2)],
+              ["L*",  `${(L*100).toFixed(1)}%`],
+              ["C",   C.toFixed(3)],
+              ["css", `oklch(${(L*100).toFixed(1)}% ${C.toFixed(3)} ${hue.toFixed(0)})`],
+            ];
+          },
+        },
+        hsluv: {
+          label: "HSLuv",
+          ringAt(hue) {
+            const L = HSLUV_CUSP_L[Math.round(((hue%360)+360)%360)];
+            const [r, g, b] = hsluvToLinearRgb(hue, 100, L);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+          },
+          atBary(hue, w, b, c) {
+            const Lp = HSLUV_CUSP_L[Math.round(((hue%360)+360)%360)];
+            const L = 100 * w + Lp * c;
+            const S = 100 * c;
+            const [r, g, bl] = hsluvToLinearRgb(hue, S, L);
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl)];
+          },
+          readout(hue, w, b) {
+            const c = 1 - w - b;
+            const Lp = HSLUV_CUSP_L[Math.round(((hue%360)+360)%360)];
+            const L = 100 * w + Lp * c;
+            const S = 100 * c;
+            return [
+              ["hue", `${hue.toFixed(0)}°`],
+              ["W",   w.toFixed(2)],
+              ["B",   b.toFixed(2)],
+              ["C",   c.toFixed(2)],
+              ["L",   `${L.toFixed(1)}%`],
+              ["S",   `${S.toFixed(1)}%`],
+              ["css", `hsluv(${hue.toFixed(0)} ${S.toFixed(0)}% ${L.toFixed(0)}%)`],
+            ];
+          },
+        },
+      };
+
+      function strat() { return STRATEGIES[state.space]; }
+
+      // ═══════════════════════════════════════════════════════════
+      // Geometry
+      // ═══════════════════════════════════════════════════════════
+
+      const DISPLAY_SIZE = 420;
+
+      function geometry(size, { hasRing = false, hue = 0, ringWidth = 26, ringGap = 14, ringPad = 4, triPad = 20 } = {}) {
+        const scale = size / DISPLAY_SIZE;
+        const px = v => v * scale;
+        const cx = size / 2, cy = size / 2;
+        const ringOuter = hasRing ? size / 2 - px(ringPad) : 0;
+        const ringInner = hasRing ? ringOuter - px(ringWidth) : 0;
+        const gap = hasRing ? px(ringGap) : 0;
+        const triR = hasRing ? ringInner - gap : size / 2 - px(triPad);
+        const angles = { C: hue, W: hue + 120, B: hue + 240 };
+        const verts = {};
+        for (const [k, deg] of Object.entries(angles)) {
+          const r = deg * Math.PI / 180;
+          verts[k] = [cx + triR * Math.cos(r), cy - triR * Math.sin(r)];
+        }
+        return { cx, cy, ringInner, ringOuter, triR, verts };
       }
 
-      function paintRingHsluv(canvas) {
+      function barycentric(x, y, verts) {
+        const [x1, y1] = verts.W, [x2, y2] = verts.B, [x3, y3] = verts.C;
+        const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+        const w = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / det;
+        const b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / det;
+        return [w, b, 1 - w - b];
+      }
+      function fromBarycentric(w, b, c, verts) {
+        const [x1, y1] = verts.W, [x2, y2] = verts.B, [x3, y3] = verts.C;
+        return [w * x1 + b * x2 + c * x3, w * y1 + b * y2 + c * y3];
+      }
+      function unrotate(dx, dy, hueDeg) {
+        const rad = hueDeg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        return [dx * cos - dy * sin, dx * sin + dy * cos];
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // Painting
+      // ═══════════════════════════════════════════════════════════
+
+      function paintRing(canvas) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
         const geo = geometry(width, { hasRing: true });
         const { cx, cy, ringInner, ringOuter } = geo;
         const img = ctx.createImageData(width, height);
         const data = img.data;
+
         const rInnerSq = ringInner * ringInner;
         const rOuterSq = ringOuter * ringOuter;
         const yMin = Math.max(0, Math.floor(cy - ringOuter - 1));
         const yMax = Math.min(height, Math.ceil(cy + ringOuter + 1));
         const xMin = Math.max(0, Math.floor(cx - ringOuter - 1));
         const xMax = Math.min(width, Math.ceil(cx + ringOuter + 1));
+
+        const s = strat();
         for (let y = yMin; y < yMax; y++) {
           const dy = y - cy, dy2 = dy * dy;
           for (let x = xMin; x < xMax; x++) {
@@ -1588,34 +821,34 @@ N = 8 →  45</pre>
             if (distSq < rInnerSq || distSq > rOuterSq) continue;
             const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
             const pixelHue = (angle + 360) % 360;
-            const Lp = hsluvCuspL(pixelHue);
-            const [r, g, b] = hsluvToLinearRgb(pixelHue, 100, Lp);
+            const rgb = s.ringAt(pixelHue);
             const i = (y * width + x) * 4;
-            data[i]     = Math.round(linearToSrgb(r) * 255);
-            data[i + 1] = Math.round(linearToSrgb(g) * 255);
-            data[i + 2] = Math.round(linearToSrgb(b) * 255);
+            data[i]     = Math.round(rgb[0] * 255);
+            data[i + 1] = Math.round(rgb[1] * 255);
+            data[i + 2] = Math.round(rgb[2] * 255);
             data[i + 3] = 255;
           }
         }
         ctx.putImageData(img, 0, 0);
       }
 
-      function paintBodyHsluv(canvas, hue) {
+      function paintBody(canvas, hue) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
         const geo = geometry(width, { hasRing: true, hue: 0 });
         const { cx, cy, triR, verts } = geo;
         ctx.clearRect(0, 0, width, height);
+
         const yMin = Math.max(0, Math.floor(cy - triR - 1));
         const yMax = Math.min(height, Math.ceil(cy + triR + 1));
         const xMin = Math.max(0, Math.floor(cx - triR - 1));
         const xMax = Math.min(width, Math.ceil(cx + triR + 1));
         const boxW = xMax - xMin;
-        const img = ctx.createImageData(boxW, yMax - yMin);
+        const boxH = yMax - yMin;
+
+        const img = ctx.createImageData(boxW, boxH);
         const data = img.data;
-        const [x1, y1] = verts.W;
-        const [x2, y2] = verts.B;
-        const [x3, y3] = verts.C;
+        const [x1, y1] = verts.W, [x2, y2] = verts.B, [x3, y3] = verts.C;
         const det = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
         const invDet = 1 / det;
         const a1 = (y2 - y3) * invDet;
@@ -1623,7 +856,7 @@ N = 8 →  45</pre>
         const a2 = (y3 - y1) * invDet;
         const b2 = (x1 - x3) * invDet;
 
-        const L_PEAK_HSLUV = hsluvCuspL(hue);
+        const s = strat();
         for (let y = yMin; y < yMax; y++) {
           const dy = y - y3;
           for (let x = xMin; x < xMax; x++) {
@@ -1635,13 +868,11 @@ N = 8 →  45</pre>
             const wc = Math.max(0, w);
             const bc = Math.max(0, b);
             const cc = Math.max(0, c);
-            const L = 100 * wc + 0 * bc + L_PEAK_HSLUV * cc;
-            const S = 100 * cc;
-            const [r, g, bl] = hsluvToLinearRgb(hue, S, L);
+            const rgb = s.atBary(hue, wc, bc, cc);
             const i = ((y - yMin) * boxW + (x - xMin)) * 4;
-            data[i]     = Math.round(linearToSrgb(r) * 255);
-            data[i + 1] = Math.round(linearToSrgb(g) * 255);
-            data[i + 2] = Math.round(linearToSrgb(bl) * 255);
+            data[i]     = Math.round(rgb[0] * 255);
+            data[i + 1] = Math.round(rgb[1] * 255);
+            data[i + 2] = Math.round(rgb[2] * 255);
             data[i + 3] = 255;
           }
         }
@@ -1649,241 +880,188 @@ N = 8 →  45</pre>
         return geo;
       }
 
-      const hsluvStage       = document.getElementById("hsluv-stage");
-      const hsluvCanvas      = document.getElementById("hsluv-canvas");
-      const hsluvRingCanvas  = document.getElementById("hsluv-ring-canvas");
-      const hsluvBodyOverlay = document.getElementById("hsluv-body-overlay");
-      const hsluvCursor      = document.getElementById("hsluv-cursor");
-      const hsluvHueCursor   = document.getElementById("hsluv-hue-cursor");
-      const hsluvSample      = document.getElementById("hsluv-sample");
-
-      let hsluvState = { h: 162, w: 0.333, b: 0.333, geo: null };
-
-      paintRingHsluv(hsluvRingCanvas);
-
-      function applyHsluvOrientation() {
-        const rot = `rotate(${-hsluvState.h}deg)`;
-        hsluvCanvas.style.transform = rot;
-        hsluvBodyOverlay.style.transform = rot;
+      function cssFromRgb(rgb) {
+        return `rgb(${Math.round(rgb[0] * 255)}, ${Math.round(rgb[1] * 255)}, ${Math.round(rgb[2] * 255)})`;
       }
 
-      function updateHsluvReadout() {
-        const { h, w, b } = hsluvState;
-        const c = 1 - w - b;
-        const L_peak = hsluvCuspL(h);
-        const L = 100 * w + L_peak * c;
-        const S = 100 * c;
-        document.getElementById("hsluv-h").textContent = `${h.toFixed(0)}°`;
-        document.getElementById("hsluv-w").textContent = w.toFixed(2);
-        document.getElementById("hsluv-b").textContent = b.toFixed(2);
-        document.getElementById("hsluv-c").textContent = c.toFixed(2);
-        document.getElementById("hsluv-L").textContent = `${L.toFixed(1)}%`;
-        document.getElementById("hsluv-S").textContent = `${S.toFixed(1)}%`;
-        const [r, g, bl] = hsluvToLinearRgb(h, S, L);
-        const css = `rgb(${Math.round(linearToSrgb(r) * 255)}, ${Math.round(linearToSrgb(g) * 255)}, ${Math.round(linearToSrgb(bl) * 255)})`;
-        document.getElementById("hsluv-css").textContent = css;
-        hsluvSample.style.background = css;
-      }
+      // ═══════════════════════════════════════════════════════════
+      // Section 1 — Picker
+      // ═══════════════════════════════════════════════════════════
 
-      function updateHsluvCursors() {
-        const { h, w, b, geo } = hsluvState;
+      const pickerStage       = document.getElementById("picker-stage");
+      const pickerBody        = document.getElementById("picker-body");
+      const pickerRing        = document.getElementById("picker-ring");
+      const pickerBodyOverlay = document.getElementById("picker-body-overlay");
+      const pickerCursor      = document.getElementById("picker-cursor");
+      const pickerHueCursor   = document.getElementById("picker-hue-cursor");
+      const pickerReadouts    = document.getElementById("picker-readouts");
+      const pickerSample      = document.getElementById("picker-sample");
+
+      function repaintPicker() {
+        paintRing(pickerRing);
+        state.picker.geo = paintBody(pickerBody, state.hue);
+        pickerBody.style.transform = `rotate(${-state.hue}deg)`;
+        pickerBodyOverlay.style.transform = `rotate(${-state.hue}deg)`;
+        updatePickerCursors();
+        updatePickerReadout();
+      }
+      function updatePickerCursors() {
+        const geo = state.picker.geo;
+        const { w, b } = state.picker;
         const c = 1 - w - b;
         const [px, py] = fromBarycentric(w, b, c, geo.verts);
-        const size = hsluvCanvas.width;
-        hsluvCursor.style.left = (px / size * 100) + "%";
-        hsluvCursor.style.top  = (py / size * 100) + "%";
+        const size = pickerBody.width;
+        pickerCursor.style.left = (px / size * 100) + "%";
+        pickerCursor.style.top  = (py / size * 100) + "%";
         const ringMid = (geo.ringInner + geo.ringOuter) / 2;
-        const rad = h * Math.PI / 180;
-        const hx = geo.cx + ringMid * Math.cos(rad);
-        const hy = geo.cy - ringMid * Math.sin(rad);
-        hsluvHueCursor.style.left = (hx / size * 100) + "%";
-        hsluvHueCursor.style.top  = (hy / size * 100) + "%";
+        const rad = state.hue * Math.PI / 180;
+        pickerHueCursor.style.left = ((geo.cx + ringMid * Math.cos(rad)) / size * 100) + "%";
+        pickerHueCursor.style.top  = ((geo.cy - ringMid * Math.sin(rad)) / size * 100) + "%";
+      }
+      function updatePickerReadout() {
+        const { w, b } = state.picker;
+        const c = 1 - w - b;
+        const rows = strat().readout(state.hue, w, b);
+        pickerReadouts.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+        const rgb = strat().atBary(state.hue, w, b, c);
+        pickerSample.style.background = cssFromRgb(rgb);
       }
 
-      function repaintHsluvBody() {
-        hsluvState.geo = paintBodyHsluv(hsluvCanvas, hsluvState.h);
-      }
-
-      function onHsluvHueChange() {
-        repaintHsluvBody();
-        applyHsluvOrientation();
-        updateHsluvCursors();
-        updateHsluvReadout();
-      }
-
-      function repaintHsluv() {
-        onHsluvHueChange();
-      }
-
-      attachPickerDrag(hsluvStage, hsluvState, {
-        onHueChange: onHsluvHueChange,
-        updateCursors: updateHsluvCursors,
-        updateReadout: updateHsluvReadout,
+      attachDrag(pickerStage, pickerBody, state.picker, {
+        onHue: h => { state.hue = h; repaintPicker(); syncHueInput(); onHueChanged(); },
+        onTri: (w, b) => { state.picker.w = w; state.picker.b = b; updatePickerCursors(); updatePickerReadout(); },
       });
 
-      repaintHsluv();
-
-      // ═══ Section 4 — constrained picker ═══════════════════════
-
-      const STEPS = [
-        { n: 1,  L: 10, cMult: 0.30 },
-        { n: 2,  L: 14, cMult: 0.40 },
-        { n: 3,  L: 20, cMult: 0.55 },
-        { n: 4,  L: 26, cMult: 0.70 },
-        { n: 5,  L: 32, cMult: 0.80 },
-        { n: 6,  L: 40, cMult: 0.90 },
-        { n: 7,  L: 50, cMult: 0.95 },
-        { n: 8,  L: 62, cMult: 1.00 },
-        { n: 9,  L: 72, cMult: 1.00 },
-        { n: 10, L: 80, cMult: 0.90 },
-        { n: 11, L: 88, cMult: 0.70 },
-        { n: 12, L: 95, cMult: 0.50 },
-      ];
-
-      const SCALES = [
-        { name: "surface", hue: 162, chroma: 0.010 },
-        { name: "accent",  hue: 162, chroma: 0.070 },
-      ];
-
-      function plotScale(scale) {
-        const canvas = document.getElementById(`${scale.name}-canvas`);
-        const overlay = document.getElementById(`${scale.name}-overlay`);
-        const list = document.getElementById(`${scale.name}-list`);
-        const geo = paintStage(canvas, scale.hue);
-        const verts = geo.verts;
-
-        list.innerHTML = `
-          <dl class="tri-value-grid">
-            <dt>step</dt><dt></dt><dt>W</dt><dt>B</dt><dt>C</dt>
-          </dl>
-        `;
-        const grid = list.querySelector(".tri-value-grid");
-        grid.style.gridTemplateColumns = "auto 16px auto auto auto";
-
-        for (const s of STEPS) {
-          const c = scale.chroma * s.cMult;
-          const css = `oklch(${s.L}% ${c} ${scale.hue})`;
-          const [r, g, b] = cssColorToRgb(css);
-          const [w, bl] = rgbToHwb(r, g, b);
-          const col = Math.max(0, 1 - w - bl);
-          const [px, py] = fromBarycentric(w, bl, col, verts);
-
-          const dot = document.createElement("span");
-          dot.className = "token-dot";
-          dot.dataset.scale = scale.name;
-          dot.style.left = (px / canvas.width * 100) + "%";
-          dot.style.top  = (py / canvas.height * 100) + "%";
-          dot.title = `${scale.name}-${s.n}  W ${w.toFixed(2)}  B ${bl.toFixed(2)}  C ${col.toFixed(2)}`;
-          overlay.appendChild(dot);
-
-          const row = document.createElement("span");
-          const swatch = document.createElement("span");
-          swatch.style.cssText = `
-            display:inline-block;
-            width:14px;height:14px;
-            border-radius:3px;
-            border:1px solid var(--color-border-subtle);
-            background:${css};
-          `;
-          grid.insertAdjacentHTML("beforeend", `
-            <span>${s.n}</span>
-            <span></span>
-            <span>${w.toFixed(2)}</span>
-            <span>${bl.toFixed(2)}</span>
-            <span>${col.toFixed(2)}</span>
-          `);
-          grid.children[grid.children.length - 4].appendChild(swatch);
-        }
-      }
-
-      for (const scale of SCALES) plotScale(scale);
-
-      // ═══ Section 5 — quantization viz ═════════════════════════
+      // ═══════════════════════════════════════════════════════════
+      // Section 2 — Quantized picker
+      // ═══════════════════════════════════════════════════════════
 
       const quantStage       = document.getElementById("quant-stage");
-      const quantCanvas      = document.getElementById("quant-canvas");
-      const quantRingCanvas  = document.getElementById("quant-ring-canvas");
+      const quantBody        = document.getElementById("quant-body");
+      const quantRing        = document.getElementById("quant-ring");
       const quantBodyOverlay = document.getElementById("quant-body-overlay");
       const quantHueCursor   = document.getElementById("quant-hue-cursor");
-      const quantOverlay     = document.getElementById("quant-overlay");
-      const quantNSelect     = document.getElementById("quant-N");
-      const quantList        = document.getElementById("quant-list");
+      const quantReadouts    = document.getElementById("quant-readouts");
+      const quantSample      = document.getElementById("quant-sample");
 
-      let quantState = { h: 162, N: +quantNSelect.value, geo: null, mode: "oklch" };
-
-      paintRing(quantRingCanvas, "oklch", quantPeaks);
-
-      function applyQuantOrientation() {
-        const rot = `rotate(${-quantState.h}deg)`;
-        quantCanvas.style.transform = rot;
-        quantBodyOverlay.style.transform = rot;
+      function repaintQuant() {
+        paintRing(quantRing);
+        state.quant.geo = paintBody(quantBody, state.hue);
+        quantBody.style.transform = `rotate(${-state.hue}deg)`;
+        quantBodyOverlay.style.transform = `rotate(${-state.hue}deg)`;
+        renderQuantDots();
+        updateQuantReadout();
       }
-
-      function updateQuantReadout() {
-        document.getElementById("quant-h").textContent = `${quantState.h.toFixed(0)}°`;
-        document.getElementById("quant-N-readout").textContent = quantState.N;
-        const count = (quantState.N + 1) * (quantState.N + 2) / 2;
-        document.getElementById("quant-count").textContent = count;
-
-        const ringMid = (quantState.geo.ringInner + quantState.geo.ringOuter) / 2;
-        const rad = quantState.h * Math.PI / 180;
-        const size = quantCanvas.width;
-        const hx = quantState.geo.cx + ringMid * Math.cos(rad);
-        const hy = quantState.geo.cy - ringMid * Math.sin(rad);
-        quantHueCursor.style.left = (hx / size * 100) + "%";
-        quantHueCursor.style.top  = (hy / size * 100) + "%";
-      }
-
-      let quantScheme = "cl";
-
-      function tokenName(r, N) {
-        if (quantScheme === "cl")  return `c${r.k}-l${r.i}`;
-        if (quantScheme === "wb")  return `w${r.i}b${r.j}`;
-        if (quantScheme === "num") return `${r.k}${r.i}`;
-        return `c${r.k}-l${r.i}`;
-      }
-
-      function renderGrid() {
-        const { N, h, geo } = quantState;
-        const verts = geo.verts;
-        const size = quantCanvas.width;
-
-        // Dots on the triangle (rotating overlay, canonical frame).
+      function renderQuantDots() {
+        const { N, quant } = state;
+        const geo = quant.geo;
         quantBodyOverlay.innerHTML = "";
-        const cells = [];
+        const size = quantBody.width;
         for (let k = 0; k <= N; k++) {
           for (let i = 0; i <= N - k; i++) {
             const j = N - i - k;
-            cells.push({ i, j, k, w: i / N, b: j / N, c: k / N });
+            const w = i / N, b = j / N, c = k / N;
+            const [px, py] = fromBarycentric(w, b, c, geo.verts);
+            const dot = document.createElement("span");
+            dot.className = "quant-dot";
+            dot.style.left = (px / size * 100) + "%";
+            dot.style.top  = (py / size * 100) + "%";
+            dot.title = tokenName(i, j, k, N);
+            if (i === quant.i && k === quant.k) dot.setAttribute("aria-selected", "true");
+            dot.addEventListener("click", () => {
+              state.quant.i = i;
+              state.quant.k = k;
+              renderQuantDots();
+              updateQuantReadout();
+            });
+            quantBodyOverlay.appendChild(dot);
           }
         }
-        for (const r of cells) {
-          const [px, py] = fromBarycentric(r.w, r.b, r.c, verts);
-          const dot = document.createElement("span");
-          dot.className = "quant-dot";
-          dot.style.left = (px / size * 100) + "%";
-          dot.style.top  = (py / size * 100) + "%";
-          dot.title = tokenName(r, N);
-          quantBodyOverlay.appendChild(dot);
-        }
+        const ringMid = (geo.ringInner + geo.ringOuter) / 2;
+        const rad = state.hue * Math.PI / 180;
+        quantHueCursor.style.left = ((geo.cx + ringMid * Math.cos(rad)) / size * 100) + "%";
+        quantHueCursor.style.top  = ((geo.cy - ringMid * Math.sin(rad)) / size * 100) + "%";
+      }
+      function updateQuantReadout() {
+        const { N, quant } = state;
+        const i = quant.i, k = quant.k, j = N - i - k;
+        const w = i / N, b = j / N, c = k / N;
+        const rows = [
+          ["token", tokenName(i, j, k, N)],
+          ["address", `i=${i}, j=${j}, k=${k}`],
+          ...strat().readout(state.hue, w, b),
+        ];
+        quantReadouts.innerHTML = rows.map(([key, v]) => `<dt>${key}</dt><dd>${v}</dd>`).join("");
+        const rgb = strat().atBary(state.hue, w, b, c);
+        quantSample.style.background = cssFromRgb(rgb);
+      }
 
-        // 2D grid. Rows = k (chroma band, 0 at top), cols = i
-        // (lightness index). Cells with i + k > N are hidden.
-        // Top-right = white, top-left = black, bottom-left = pure.
-        const [Lp, Cp] = quantPeaks(h);
-        const cellMap = Object.fromEntries(
-          cells.map(c => [`${c.k}-${c.i}`, c]),
-        );
+      quantStage.addEventListener("pointerdown", e => {
+        const rect = quantStage.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width * quantBody.width;
+        const y = (e.clientY - rect.top) / rect.height * quantBody.height;
+        const geo = state.quant.geo;
+        const dx = x - geo.cx, dy = y - geo.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < geo.ringInner - 2 || dist > geo.ringOuter + 8) return;
+        quantStage.setPointerCapture(e.pointerId);
+        let rafId = null, pendingEvt = null;
+        const flush = () => {
+          rafId = null;
+          if (!pendingEvt) return;
+          const ev = pendingEvt; pendingEvt = null;
+          const r = quantStage.getBoundingClientRect();
+          const mx = (ev.clientX - r.left) / r.width * quantBody.width;
+          const my = (ev.clientY - r.top) / r.height * quantBody.height;
+          const g = state.quant.geo;
+          const angle = Math.atan2(-(my - g.cy), mx - g.cx) * 180 / Math.PI;
+          state.hue = (angle + 360) % 360;
+          syncHueInput();
+          onHueChanged();
+        };
+        const dispatch = ev => {
+          pendingEvt = ev;
+          if (rafId === null) rafId = requestAnimationFrame(flush);
+        };
+        const up = () => {
+          if (rafId) cancelAnimationFrame(rafId);
+          quantStage.removeEventListener("pointermove", dispatch);
+          quantStage.removeEventListener("pointerup", up);
+          quantStage.removeEventListener("pointercancel", up);
+        };
+        // initial
+        const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
+        state.hue = (angle0 + 360) % 360;
+        syncHueInput();
+        onHueChanged();
+        quantStage.addEventListener("pointermove", dispatch);
+        quantStage.addEventListener("pointerup", up);
+        quantStage.addEventListener("pointercancel", up);
+      });
 
-        const cols = N + 1;
-        const rows = N + 1;
+      // ═══════════════════════════════════════════════════════════
+      // Section 3 — 2D grid
+      // ═══════════════════════════════════════════════════════════
+
+      const gridTarget = document.getElementById("grid-target");
+
+      function tokenName(i, j, k, N) {
+        if (state.scheme === "cl")  return `c${k}-l${i}`;
+        if (state.scheme === "wb")  return `w${i}b${j}`;
+        if (state.scheme === "num") return `${k}${i}`;
+        return `c${k}-l${i}`;
+      }
+
+      function renderGrid() {
+        const { N, hue } = state;
+        const s = strat();
+        const cols = N + 1, rows = N + 1;
         const grid = document.createElement("div");
         grid.className = "token-grid";
-        grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(46px, 1fr))`;
-        grid.style.gridTemplateRows    = `22px repeat(${rows}, minmax(46px, 1fr))`;
-        grid.style.maxWidth = "560px";
+        grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(44px, 1fr))`;
+        grid.style.gridTemplateRows    = `22px repeat(${rows}, minmax(44px, 1fr))`;
 
-        // header row — lightness labels
+        // header
         const corner = document.createElement("div");
         corner.className = "axis-label";
         corner.textContent = "k\\i";
@@ -1903,117 +1081,325 @@ N = 8 →  45</pre>
           for (let i = 0; i < cols; i++) {
             const cell = document.createElement("div");
             cell.className = "cell";
-            const key = `${k}-${i}`;
-            if (!cellMap[key]) {
+            if (i + k > N) {
               cell.setAttribute("data-empty", "");
               grid.appendChild(cell);
               continue;
             }
-            const r = cellMap[key];
-            const L = r.w + r.c * Lp;
-            const C = r.c * Cp;
-            const css = `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${quantState.h.toFixed(0)})`;
-            cell.style.background = css;
-            cell.textContent = tokenName(r, N);
-            // Text color contrast heuristic: L>0.55 → dark ink; else → light ink.
-            cell.setAttribute(L > 0.55 ? "data-light" : "data-dark", "");
-            cell.title = `(i=${r.i}, j=${r.j}, k=${r.k})  ${css}`;
+            const j = N - i - k;
+            const w = i / N, b = j / N, c = k / N;
+            const rgb = s.atBary(hue, w, b, c);
+            cell.style.background = cssFromRgb(rgb);
+            cell.textContent = tokenName(i, j, k, N);
+            const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+            cell.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
+            cell.title = tokenName(i, j, k, N);
             grid.appendChild(cell);
           }
         }
 
-        quantList.innerHTML = "";
-        quantList.appendChild(grid);
+        gridTarget.innerHTML = "";
+        gridTarget.appendChild(grid);
       }
 
-      function repaintQuantBody() {
-        quantState.geo = paintBody(
-          quantCanvas,
-          quantState.h,
-          "oklch",
-          quantPeaks(quantState.h),
-        );
+      // ═══════════════════════════════════════════════════════════
+      // Section 4 — Arc-based scales
+      // ═══════════════════════════════════════════════════════════
+
+      const arcBody = document.getElementById("arc-body");
+      const arcSvg  = document.getElementById("arc-svg");
+      const arcScalesTarget = document.getElementById("arc-scales");
+      const ARC_COUNT = 5;
+
+      // Evaluate an arc at parameter t ∈ [0, 1].
+      //   t=0   → black (w=0, b=1, c=0)
+      //   t=0.5 → midpoint at max-c for this arc
+      //   t=1   → white (w=1, b=0, c=0)
+      // The arc's barycentric c(t) = 4·peak·t·(1-t) (parabola),
+      // w(t) ramps linearly so W+B+C = 1 stays satisfied.
+      function arcBary(t, peak) {
+        const c = 4 * peak * t * (1 - t);
+        const w = t * (1 - c);
+        const b = (1 - t) * (1 - c);
+        return [w, b, c];
       }
 
-      function repaintQuant() {
-        repaintQuantBody();
-        applyQuantOrientation();
+      // Arc length integration (numeric) in barycentric space for
+      // uniform-along-arc sampling.
+      function arcSamples(peak, N) {
+        const segs = 400;
+        const pts = [];
+        let len = 0;
+        let prev = arcBary(0, peak);
+        pts.push({ t: 0, s: 0, bary: prev });
+        for (let i = 1; i <= segs; i++) {
+          const t = i / segs;
+          const cur = arcBary(t, peak);
+          len += Math.hypot(cur[0] - prev[0], cur[1] - prev[1], cur[2] - prev[2]);
+          pts.push({ t, s: len, bary: cur });
+          prev = cur;
+        }
+        // Sample N+1 points at equal arc-length spans.
+        const out = [];
+        for (let i = 0; i <= N; i++) {
+          const target = (i / N) * len;
+          let j = 0;
+          while (j < pts.length - 1 && pts[j + 1].s < target) j++;
+          const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
+          const frac = (b.s - a.s) > 0 ? (target - a.s) / (b.s - a.s) : 0;
+          const t = a.t + (b.t - a.t) * frac;
+          out.push({ t, bary: arcBary(t, peak) });
+        }
+        return out;
+      }
+
+      function renderArcs() {
+        // Paint the body (triangle fill) in the current color space.
+        paintBody(arcBody, state.hue);
+        arcBody.style.transform = `rotate(${-state.hue}deg)`;
+
+        const width = arcBody.width;
+        const geo = geometry(width, { hasRing: true, hue: state.hue, ringWidth: 0, ringGap: 0, ringPad: 0 });
+        // But we're not painting a ring on this stage; use triangle-only geo.
+        const geoNoRing = geometry(width, { hue: state.hue });
+        const verts = geoNoRing.verts;
+
+        // Draw arcs as SVG paths so they anti-alias nicely.
+        const svg = arcSvg;
+        svg.innerHTML = "";
+        const svgSize = 460;
+        const scaleFactor = svgSize / arcBody.width;
+
+        const s = strat();
+        const peaks = [];
+        for (let a = 0; a < ARC_COUNT; a++) {
+          peaks.push(a / (ARC_COUNT - 1));
+        }
+
+        const arcData = [];
+        for (let a = 0; a < ARC_COUNT; a++) {
+          const peak = peaks[a];
+          // Draw the continuous curve.
+          let d = "";
+          const curveSegs = 100;
+          for (let i = 0; i <= curveSegs; i++) {
+            const t = i / curveSegs;
+            const [w, b, c] = arcBary(t, peak);
+            const [px, py] = fromBarycentric(w, b, c, verts);
+            const sx = px * scaleFactor;
+            const sy = py * scaleFactor;
+            d += (i === 0 ? "M " : "L ") + sx.toFixed(1) + " " + sy.toFixed(1) + " ";
+          }
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", d);
+          path.setAttribute("fill", "none");
+          path.setAttribute("stroke", "oklch(95% 0 0 / 0.45)");
+          path.setAttribute("stroke-width", "1.5");
+          svg.appendChild(path);
+
+          // Sample N+1 points along arc length.
+          const pts = arcSamples(peak, state.N);
+          arcData.push({ peak, points: pts });
+
+          // Dots.
+          for (const { bary } of pts) {
+            const [px, py] = fromBarycentric(bary[0], bary[1], bary[2], verts);
+            const sx = px * scaleFactor;
+            const sy = py * scaleFactor;
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", sx);
+            dot.setAttribute("cy", sy);
+            dot.setAttribute("r", "4");
+            dot.setAttribute("fill", "oklch(95% 0 0)");
+            dot.setAttribute("stroke", "oklch(10% 0 0)");
+            dot.setAttribute("stroke-width", "1");
+            svg.appendChild(dot);
+          }
+        }
+
+        // Ramps per arc.
+        arcScalesTarget.innerHTML = "";
+        for (let a = 0; a < ARC_COUNT; a++) {
+          const { peak, points } = arcData[a];
+          const row = document.createElement("div");
+          row.className = "arc-scale";
+          const label = document.createElement("div");
+          label.className = "arc-scale-label";
+          label.textContent = `c${a} · peak ${(peak * 100).toFixed(0)}%`;
+          row.appendChild(label);
+          const ramp = document.createElement("div");
+          ramp.className = "arc-scale-ramp";
+          ramp.style.gridAutoColumns = `minmax(22px, 1fr)`;
+          for (const { bary } of points) {
+            const [w, b, c] = bary;
+            const rgb = s.atBary(state.hue, w, b, c);
+            const sw = document.createElement("div");
+            sw.className = "arc-swatch";
+            sw.style.background = cssFromRgb(rgb);
+            ramp.appendChild(sw);
+          }
+          row.appendChild(ramp);
+          arcScalesTarget.appendChild(row);
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // Picker drag helpers
+      // ═══════════════════════════════════════════════════════════
+
+      function stageXY(evt, stage, canvas) {
+        const rect = stage.getBoundingClientRect();
+        return [
+          (evt.clientX - rect.left) / rect.width * canvas.width,
+          (evt.clientY - rect.top) / rect.height * canvas.height,
+        ];
+      }
+
+      function attachDrag(stage, canvas, picker, hooks) {
+        stage.addEventListener("pointerdown", e => {
+          const [x, y] = stageXY(e, stage, canvas);
+          const geo = picker.geo;
+          const dx = x - geo.cx, dy = y - geo.cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          let target;
+          if (dist >= geo.ringInner - 2 && dist <= geo.ringOuter + 8) target = "ring";
+          else {
+            const [cdx, cdy] = unrotate(dx, dy, state.hue);
+            const [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
+            if (w >= -0.01 && b >= -0.01 && c >= -0.01) target = "tri";
+          }
+          if (!target) return;
+          stage.setPointerCapture(e.pointerId);
+
+          let rafId = null, pendingEvt = null;
+          const flush = () => {
+            rafId = null;
+            if (!pendingEvt) return;
+            const ev = pendingEvt; pendingEvt = null;
+            const [mx, my] = stageXY(ev, stage, canvas);
+            const mdx = mx - picker.geo.cx, mdy = my - picker.geo.cy;
+            if (target === "ring") {
+              const angle = Math.atan2(-mdy, mdx) * 180 / Math.PI;
+              hooks.onHue((angle + 360) % 360);
+            } else {
+              const [cdx, cdy] = unrotate(mdx, mdy, state.hue);
+              let [w, b, c] = barycentric(cdx + picker.geo.cx, cdy + picker.geo.cy, picker.geo.verts);
+              w = Math.max(0, Math.min(1, w));
+              b = Math.max(0, Math.min(1, b));
+              if (w + b > 1) { const s = w + b; w /= s; b /= s; }
+              hooks.onTri(w, b);
+            }
+          };
+          const dispatch = ev => {
+            pendingEvt = ev;
+            if (rafId === null) rafId = requestAnimationFrame(flush);
+          };
+          // initial
+          if (target === "ring") {
+            const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+            hooks.onHue((angle + 360) % 360);
+          } else {
+            const [cdx, cdy] = unrotate(dx, dy, state.hue);
+            let [w, b, c] = barycentric(cdx + geo.cx, cdy + geo.cy, geo.verts);
+            w = Math.max(0, Math.min(1, w));
+            b = Math.max(0, Math.min(1, b));
+            if (w + b > 1) { const s = w + b; w /= s; b /= s; }
+            hooks.onTri(w, b);
+          }
+
+          const up = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            stage.removeEventListener("pointermove", dispatch);
+            stage.removeEventListener("pointerup", up);
+            stage.removeEventListener("pointercancel", up);
+          };
+          stage.addEventListener("pointermove", dispatch);
+          stage.addEventListener("pointerup", up);
+          stage.addEventListener("pointercancel", up);
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // Controls
+      // ═══════════════════════════════════════════════════════════
+
+      const hueInput   = document.getElementById("hue-input");
+      const hueReadout = document.getElementById("hue-readout");
+
+      function syncHueInput() {
+        hueInput.value = String(Math.round(state.hue));
+        hueReadout.textContent = `${Math.round(state.hue)}°`;
+      }
+
+      function setSegActive(seg, value) {
+        seg.querySelectorAll("button").forEach(b => {
+          b.setAttribute("aria-pressed", b.dataset.value === String(value) ? "true" : "false");
+        });
+      }
+
+      function onSpaceChanged() {
+        repaintPicker();
+        repaintQuant();
         renderGrid();
+        renderArcs();
+      }
+      function onHueChanged() {
+        repaintPicker();
+        repaintQuant();
+        renderGrid();
+        renderArcs();
+      }
+      function onNChanged() {
+        // Clamp quant selection to new N.
+        state.quant.i = Math.min(state.quant.i, state.N - state.quant.k);
+        state.quant.k = Math.min(state.quant.k, state.N);
+        renderQuantDots();
         updateQuantReadout();
+        renderGrid();
+        renderArcs();
+      }
+      function onSchemeChanged() {
+        updatePickerReadout();
+        updateQuantReadout();
+        renderGrid();
       }
 
-      function onQuantHueChange() {
-        repaintQuantBody();
-        applyQuantOrientation();
-        renderGrid();
-        updateQuantReadout();
-      }
-
-      quantNSelect.addEventListener("change", () => {
-        quantState.N = +quantNSelect.value;
-        renderGrid();
-        updateQuantReadout();
+      hueInput.addEventListener("input", () => {
+        state.hue = +hueInput.value;
+        syncHueInput();
+        onHueChanged();
       });
 
-      document.querySelectorAll(".scheme-tabs button").forEach(btn => {
+      document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
         btn.addEventListener("click", () => {
-          document.querySelectorAll(".scheme-tabs button").forEach(b => {
-            b.setAttribute("aria-pressed", b === btn ? "true" : "false");
-          });
-          quantScheme = btn.dataset.scheme;
-          renderGrid();
+          state.space = btn.dataset.value;
+          setSegActive(btn.parentElement, state.space);
+          onSpaceChanged();
+        });
+      });
+      document.querySelectorAll('[data-decision="N"] button').forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.N = +btn.dataset.value;
+          setSegActive(btn.parentElement, state.N);
+          onNChanged();
+        });
+      });
+      document.querySelectorAll('[data-decision="scheme"] button').forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.scheme = btn.dataset.value;
+          setSegActive(btn.parentElement, state.scheme);
+          onSchemeChanged();
         });
       });
 
-      // Reuse attachPickerDrag for the hue ring. The quant picker
-      // doesn't have a (W, B, C) cursor so the "tri" branch just
-      // no-ops via a stub hitTest — we accept ring hits only.
-      quantStage.addEventListener("pointerdown", e => {
-        const rect = quantStage.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width * quantCanvas.width;
-        const y = (e.clientY - rect.top) / rect.height * quantCanvas.height;
-        const geo = quantState.geo;
-        const dx = x - geo.cx, dy = y - geo.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < geo.ringInner - 2 || dist > geo.ringOuter + 8) return;
-        quantStage.setPointerCapture(e.pointerId);
+      // ═══════════════════════════════════════════════════════════
+      // Initial paint
+      // ═══════════════════════════════════════════════════════════
 
-        let pendingEvt = null, rafId = null;
-        const flush = () => {
-          rafId = null;
-          if (!pendingEvt) return;
-          const ev = pendingEvt; pendingEvt = null;
-          const r = quantStage.getBoundingClientRect();
-          const mx = (ev.clientX - r.left) / r.width * quantCanvas.width;
-          const my = (ev.clientY - r.top) / r.height * quantCanvas.height;
-          const g = quantState.geo;
-          const dx2 = mx - g.cx, dy2 = my - g.cy;
-          const angle = Math.atan2(-dy2, dx2) * 180 / Math.PI;
-          quantState.h = (angle + 360) % 360;
-          onQuantHueChange();
-        };
-        const dispatch = ev => {
-          pendingEvt = ev;
-          if (rafId === null) rafId = requestAnimationFrame(flush);
-        };
-
-        // Initial pick.
-        const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
-        quantState.h = (angle0 + 360) % 360;
-        onQuantHueChange();
-
-        const up = () => {
-          if (rafId) cancelAnimationFrame(rafId);
-          quantStage.removeEventListener("pointermove", dispatch);
-          quantStage.removeEventListener("pointerup", up);
-          quantStage.removeEventListener("pointercancel", up);
-        };
-        quantStage.addEventListener("pointermove", dispatch);
-        quantStage.addEventListener("pointerup", up);
-        quantStage.addEventListener("pointercancel", up);
-      });
-
+      repaintPicker();
       repaintQuant();
+      renderGrid();
+      renderArcs();
     </script>
   </body>
 </html>
