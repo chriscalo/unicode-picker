@@ -163,8 +163,8 @@ main { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  height: 68dvh;
-  min-height: 520px;
+  height: 42dvh;
+  min-height: 360px;
 }
 .preview {
   position: relative;
@@ -175,17 +175,42 @@ main { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px
   overflow: hidden;
 }
 .preview .preview-label {
-  padding: 4px 10px;
+  padding: 4px 6px 4px 10px;
   font-size: 10px;
   color: var(--muted);
   background: var(--card);
   border-bottom: solid 1px var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.preview .preview-label .theme { text-transform: uppercase; letter-spacing: 0.08em; }
+.preview .preview-label .spacer { margin-left: auto; }
+.preview .interact-toggle {
+  appearance: none;
+  font: inherit;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: solid 1px var(--rule);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.preview .interact-toggle:hover { color: var(--ink); }
+.preview.interactive .interact-toggle {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: transparent;
 }
 .preview iframe {
   flex: 1;
   width: 100%;
   border: 0;
+  pointer-events: none;
 }
+.preview.interactive iframe { pointer-events: auto; }
+.preview.interactive { outline: solid 2px var(--accent); outline-offset: -2px; }
 
 /* Designer overlay */
 .overlay {
@@ -418,7 +443,21 @@ function renderCandidate(cand) {
   const previews = el("div", { class: "previews" });
   for (const theme of ["light", "dark"]) {
     const wrap = el("div", { class: "preview" });
-    wrap.append(el("div", { class: "preview-label" }, theme));
+    const label = el("div", { class: "preview-label" },
+      el("span", { class: "theme" }, theme),
+      el("span", { class: "spacer" }),
+    );
+    const interactBtn = el("button", {
+      class: "interact-toggle",
+      type: "button",
+      title: "Toggle whether this iframe receives mouse/keyboard input",
+    }, "interact");
+    interactBtn.addEventListener("click", () => {
+      const on = wrap.classList.toggle("interactive");
+      interactBtn.textContent = on ? "locked" : "interact";
+    });
+    label.append(interactBtn);
+    wrap.append(label);
     const iframe = el("iframe", {
       src: "/index.html",
       title: `${cand.name} / ${theme}`,
