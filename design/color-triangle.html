@@ -961,29 +961,40 @@
         return out;
       })();
 
-      // — OKHSV (Björn Ottosson) — HSV variant of OKHSL.
+      // — OKHSV (Björn Ottosson) — HSV on OKLab. Ported verbatim
+      // from ok_color.h#okhsv_to_srgb.
       function okhsvToLinearRgb(h, s, v) {
         if (v <= 0) return [0, 0, 0];
+        const hRad = h * Math.PI / 180;
+        const a_ = Math.cos(hRad), b_ = Math.sin(hRad);
         const cusp = okhslCuspAtHue(h);
-        const STmax = { S: cusp.C / cusp.L, T: cusp.C / (1 - cusp.L) };
+        const S_max = cusp.C / cusp.L;
+        const T_max = cusp.C / (1 - cusp.L);
         const S_0 = 0.5;
-        const k = 1 - S_0 / STmax.S;
-        // L, C from (s, v)
-        const L_v = 1 - s * S_0 / (S_0 + STmax.T - STmax.T * k * s);
-        const C_v = s * STmax.T * S_0 / (S_0 + STmax.T - STmax.T * k * s);
-        const L = v * L_v;
-        const C = v * C_v;
-        // Toe compensation
-        const toeL = 0.5 * (OKHSL_K3 * L_v - OKHSL_K1
-          + Math.sqrt((OKHSL_K3 * L_v - OKHSL_K1) ** 2 + 4 * OKHSL_K2 * OKHSL_K3 * L_v));
-        const L_vt = okhslToeInv(toeL);
-        const toeV = 0.5 * (OKHSL_K3 * v - OKHSL_K1
-          + Math.sqrt((OKHSL_K3 * v - OKHSL_K1) ** 2 + 4 * OKHSL_K2 * OKHSL_K3 * v));
-        const V_t = okhslToeInv(toeV);
-        // Adjust L, C for perceptual
-        const L_new = V_t * L / L_v;
-        const C_new = (V_t * L / L_v) * (C / L);
-        return oklchToLinearRgb(L_new, C_new, h);
+        const k = 1 - S_0 / S_max;
+
+        // Triangle-approximation L and C for (s, v=1).
+        const L_v = 1 - s * S_0 / (S_0 + T_max - T_max * k * s);
+        const C_v = s * T_max * S_0 / (S_0 + T_max - T_max * k * s);
+
+        let L = v * L_v;
+        let C = v * C_v;
+
+        // Compensate for toe and for the curved top of the gamut.
+        const L_vt = okhslToeInv(L_v);
+        const C_vt = C_v * L_vt / L_v;
+        const L_new = okhslToeInv(L);
+        C = C * L_new / L;
+        L = L_new;
+
+        // Scale so the C=T_max line lies exactly on the gamut.
+        const rgbScale = oklchToLinearRgb(L_vt, C_vt, h);
+        const rgbMax = Math.max(rgbScale[0], rgbScale[1], rgbScale[2], 0);
+        const scaleL = rgbMax > 0 ? Math.cbrt(1 / rgbMax) : 1;
+        L *= scaleL;
+        C *= scaleL;
+
+        return oklchToLinearRgb(L, C, h);
       }
 
       // — Jzazbz (Safdar et al. 2017) — perceptually-uniform HDR
