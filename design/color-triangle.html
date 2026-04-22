@@ -1473,6 +1473,42 @@ N = 8 →  45</pre>
         return xyzToLinearRgb(X, Y, Z);
       }
 
+      // For each hue, find the L that maximises chroma (HSLuv
+      // cusp L). Then Gaussian-smooth the LUT with σ=5° to blunt
+      // the sRGB cube-corner kink, same trick the OKLCH picker
+      // uses. Net result: C vertex reaches actual max saturation
+      // for its hue, ring stays smooth.
+      function findHsluvCuspL(hue) {
+        let bestL = 50, bestC = 0;
+        for (let L = 1; L < 99; L += 0.5) {
+          const c = maxChromaForLH(L, hue);
+          if (c > bestC) { bestC = c; bestL = L; }
+        }
+        return bestL;
+      }
+      const HSLUV_CUSP_L_LUT = (() => {
+        const raw = new Array(361);
+        for (let h = 0; h <= 360; h++) raw[h] = findHsluvCuspL(h);
+        const sigma = 5;
+        const half = Math.ceil(3 * sigma);
+        const out = new Array(361);
+        for (let i = 0; i < 361; i++) {
+          let sum = 0, wSum = 0;
+          for (let j = -half; j <= half; j++) {
+            const w = Math.exp(-(j * j) / (2 * sigma * sigma));
+            const k = ((i + j) % 360 + 360) % 360;
+            sum += raw[k] * w;
+            wSum += w;
+          }
+          out[i] = sum / wSum;
+        }
+        return out;
+      })();
+      function hsluvCuspL(hue) {
+        const h = ((hue % 360) + 360) % 360;
+        return HSLUV_CUSP_L_LUT[Math.round(h)];
+      }
+
       function paintRingHsluv(canvas) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
@@ -1494,7 +1530,8 @@ N = 8 →  45</pre>
             if (distSq < rInnerSq || distSq > rOuterSq) continue;
             const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
             const pixelHue = (angle + 360) % 360;
-            const [r, g, b] = hsluvToLinearRgb(pixelHue, 100, 60);
+            const Lp = hsluvCuspL(pixelHue);
+            const [r, g, b] = hsluvToLinearRgb(pixelHue, 100, Lp);
             const i = (y * width + x) * 4;
             data[i]     = Math.round(linearToSrgb(r) * 255);
             data[i + 1] = Math.round(linearToSrgb(g) * 255);
@@ -1528,7 +1565,7 @@ N = 8 →  45</pre>
         const a2 = (y3 - y1) * invDet;
         const b2 = (x1 - x3) * invDet;
 
-        const L_PEAK_HSLUV = 60;
+        const L_PEAK_HSLUV = hsluvCuspL(hue);
         for (let y = yMin; y < yMax; y++) {
           const dy = y - y3;
           for (let x = xMin; x < xMax; x++) {
@@ -1575,7 +1612,8 @@ N = 8 →  45</pre>
       function updateHsluvReadout() {
         const { h, w, b } = hsluvState;
         const c = 1 - w - b;
-        const L = 100 * w + 60 * c;
+        const L_peak = hsluvCuspL(h);
+        const L = 100 * w + L_peak * c;
         const S = 100 * c;
         document.getElementById("hsluv-h").textContent = `${h.toFixed(0)}°`;
         document.getElementById("hsluv-w").textContent = w.toFixed(2);
