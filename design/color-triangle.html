@@ -431,8 +431,8 @@
       <section>
         <div class="section-head">
           <h2>
-            Continuous picker
-            <span class="info" tabindex="0" data-tooltip="Drag the triangle to move between the pure hue (C corner), a tint (W corner, hue + white), and a shade (B corner, hue + black). Interior points are tones (hue + grey). Drag the ring to change the hue.">ⓘ</span>
+            Continuous mix
+            <span class="info" tabindex="0" data-tooltip="Continuous tint / shade / tone picker. Triangle corners: pure hue (C), tint = hue + white (W), shade = hue + black (B). Interior points are tones (hue + grey). Drag the ring to change the hue.">ⓘ</span>
           </h2>
         </div>
 
@@ -458,8 +458,8 @@
       <section>
         <div class="section-head">
           <h2>
-            Quantized picker
-            <span class="info" tabindex="0" data-tooltip="Quantized picker. The only hues available are the evenly-spaced steps on the ring; the only tints/shades/tones are the ternary-grid points at resolution N.">ⓘ</span>
+            Quantized mix
+            <span class="info" tabindex="0" data-tooltip="Same tint / shade / tone space as tile 1, snapped to a finite grid. The only hues available are the evenly-spaced ring steps; the only tints, shades, and tones are the ternary-grid cells at resolution N.">ⓘ</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -493,8 +493,8 @@
       <section>
         <div class="section-head">
           <h2>
-            2D grid
-            <span class="info" tabindex="0" data-tooltip="Rows = chroma band (how much pure hue is in the mix). Columns = lightness mix (more white on the right). Top-left = black, top-right = white, bottom-left = pure hue. Top row is the black-to-white shades/tints; the bottom cell is the pure hue; the interior is tones.">ⓘ</span>
+            Mix palette
+            <span class="info" tabindex="0" data-tooltip="Named palette of tints, shades, and tones at the chosen hue. Rows = tone level (how much pure hue is in the mix, k). Columns = white-vs-black bias (i). Top-left = black (max shade), top-right = white (max tint), bottom-left = pure hue. Top row reads as the shades-to-tints ramp; interior cells are tones.">ⓘ</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -525,8 +525,8 @@
       <section>
         <div class="section-head">
           <h2>
-            Arc-based scales
-            <span class="info" tabindex="0" data-tooltip="Each arc is a ramp from black (shade extreme) through a peak tone to white (tint extreme). Arcs differ by peak colorfulness — c00 is pure greyscale, c100 runs black → pure hue → white. Every arc carries N evenly-spaced color stops.">ⓘ</span>
+            Tonal arcs
+            <span class="info" tabindex="0" data-tooltip="Shade-to-tint ramps at varying peak tone. Each arc runs black (shade extreme) → midpoint → white (tint extreme); the arcs differ by how much pure hue sits at the midpoint — c00 is fully greyscale, c100 has the pure hue at its peak. Every arc carries N evenly-spaced color stops.">ⓘ</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
