@@ -831,16 +831,17 @@
         --color-toggle-icon:    var(--neutral-1);
       }
 
-      html[data-neutral-hue="warm"]  unicode-picker { --neutral-hue:  30; }
-      html[data-neutral-hue="cream"] unicode-picker { --neutral-hue:  80; }
-      html[data-neutral-hue="sage"]  unicode-picker { --neutral-hue: 140; }
-      html[data-neutral-hue="cool"]  unicode-picker { --neutral-hue: 200; }
-      html[data-neutral-hue="blue"]  unicode-picker { --neutral-hue: 260; }
-      html[data-neutral-hue="rose"]  unicode-picker { --neutral-hue: 340; }
-
-      html[data-neutral-chroma="none"]     unicode-picker { --neutral-chroma: 0;     }
-      html[data-neutral-chroma="subtle"]   unicode-picker { --neutral-chroma: 0.008; }
-      html[data-neutral-chroma="moderate"] unicode-picker { --neutral-chroma: 0.018; }
+      /* Same hue set for both scales — the same hue ID maps to
+         the same angle on each. Rendered swatches differ because
+         neutral uses step-3 L and accent uses step-9 L. */
+      html[data-neutral-hue="red"]     unicode-picker { --neutral-hue:  20; }
+      html[data-neutral-hue="orange"]  unicode-picker { --neutral-hue:  45; }
+      html[data-neutral-hue="yellow"]  unicode-picker { --neutral-hue:  90; }
+      html[data-neutral-hue="green"]   unicode-picker { --neutral-hue: 150; }
+      html[data-neutral-hue="teal"]    unicode-picker { --neutral-hue: 195; }
+      html[data-neutral-hue="blue"]    unicode-picker { --neutral-hue: 250; }
+      html[data-neutral-hue="violet"]  unicode-picker { --neutral-hue: 285; }
+      html[data-neutral-hue="magenta"] unicode-picker { --neutral-hue: 340; }
 
       html[data-accent-hue="red"]     unicode-picker { --accent-hue:  20; }
       html[data-accent-hue="orange"]  unicode-picker { --accent-hue:  45; }
@@ -851,10 +852,20 @@
       html[data-accent-hue="violet"]  unicode-picker { --accent-hue: 285; }
       html[data-accent-hue="magenta"] unicode-picker { --accent-hue: 340; }
 
+      /* Shared chroma labels (none/low/medium/high/vivid), scaled
+         per role: neutral tops out low (paper shouldn't scream),
+         accent goes much higher. */
+      html[data-neutral-chroma="none"]   unicode-picker { --neutral-chroma: 0;     }
+      html[data-neutral-chroma="low"]    unicode-picker { --neutral-chroma: 0.004; }
+      html[data-neutral-chroma="medium"] unicode-picker { --neutral-chroma: 0.010; }
+      html[data-neutral-chroma="high"]   unicode-picker { --neutral-chroma: 0.018; }
+      html[data-neutral-chroma="vivid"]  unicode-picker { --neutral-chroma: 0.030; }
+
       html[data-accent-chroma="none"]   unicode-picker { --accent-chroma: 0;     }
       html[data-accent-chroma="low"]    unicode-picker { --accent-chroma: 0.050; }
       html[data-accent-chroma="medium"] unicode-picker { --accent-chroma: 0.100; }
-      html[data-accent-chroma="high"]   unicode-picker { --accent-chroma: 0.150; }
+      html[data-accent-chroma="high"]   unicode-picker { --accent-chroma: 0.140; }
+      html[data-accent-chroma="vivid"]  unicode-picker { --accent-chroma: 0.180; }
 
       /* Phase 2 — per-element contrast controls.
          Each role-* decision re-points one semantic token at a
@@ -1194,27 +1205,35 @@
             ["space-mono","Space Mono"],
           ],
           default: "noto" },
+        /* Shared hue set — same 8 IDs for neutral and accent,
+           so the two scales can rhyme. Per-swatch chroma (c) is
+           tuned for perceptual visibility at the swatch's
+           render step, not tied to the user's chroma decision. */
         { id: "neutral-hue", step: "surface", label: "Neutral hue",
           help: "Paper / ink scale hue.",
           kind: "swatch-palette",
           options: [
-            ["warm",  "Warm",  { role: "neutral", h:  30, c: 0.015 }],
-            ["cream", "Cream", { role: "neutral", h:  80, c: 0.015 }],
-            ["sage",  "Sage",  { role: "neutral", h: 140, c: 0.012 }],
-            ["cool",  "Cool",  { role: "neutral", h: 200, c: 0.012 }],
-            ["blue",  "Blue",  { role: "neutral", h: 260, c: 0.012 }],
-            ["rose",  "Rose",  { role: "neutral", h: 340, c: 0.015 }],
+            ["red",     "Red",     { role: "neutral", h:  20, c: 0.030 }],
+            ["orange",  "Orange",  { role: "neutral", h:  45, c: 0.030 }],
+            ["yellow",  "Yellow",  { role: "neutral", h:  90, c: 0.030 }],
+            ["green",   "Green",   { role: "neutral", h: 150, c: 0.030 }],
+            ["teal",    "Teal",    { role: "neutral", h: 195, c: 0.030 }],
+            ["blue",    "Blue",    { role: "neutral", h: 250, c: 0.030 }],
+            ["violet",  "Violet",  { role: "neutral", h: 285, c: 0.030 }],
+            ["magenta", "Magenta", { role: "neutral", h: 340, c: 0.030 }],
           ],
-          default: "cream" },
+          default: "yellow" },
         { id: "neutral-chroma", step: "surface", label: "Neutral chroma",
           help: "How tinted the paper reads.",
           kind: "swatch-palette",
           options: [
-            ["none",     "None",     { role: "neutral", h: 80, c: 0 }],
-            ["subtle",   "Subtle",   { role: "neutral", h: 80, c: 0.008 }, { preferred: true }],
-            ["moderate", "Moderate", { role: "neutral", h: 80, c: 0.018 }],
+            ["none",   "None",   { role: "neutral", h: 90, c: 0 }],
+            ["low",    "Low",    { role: "neutral", h: 90, c: 0.004 }, { preferred: true }],
+            ["medium", "Medium", { role: "neutral", h: 90, c: 0.010 }],
+            ["high",   "High",   { role: "neutral", h: 90, c: 0.018 }],
+            ["vivid",  "Vivid",  { role: "neutral", h: 90, c: 0.030 }],
           ],
-          default: "subtle" },
+          default: "low" },
         { id: "accent-hue", step: "surface", label: "Accent hue",
           help: "Brand accent scale hue.",
           kind: "swatch-palette",
@@ -1233,10 +1252,11 @@
           help: "How saturated the accent reads.",
           kind: "swatch-palette",
           options: [
-            ["none",   "None",   { role: "accent", h: 160, c: 0 }],
-            ["low",    "Low",    { role: "accent", h: 160, c: 0.050 }],
-            ["medium", "Medium", { role: "accent", h: 160, c: 0.100 }, { preferred: true }],
-            ["high",   "High",   { role: "accent", h: 160, c: 0.150 }],
+            ["none",   "None",   { role: "accent", h: 150, c: 0 }],
+            ["low",    "Low",    { role: "accent", h: 150, c: 0.050 }],
+            ["medium", "Medium", { role: "accent", h: 150, c: 0.100 }, { preferred: true }],
+            ["high",   "High",   { role: "accent", h: 150, c: 0.140 }],
+            ["vivid",  "Vivid",  { role: "accent", h: 150, c: 0.180 }],
           ],
           default: "medium" },
 
