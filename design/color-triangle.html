@@ -225,7 +225,6 @@
         font-variant-numeric: tabular-nums;
       }
       .token-grid .cell {
-        aspect-ratio: 1;
         border-radius: 4px;
         border: 1px solid var(--color-border-subtle);
         display: flex;
@@ -233,6 +232,8 @@
         justify-content: center;
         font-size: 9px;
         cursor: default;
+        min-width: 0;
+        min-height: 0;
       }
       .token-grid .cell[data-empty] {
         border: 0;
@@ -264,29 +265,39 @@
       .arc-scales {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 5px;
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
       }
       .arc-scale {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
+        flex: 1 1 0;
+        min-height: 0;
       }
       .arc-scale-label {
         font-size: 10px;
         color: var(--color-text-secondary);
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.04em;
+        flex: 0 0 auto;
       }
       .arc-scale-ramp {
         display: grid;
         grid-auto-flow: column;
-        grid-auto-columns: 1fr;
+        grid-auto-columns: minmax(0, 1fr);
         gap: 2px;
+        flex: 1 1 0;
+        min-height: 0;
+        min-width: 0;
       }
       .arc-swatch {
-        aspect-ratio: 1;
         border-radius: 3px;
         border: 1px solid var(--color-border-subtle);
+        min-width: 0;
+        min-height: 0;
       }
 
       pre {
@@ -421,7 +432,7 @@
           Rows = chroma band k, cols = lightness index i. Top-right
           = white, top-left = black, bottom-left = pure hue.
         </p>
-        <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden;"></div>
+        <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
       </section>
 
       <!-- 4. Arc-based scales -->
@@ -1082,10 +1093,11 @@
         const cols = N + 1, rows = N + 1;
         const grid = document.createElement("div");
         grid.className = "token-grid";
-        grid.style.gridTemplateColumns = `20px repeat(${cols}, minmax(24px, 1fr))`;
-        grid.style.gridTemplateRows    = `16px repeat(${rows}, minmax(24px, 1fr))`;
-        grid.style.maxHeight = "100%";
-        grid.style.height = "100%";
+        grid.style.gridTemplateColumns = `20px repeat(${cols}, minmax(0, 1fr))`;
+        grid.style.gridTemplateRows    = `16px repeat(${rows}, minmax(0, 1fr))`;
+        grid.style.flex = "1 1 auto";
+        grid.style.minHeight = "0";
+        grid.style.minWidth = "0";
 
         // header
         const corner = document.createElement("div");
@@ -1137,17 +1149,28 @@
       const arcScalesTarget = document.getElementById("arc-scales");
       const ARC_COUNT = 5;
 
-      // Evaluate an arc at parameter t ∈ [0, 1].
-      //   t=0   → black (w=0, b=1, c=0)
-      //   t=0.5 → midpoint at max-c for this arc
-      //   t=1   → white (w=1, b=0, c=0)
-      // The arc's barycentric c(t) = 4·peak·t·(1-t) (parabola),
-      // w(t) ramps linearly so W+B+C = 1 stays satisfied.
+      // Arc parameterised so peak=0 is a straight line B→W (no
+      // chroma) and peak=1 is a true V: B → C → W along the
+      // triangle edges with a cusp at the C vertex. In between the
+      // arcs are smooth curves that asymptotically approach the V.
+      //
+      // c(t, p) = p · (1 − |2t−1|^α),   α = 2 − p
+      //   α=2, p=0 → straight line (c≡0).
+      //   α=1, p=1 → 1 − |2t−1|, a triangle wave (V in chroma).
+      //
+      // (w, b) split blends the parabolic interior (w:b = t:(1-t))
+      // toward the V's edge-hugging split (w=0 on B→C leg, b=0 on
+      // C→W leg) as p → 1, so the full (w,b,c) point walks the
+      // triangle edges at peak=1 and interiors in between.
       function arcBary(t, peak) {
-        const c = 4 * peak * t * (1 - t);
-        const w = t * (1 - c);
-        const b = (1 - t) * (1 - c);
-        return [w, b, c];
+        const alpha = 2 - peak;
+        const u = Math.abs(2 * t - 1);
+        const c = peak * (1 - Math.pow(u, alpha));
+        const w0 = (1 - peak) * t        + peak * Math.max(0, 2 * t - 1);
+        const b0 = (1 - peak) * (1 - t)  + peak * Math.max(0, 1 - 2 * t);
+        const denom = w0 + b0;
+        const scale = denom > 1e-10 ? (1 - c) / denom : 0;
+        return [w0 * scale, b0 * scale, c];
       }
 
       // Arc length integration (numeric) in barycentric space for
