@@ -84,10 +84,6 @@
         background: var(--color-text-primary);
         color: var(--color-bg-base);
       }
-      .control input[type=range] {
-        width: 200px;
-      }
-
       .inline-controls {
         display: flex;
         gap: 12px;
@@ -105,12 +101,6 @@
         text-transform: uppercase;
         color: var(--color-text-secondary);
       }
-      .hue-readout {
-        font-size: 11px;
-        font-variant-numeric: tabular-nums;
-        color: var(--color-text-secondary);
-      }
-
       main {
         flex: 1 1 0;
         display: grid;
@@ -349,11 +339,6 @@
           </div>
         </div>
 
-        <div class="control">
-          <div class="control__label">Hue <span id="hue-readout" class="hue-readout">180°</span></div>
-          <input type="range" id="hue-input" min="0" max="360" value="180" step="1">
-        </div>
-
       </div>
     </header>
 
@@ -432,11 +417,11 @@
           <div class="inline-control">
             <span class="inline-control__label">N</span>
             <div class="seg" data-decision="N">
+              <button data-value="2">2</button>
               <button data-value="4">4</button>
-              <button data-value="6">6</button>
-              <button data-value="8">8</button>
+              <button data-value="5">5</button>
               <button data-value="10" aria-pressed="true">10</button>
-              <button data-value="12">12</button>
+              <button data-value="20">20</button>
             </div>
           </div>
           <div class="inline-control">
@@ -1012,7 +997,7 @@
 
       attachDrag(pickerStage, pickerBody, state.picker, {
         // Tile 1 is the continuous picker — never snap.
-        onHue: h => { state.hue = ((h % 360) + 360) % 360; syncHueInput(); onHueChanged(); },
+        onHue: h => { state.hue = ((h % 360) + 360) % 360; onHueChanged(); },
         onTri: (w, b) => { state.picker.w = w; state.picker.b = b; updatePickerCursors(); updatePickerReadout(); },
       });
 
@@ -1084,7 +1069,6 @@
             dot.addEventListener("click", e => {
               e.stopPropagation();
               state.hue = quantizeHue(angle);
-              syncHueInput();
               onHueChanged();
             });
             quantOverlay.appendChild(dot);
@@ -1108,7 +1092,7 @@
         const w = i / N, b = j / N, c = k / N;
         const rows = [
           ["token", tokenName(i, j, k, N)],
-          ["address", `i=${i}, j=${j}, k=${k}`],
+          ["address", `i=${Math.round((i/N)*100)}, j=${Math.round((j/N)*100)}, k=${Math.round((k/N)*100)}`],
           ...strat().readout(state.hue, w, b),
         ];
         quantReadouts.innerHTML = rows.map(([key, v]) => `<dt>${key}</dt><dd>${v}</dd>`).join("");
@@ -1136,7 +1120,6 @@
           const g = state.quant.geo;
           const angle = Math.atan2(-(my - g.cy), mx - g.cx) * 180 / Math.PI;
           state.hue = quantizeHue(angle);
-          syncHueInput();
           onHueChanged();
         };
         const dispatch = ev => {
@@ -1151,8 +1134,7 @@
         };
         // initial
         const angle0 = Math.atan2(-dy, dx) * 180 / Math.PI;
-        state.hue = (angle0 + 360) % 360;
-        syncHueInput();
+        state.hue = quantizeHue(angle0);
         onHueChanged();
         quantStage.addEventListener("pointermove", dispatch);
         quantStage.addEventListener("pointerup", up);
@@ -1165,11 +1147,19 @@
 
       const gridTarget = document.getElementById("grid-target");
 
+      // Percentage-based labels: 0 → "00", 50 → "50", 100 → "100".
+      function pctLabel(v) {
+        return v.toString().padStart(2, "0");
+      }
+
       function tokenName(i, j, k, N) {
-        if (state.scheme === "cl")  return `c${k}-l${i}`;
-        if (state.scheme === "wb")  return `w${i}b${j}`;
-        if (state.scheme === "num") return `${k}-${i}`;
-        return `c${k}-l${i}`;
+        const iPct = pctLabel(Math.round((i / N) * 100));
+        const jPct = pctLabel(Math.round((j / N) * 100));
+        const kPct = pctLabel(Math.round((k / N) * 100));
+        if (state.scheme === "cl")  return `c${kPct}-l${iPct}`;
+        if (state.scheme === "wb")  return `w${iPct}b${jPct}`;
+        if (state.scheme === "num") return `${kPct}-${iPct}`;
+        return `c${kPct}-l${iPct}`;
       }
 
       function renderGrid() {
@@ -1192,14 +1182,14 @@
         for (let i = 0; i < cols; i++) {
           const hdr = document.createElement("div");
           hdr.className = "axis-label";
-          hdr.textContent = i;
+          hdr.textContent = Math.round((i / N) * 100);
           grid.appendChild(hdr);
         }
 
         for (let k = 0; k < rows; k++) {
           const rowLabel = document.createElement("div");
           rowLabel.className = "axis-label axis-label--row";
-          rowLabel.textContent = k;
+          rowLabel.textContent = Math.round((k / N) * 100);
           grid.appendChild(rowLabel);
           for (let i = 0; i < cols; i++) {
             const cell = document.createElement("div");
@@ -1477,14 +1467,6 @@
       // Controls
       // ═══════════════════════════════════════════════════════════
 
-      const hueInput   = document.getElementById("hue-input");
-      const hueReadout = document.getElementById("hue-readout");
-
-      function syncHueInput() {
-        hueInput.value = String(Math.round(state.hue));
-        hueReadout.textContent = `${Math.round(state.hue)}°`;
-      }
-
       function setSegActive(seg, value) {
         seg.querySelectorAll("button").forEach(b => {
           b.setAttribute("aria-pressed", b.dataset.value === String(value) ? "true" : "false");
@@ -1518,14 +1500,7 @@
         renderGrid();
       }
 
-      hueInput.addEventListener("input", () => {
-        // Header slider is continuous — tile 2 applies its own snap.
-        state.hue = +hueInput.value % 360;
-        syncHueInput();
-        onHueChanged();
-      });
-
-      document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
+document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
         btn.addEventListener("click", () => {
           state.space = btn.dataset.value;
           setSegActive(btn.parentElement, state.space);
@@ -1566,7 +1541,6 @@
           setSegActive(btn.parentElement, state.nHues);
           // Snap current hue to the new quantization.
           state.hue = quantizeHue(state.hue);
-          syncHueInput();
           onHueChanged();
         });
       });
