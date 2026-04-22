@@ -1203,15 +1203,20 @@
       }
 
       function renderArcs() {
-        // Paint the body (triangle fill) in the current color space.
+        // paintBody() paints in canonical orientation (hue=0, C at
+        // east) and the canvas is CSS-rotated by -hue for display.
+        // The SVG overlay must match: draw in the canonical frame
+        // and apply the same CSS rotation so arcs and dots land on
+        // the rendered triangle edges.
         paintBody(arcBody, state.hue);
         arcBody.style.transform = `rotate(${-state.hue}deg)`;
+        arcSvg.style.transform  = `rotate(${-state.hue}deg)`;
 
         const width = arcBody.width;
-        const geo = geometry(width, { hasRing: true, hue: state.hue, ringWidth: 0, ringGap: 0, ringPad: 0 });
-        // But we're not painting a ring on this stage; use triangle-only geo.
-        const geoNoRing = geometry(width, { hue: state.hue });
-        const verts = geoNoRing.verts;
+        // Use the same geometry paintBody uses so the SVG overlay
+        // lines up with the rendered triangle edges.
+        const geoBody = geometry(width, { hasRing: true, hue: 0 });
+        const verts = geoBody.verts;
 
         // Draw arcs as SVG paths so they anti-alias nicely.
         const svg = arcSvg;
