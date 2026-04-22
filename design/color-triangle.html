@@ -475,8 +475,8 @@
         <div class="control">
           <div class="control__label">Curve magnitude</div>
           <div class="seg" data-decision="easingMag">
-            <button data-value="2">2</button>
-            <button data-value="4" aria-pressed="true">4</button>
+            <button data-value="2" aria-pressed="true">2</button>
+            <button data-value="4">4</button>
             <button data-value="8">8</button>
           </div>
         </div>
@@ -646,7 +646,7 @@
         //   − → ease-in  (slow start, fast finish)
         // Applied as gamma = 2^(−v·2), i.e. v=1→γ=0.25, v=-1→γ=4.
         easing: {},
-        easingMag: 4,   // γ = mag^(-v); +1 → 1/mag, -1 → mag.
+        easingMag: 2,   // γ = mag^(-v); +1 → 1/mag, -1 → mag.
       };
 
       function getEasing() {
