@@ -398,8 +398,8 @@
             <span class="inline-control__label">Hue steps</span>
             <div class="seg" data-decision="nHues">
               <button data-value="12">12</button>
-              <button data-value="16" aria-pressed="true">16</button>
-              <button data-value="24">24</button>
+              <button data-value="16">16</button>
+              <button data-value="24" aria-pressed="true">24</button>
             </div>
           </div>
         </div>
@@ -465,11 +465,12 @@
           <div class="inline-control">
             <span class="inline-control__label">N</span>
             <div class="seg" data-decision="arcN">
-              <button data-value="4">4</button>
-              <button data-value="6">6</button>
-              <button data-value="8">8</button>
-              <button data-value="10" aria-pressed="true">10</button>
-              <button data-value="12">12</button>
+              <button data-value="5">5</button>
+              <button data-value="7">7</button>
+              <button data-value="9">9</button>
+              <button data-value="11" aria-pressed="true">11</button>
+              <button data-value="13">13</button>
+              <button data-value="21">21</button>
             </div>
           </div>
           <div class="inline-control">
@@ -478,8 +479,8 @@
               <button data-value="3">3</button>
               <button data-value="4">4</button>
               <button data-value="5">5</button>
-              <button data-value="6" aria-pressed="true">6</button>
-              <button data-value="11">11</button>
+              <button data-value="6">6</button>
+              <button data-value="11" aria-pressed="true">11</button>
             </div>
           </div>
         </div>
@@ -504,10 +505,10 @@
       const state = {
         space:  "oklch",
         hue:    180,
-        nHues:  16,   // 0 = continuous; >0 = quantized to that many hues (tile 2 only)
+        nHues:  24,   // quantized hue step count (tile 2 only)
         N:      10,   // ternary-grid resolution (tiles 2 and 3 share this)
-        arcN:   10,   // arc sampling resolution (tile 4, independent)
-        arcCount: 6,  // number of arcs in tile 4
+        arcN:   11,   // arc color-stop count per arc (tile 4)
+        arcCount: 11, // number of arcs in tile 4
         scheme: "cl",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 5, k: 5, geo: null },
@@ -1258,11 +1259,13 @@
       }
 
       // Arc length integration (numeric) in barycentric space for
-      // uniform-along-arc sampling. N is restricted to even values
-      // (see Resolution-N segment) so the N+1 samples always
-      // include a natural midpoint at i = N/2 (arc length = len/2,
-      // which for a symmetric arc corresponds to t = 0.5).
-      function arcSamples(peak, N) {
+      // uniform-along-arc sampling. `stops` is the actual number
+      // of color samples to return per arc (so the off-by-one is
+      // gone — the UI button that says "11" really produces 11
+      // samples). Odd stops give a natural midpoint at index
+      // (stops-1)/2 → arc length len/2 → t=0.5 on the symmetric
+      // arc. That's why the seg restricts stops to odd values.
+      function arcSamples(peak, stops) {
         const segs = 400;
         const pts = [];
         let len = 0;
@@ -1276,8 +1279,9 @@
           prev = cur;
         }
         const out = [];
-        for (let i = 0; i <= N; i++) {
-          const target = (i / N) * len;
+        const divisor = Math.max(1, stops - 1);
+        for (let i = 0; i < stops; i++) {
+          const target = (i / divisor) * len;
           let j = 0;
           while (j < pts.length - 1 && pts[j + 1].s < target) j++;
           const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
@@ -1363,9 +1367,9 @@
         // the y-gap between ramps exactly (both driven by the
         // container's `gap`).
         arcScalesTarget.innerHTML = "";
-        const samplesPerArc = state.arcN + 1;
+        const stops = state.arcN;
         arcScalesTarget.style.gridTemplateColumns =
-          `34px repeat(${samplesPerArc}, minmax(0, 1fr))`;
+          `34px repeat(${stops}, minmax(0, 1fr))`;
         arcScalesTarget.style.gridTemplateRows =
           `repeat(${state.arcCount}, minmax(0, 1fr))`;
 
@@ -1376,6 +1380,7 @@
           const pct = Math.round(peak * 100);
           label.textContent = `c${pct.toString().padStart(2, "0")}`;
           arcScalesTarget.appendChild(label);
+          const divisor = Math.max(1, stops - 1);
           for (let j = 0; j < points.length; j++) {
             const { bary } = points[j];
             const [w, b, c] = bary;
@@ -1383,7 +1388,7 @@
             const sw = document.createElement("div");
             sw.className = "arc-swatch";
             sw.style.background = cssFromRgb(rgb);
-            const posPct = Math.round((j / state.arcN) * 100);
+            const posPct = Math.round((j / divisor) * 100);
             sw.textContent = posPct.toString().padStart(2, "0");
             const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
             sw.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
