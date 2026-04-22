@@ -16,6 +16,7 @@
         display: flex;
         flex-direction: column;
         min-height: 0;
+        background: oklch(22% 0 0);
       }
 
       header.workbench {
@@ -439,7 +440,7 @@
       <section>
         <div class="section-head">
           <h2>
-            Continuous mix
+            Continuous Color Picker
             <span class="info" tabindex="0" data-tooltip="Continuous tint / shade / tone picker. Triangle corners: pure hue (C), tint = hue + white (W), shade = hue + black (B). Interior points are tones (hue + grey). Drag the ring to change the hue.">i</span>
           </h2>
         </div>
@@ -466,8 +467,8 @@
       <section>
         <div class="section-head">
           <h2>
-            Tonal arcs
-            <span class="info" tabindex="0" data-tooltip="Shade-to-tint ramps at varying peak tone. Each arc runs black (shade extreme) → midpoint → white (tint extreme); the arcs differ by how much pure hue sits at the midpoint — c00 is fully greyscale, c100 has the pure hue at its peak. Every arc carries N evenly-spaced color stops.">i</span>
+            Tonal Arc Scales
+            <span class="info" tabindex="0" data-tooltip="A family of 1D scales, one per arc. Each arc runs black (shade extreme) → midpoint → white (tint extreme); the arcs differ by how much pure hue sits at the midpoint — c00 is fully greyscale, c100 has the pure hue at its peak. Every arc carries N evenly-spaced color stops.">i</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -508,7 +509,7 @@
       <section>
         <div class="section-head">
           <h2>
-            Quantized mix
+            Quantized Color Picker
             <span class="info" tabindex="0" data-tooltip="Same tint / shade / tone space as tile 1, snapped to a finite grid. The only hues available are the evenly-spaced ring steps; the only tints, shades, and tones are the ternary-grid cells at resolution N.">i</span>
           </h2>
           <div class="inline-controls">
@@ -543,8 +544,8 @@
       <section>
         <div class="section-head">
           <h2>
-            Mix palette
-            <span class="info" tabindex="0" data-tooltip="Named palette of tints, shades, and tones at the chosen hue. Rows = tone level (how much pure hue is in the mix, k). Columns = white-vs-black bias (i). Top-left = black (max shade), top-right = white (max tint), bottom-left = pure hue. Top row reads as the shades-to-tints ramp; interior cells are tones.">i</span>
+            Tonal Grid Scale
+            <span class="info" tabindex="0" data-tooltip="A single 2D scale that names every tint, shade, and tone at the selected hue — same cells as the Quantized Color Picker above, laid out on a flat rectangular grid instead of on the triangle. Rows = tone level k; columns = white-vs-black bias i. Top-left = black, top-right = white, bottom-left = pure hue.">i</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
