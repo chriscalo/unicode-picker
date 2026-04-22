@@ -308,34 +308,51 @@ fails the lightness-uniformity test.
   a CSS-only hover popover (absolute-positioned div revealed on
   :hover/:focus-within) so the explanation text shows up
   reliably.
+- **Use proper color-theory terminology across the tool.** The
+  three kinds of mixing we're doing all have formal names — swap
+  "W", "B", "C", "lightness", etc. for these where the meaning
+  matches exactly:
+  - **Hue** — the pure colour on the colour wheel. Synonym:
+    **pure hue** or **fully saturated**. That's our "C" corner.
+  - **Tint** — hue + white (lighter). Movement along the line
+    from the C corner toward the W corner.
+  - **Shade** — hue + black (darker). Movement from C toward B.
+  - **Tone** — hue + grey (muted; less intense without being
+    just lighter or darker). Movement from C toward the interior
+    of the B–W edge.
+  - **Saturation / chroma** — how pure vs. muted the colour is.
+    Drops as you add a tone.
+  Gotcha to avoid: "shade" colloquially means any variation, but
+  formally it's specifically *hue + black*. Don't use it for
+  tints or tones in labels. Candidate renames: tile 4's arcs are
+  a "pure-hue → tone midpoint → ??" shape, rows c00/c100 are the
+  *tints* and *shades* respectively, interior rows are *tones*.
 
 ## 8. Task list
 
+**Done**
+- [x] Visualizer: named + numbered scales per theme
+  (`design/color-scales.html`).
+- [x] Visualizer: (L × C) plane per scale / theme.
+- [x] BWC triangle exploration page (`design/color-triangle.html`)
+  — later recast as a full color-system workbench.
+- [x] Workbench: top controls + 2×2 quadrants, no scrolling.
+- [x] Tile 1 continuous picker, tile 2 quantized picker
+  (ternary-grid + quantized hue angles + per-space hue names),
+  tile 3 2D grid with percentage naming, tile 4 arc-based scales
+  (painter's-triangle orientation, c00…c100 arc labels, 00…100
+  stop labels).
+- [x] Percentage-based labels everywhere.
+- [x] Proper tint / shade / pure / tone terminology in readouts and
+  tooltips.
+- [x] Info tooltips via CSS popover (reliable across browsers).
 
+**Deferred** — old §4 Option A (per-mark chroma lever on the
+existing 12-step scale) and Option B (full HWB/OKLCH authoring
+surface) are effectively subsumed by the workbench. Revisit once
+we commit to a specific space + naming scheme; at that point the
+open work is just whether to ship the arc-based palette or the
+2D-grid palette as the actual token set in `style.css`.
 
-- [x] **Visualizer: named + numbered scales per theme.**
-  `design/color-scales.html`, both scales × both themes, with step
-  number, OKLCH breakdown, and role hint per swatch.
-- [x] **Visualizer: (L × C) plane per scale / theme.** Rows = L steps,
-  cols = chroma levels. Outlines mark the 12 current tokens.
-- [x] **BWC triangle exploration page.** `design/color-triangle.html`
-  — walks the math (HWB, barycentric coords, sRGB vs OKLCH),
-  proposes two naming schemes against the triangle, adds an
-  interactive general picker, and plots our 12 tokens per scale on
-  a constrained triangle.
-- [ ] **Revisit Q4 with the grid in hand.** For each real UI mark,
-  ask: does it want an L that's off the current curve's default C?
-  Log the answers — that's the evidence base for Option A vs B.
-  - candidates: secondary text vs link/accent text at same L
-  - hover bg vs accent-active bg at same L
-  - subtle border vs focus ring at same L
-- [ ] **Prototype Option A (per-mark chroma lever).** Add a
-  `--{role}-c` knob that overrides the step's default chroma per
-  role. Ship behind the harness first; see if it changes the way we
-  reason about marks.
-- [ ] **Prototype Option B (HWB authoring surface).** Spike the
-  triangle picker on one scale; decide whether it's worth the
-  refactor. Depends on Option A's answer.
-- [ ] **Decide A vs B.** Based on the previous two spikes + Q4.
-- [ ] **Revisit step count (12 vs 10 vs 100).** Park until the
-  (scale, L, C) model is settled.
+**Open** — see §7 for the active TODOs (more color spaces,
+nuanced hue names, etc.).

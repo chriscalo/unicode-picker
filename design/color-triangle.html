@@ -120,7 +120,7 @@
         background: var(--color-bg-base);
         min-width: 0;
         min-height: 0;
-        overflow: hidden;
+        overflow: visible;
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -151,7 +151,8 @@
         gap: 6px;
         flex: 0 0 auto;
       }
-h2 .info {
+      h2 .info {
+        position: relative;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -164,6 +165,33 @@ h2 .info {
         font-weight: var(--weight-medium);
         cursor: help;
         font-family: var(--font-ui);
+      }
+      h2 .info::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        background: var(--color-bg-panel);
+        color: var(--color-text-primary);
+        padding: 8px 10px;
+        border: 1px solid var(--color-border-subtle);
+        border-radius: 4px;
+        width: max-content;
+        max-width: 320px;
+        font-size: 11px;
+        font-weight: var(--weight-regular);
+        line-height: 1.45;
+        letter-spacing: 0;
+        text-transform: none;
+        white-space: normal;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+        z-index: 100;
+      }
+      h2 .info:hover::after,
+      h2 .info:focus::after {
+        opacity: 1;
       }
 
       /* ── picker stage ─────────────────────────────────────── */
@@ -244,6 +272,30 @@ h2 .info {
         transform: translate(-50%, -50%);
         pointer-events: auto;
         cursor: pointer;
+      }
+      .hue-step-dot[data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: calc(50% + var(--label-offset-x, 0px));
+        top: calc(50% + var(--label-offset-y, 0px));
+        transform: translate(-50%, -50%);
+        font-family: var(--font-ui);
+        font-size: 9px;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-primary);
+        background: var(--color-bg-panel);
+        padding: 1px 4px;
+        border-radius: 2px;
+        border: 1px solid var(--color-border-subtle);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 120ms ease;
+        white-space: nowrap;
+        z-index: 5;
+      }
+      .hue-step-dot:hover::after,
+      .hue-step-dot:focus::after {
+        opacity: 1;
       }
       .quant-dot[aria-selected="true"],
       .hue-step-dot[aria-selected="true"] {
@@ -375,7 +427,7 @@ h2 .info {
         <div class="section-head">
           <h2>
             Continuous picker
-            <span class="info" title="Drag the triangle for (W, B, C); drag the ring for hue. No quantization; the C vertex tracks the selected hue.">ⓘ</span>
+            <span class="info" tabindex="0" data-tooltip="Drag the triangle to move between the pure hue (C corner), a tint (W corner, hue + white), and a shade (B corner, hue + black). Interior points are tones (hue + grey). Drag the ring to change the hue.">ⓘ</span>
           </h2>
         </div>
 
@@ -402,7 +454,7 @@ h2 .info {
         <div class="section-head">
           <h2>
             Quantized picker
-            <span class="info" title="Only the ternary-grid points at resolution N and the hue angles at the chosen step count are clickable.">ⓘ</span>
+            <span class="info" tabindex="0" data-tooltip="Quantized picker. The only hues available are the evenly-spaced steps on the ring; the only tints/shades/tones are the ternary-grid points at resolution N.">ⓘ</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -437,7 +489,7 @@ h2 .info {
         <div class="section-head">
           <h2>
             2D grid
-            <span class="info" title="Rows = chroma band k, cols = lightness index i. Top-right = white, top-left = black, bottom-left = pure hue.">ⓘ</span>
+            <span class="info" tabindex="0" data-tooltip="Rows = chroma band (how much pure hue is in the mix). Columns = lightness mix (more white on the right). Top-left = black, top-right = white, bottom-left = pure hue. Top row is the black-to-white shades/tints; the bottom cell is the pure hue; the interior is tones.">ⓘ</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -469,7 +521,7 @@ h2 .info {
         <div class="section-head">
           <h2>
             Arc-based scales
-            <span class="info" title="Arcs run black → max-C midpoint → white at peak-chroma levels 0–100%. Each arc carries N color stops spaced by arc length.">ⓘ</span>
+            <span class="info" tabindex="0" data-tooltip="Each arc is a ramp from black (shade extreme) through a peak tone to white (tint extreme). Arcs differ by peak colorfulness — c00 is pure greyscale, c100 runs black → pure hue → white. Every arc carries N evenly-spaced color stops.">ⓘ</span>
           </h2>
           <div class="inline-controls">
             <div class="inline-control">
@@ -529,6 +581,41 @@ h2 .info {
         if (!state.nHues) return ((h % 360) + 360) % 360;
         const step = 360 / state.nHues;
         return ((Math.round(h / step) * step) % 360 + 360) % 360;
+      }
+
+      // Colour-name lookup for a given angle, per color space.
+      // Each space has its own 0° so the anchors differ — HWB (sRGB
+      // HSV) aligns with CSS named colours; OKLCH and HSLuv each
+      // have slightly different hue positions. Hand-anchored from
+      // the swatches produced at those angles.
+      const HUE_ANCHORS = {
+        hwb: [
+          [  0, "red"],      [ 30, "orange"], [ 60, "yellow"],
+          [ 90, "chartreuse"], [120, "green"], [150, "spring"],
+          [180, "cyan"],     [210, "azure"],  [240, "blue"],
+          [270, "violet"],   [300, "magenta"],[330, "rose"],
+        ],
+        oklch: [
+          [ 29, "red"],      [ 54, "orange"], [ 85, "yellow"],
+          [120, "chartreuse"], [142, "green"], [170, "teal"],
+          [196, "cyan"],     [232, "blue"],   [264, "indigo"],
+          [303, "magenta"],  [355, "rose"],
+        ],
+        hsluv: [
+          [ 12, "red"],      [ 40, "orange"], [ 80, "yellow"],
+          [115, "chartreuse"],[130, "green"], [160, "teal"],
+          [192, "cyan"],     [225, "blue"],   [265, "violet"],
+          [300, "magenta"],  [345, "rose"],
+        ],
+      };
+      function hueNameAt(angle) {
+        const anchors = HUE_ANCHORS[state.space] || HUE_ANCHORS.hwb;
+        let best = anchors[0], bestD = 361;
+        for (const [a, name] of anchors) {
+          const d = Math.min(Math.abs(angle - a), 360 - Math.abs(angle - a));
+          if (d < bestD) { bestD = d; best = [a, name]; }
+        }
+        return best[1];
       }
 
       // ═══════════════════════════════════════════════════════════
@@ -771,11 +858,11 @@ h2 .info {
           readout(hue, w, b) {
             const c = 1 - w - b;
             return [
-              ["hue", `${hue.toFixed(0)}°`],
-              ["W",   w.toFixed(2)],
-              ["B",   b.toFixed(2)],
-              ["C",   c.toFixed(2)],
-              ["css", `hwb(${hue.toFixed(0)} ${(w*100).toFixed(1)}% ${(b*100).toFixed(1)}%)`],
+              ["hue",   `${hue.toFixed(0)}°`],
+              ["tint",  w.toFixed(2)],
+              ["shade", b.toFixed(2)],
+              ["pure",  c.toFixed(2)],
+              ["css",   `hwb(${hue.toFixed(0)} ${(w*100).toFixed(1)}% ${(b*100).toFixed(1)}%)`],
             ];
           },
         },
@@ -799,13 +886,13 @@ h2 .info {
             const L = w + c * Lp;
             const C = c * Cp;
             return [
-              ["hue", `${hue.toFixed(0)}°`],
-              ["W",   w.toFixed(2)],
-              ["B",   b.toFixed(2)],
-              ["C",   c.toFixed(2)],
-              ["L*",  `${(L*100).toFixed(1)}%`],
-              ["C",   C.toFixed(3)],
-              ["css", `oklch(${(L*100).toFixed(1)}% ${C.toFixed(3)} ${hue.toFixed(0)})`],
+              ["hue",    `${hue.toFixed(0)}°`],
+              ["tint",   w.toFixed(2)],
+              ["shade",  b.toFixed(2)],
+              ["pure",   c.toFixed(2)],
+              ["L*",     `${(L*100).toFixed(1)}%`],
+              ["chroma", C.toFixed(3)],
+              ["css",    `oklch(${(L*100).toFixed(1)}% ${C.toFixed(3)} ${hue.toFixed(0)})`],
             ];
           },
         },
@@ -829,13 +916,13 @@ h2 .info {
             const L = 100 * w + Lp * c;
             const S = 100 * c;
             return [
-              ["hue", `${hue.toFixed(0)}°`],
-              ["W",   w.toFixed(2)],
-              ["B",   b.toFixed(2)],
-              ["C",   c.toFixed(2)],
-              ["L",   `${L.toFixed(1)}%`],
-              ["S",   `${S.toFixed(1)}%`],
-              ["css", `hsluv(${hue.toFixed(0)} ${S.toFixed(0)}% ${L.toFixed(0)}%)`],
+              ["hue",    `${hue.toFixed(0)}°`],
+              ["tint",   w.toFixed(2)],
+              ["shade",  b.toFixed(2)],
+              ["pure",   c.toFixed(2)],
+              ["L",      `${L.toFixed(1)}%`],
+              ["sat.",   `${S.toFixed(1)}%`],
+              ["css",    `hsluv(${hue.toFixed(0)} ${S.toFixed(0)}% ${L.toFixed(0)}%)`],
             ];
           },
         },
@@ -1088,7 +1175,16 @@ h2 .info {
             dot.className = "hue-step-dot";
             dot.style.left = (hx / size * 100) + "%";
             dot.style.top  = (hy / size * 100) + "%";
-            dot.title = `hue ${angle.toFixed(0)}°`;
+            // Small outward label with the hue name (common CSS
+            // name) + degrees. The label nudges outward from the
+            // ring centre along the radial so it doesn't overlap
+            // the triangle.
+            const outward = 22;
+            const lx = Math.cos(rad) * outward;
+            const ly = -Math.sin(rad) * outward;
+            dot.style.setProperty("--label-offset-x", `${lx}px`);
+            dot.style.setProperty("--label-offset-y", `${ly}px`);
+            dot.dataset.tooltip = `${hueNameAt(angle)} ${angle.toFixed(0)}°`;
             if (Math.abs(((state.hue - angle) % 360 + 540) % 360 - 180) < 0.5) {
               dot.setAttribute("aria-selected", "true");
             }
