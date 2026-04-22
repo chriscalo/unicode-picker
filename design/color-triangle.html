@@ -779,13 +779,16 @@ N = 8 →  45</pre>
         return lut;
       })();
 
-      // For cross-hue consistency in lightness, fix L to a target
-      // and find the max in-gamut chroma at that L for each hue.
-      // Same (w, c) then gives the same L regardless of hue; only
-      // C varies per hue.
+      // The cusp itself has a natural kink around hue 265° where
+      // sRGB's gamut surface transitions across a cube corner —
+      // measured ΔE(264°→265°) is 8× the mean. Fixing L and taking
+      // the max in-gamut chroma at that L flattens the derivative
+      // across hues (ratio drops to ~2.5×) and is visually smooth.
+      // Price: peak saturation dips a bit for hues whose cusp L is
+      // far from the chosen target.
       function findMaxChromaAtL(L, hue) {
         let lo = 0, hi = 0.5;
-        for (let i = 0; i < 22; i++) {
+        for (let i = 0; i < 24; i++) {
           const mid = (lo + hi) / 2;
           if (inSrgbGamut(L, mid, hue, 0.0005)) lo = mid;
           else hi = mid;
@@ -793,13 +796,21 @@ N = 8 →  45</pre>
         return lo * 0.98;
       }
 
-      const QUANT_L_TARGET = 0.55;
-      const QUANT_C_LUT = (() => {
+      function buildMaxChromaLut(L) {
         const lut = new Array(361);
-        for (let h = 0; h <= 360; h++) lut[h] = findMaxChromaAtL(QUANT_L_TARGET, h);
+        for (let h = 0; h <= 360; h++) lut[h] = findMaxChromaAtL(L, h);
         return lut;
-      })();
+      }
 
+      const PICKER_L_TARGET = 0.70;
+      const PICKER_C_LUT    = buildMaxChromaLut(PICKER_L_TARGET);
+      const QUANT_L_TARGET  = 0.55;
+      const QUANT_C_LUT     = buildMaxChromaLut(QUANT_L_TARGET);
+
+      function pickerPeaks(hue) {
+        const h = ((hue % 360) + 360) % 360;
+        return [PICKER_L_TARGET, PICKER_C_LUT[Math.round(h)]];
+      }
       function quantPeaks(hue) {
         const h = ((hue % 360) + 360) % 360;
         return [QUANT_L_TARGET, QUANT_C_LUT[Math.round(h)]];
@@ -875,9 +886,11 @@ N = 8 →  45</pre>
         return [w * x1 + b * x2 + c * x3, w * y1 + b * y2 + c * y3];
       }
 
-      // Paint the hue ring once — pixel hues come from angle, no
-      // hue-of-picker dependency.
-      function paintRing(canvas, mode) {
+      // Paint the hue ring once. `peaksFor(hue)` returns
+      // [L, C] for the pixel at that hue. Callers pass the same
+      // peaks function they use for the body so ring and triangle
+      // stay visually consistent.
+      function paintRing(canvas, mode, peaksFor) {
         const ctx = canvas.getContext("2d");
         const { width, height } = canvas;
         const geo = geometry(width, { hasRing: true });
@@ -903,7 +916,7 @@ N = 8 →  45</pre>
             const pixelHue = (angle + 360) % 360;
             let rgb;
             if (mode === "oklch") {
-              const [Lp, Cp] = cusp(pixelHue);
+              const [Lp, Cp] = peaksFor(pixelHue);
               rgb = oklchToSrgb(Lp, Cp, pixelHue);
             } else {
               rgb = hsvToRgb(pixelHue, 1, 1);
@@ -1227,7 +1240,7 @@ N = 8 →  45</pre>
 
       let okState = { h: 162, w: 0.333, b: 0.333, geo: null, mode: "oklch" };
 
-      paintRing(okRingCanvas, "oklch");
+      paintRing(okRingCanvas, "oklch", pickerPeaks);
 
       function applyOkOrientation() {
         const rot = `rotate(${-okState.h}deg)`;
@@ -1236,7 +1249,7 @@ N = 8 →  45</pre>
       }
 
       function repaintOkBody() {
-        okState.geo = paintBody(okCanvas, okState.h, okState.mode);
+        okState.geo = paintBody(okCanvas, okState.h, okState.mode, pickerPeaks(okState.h));
       }
 
       function repaintOk() {
@@ -1249,8 +1262,9 @@ N = 8 →  45</pre>
       function updateOkReadout() {
         const { h, w, b } = okState;
         const c = 1 - w - b;
-        const L = w + c * L_PEAK;
-        const C = c * C_PEAK;
+        const [Lp, Cp] = pickerPeaks(h);
+        const L = w + c * Lp;
+        const C = c * Cp;
         document.getElementById("ok-h").textContent = `${h.toFixed(0)}°`;
         document.getElementById("ok-w").textContent = w.toFixed(2);
         document.getElementById("ok-b").textContent = b.toFixed(2);
@@ -1381,7 +1395,7 @@ N = 8 →  45</pre>
 
       let quantState = { h: 162, N: +quantNSelect.value, geo: null, mode: "oklch" };
 
-      paintRing(quantRingCanvas, "oklch");
+      paintRing(quantRingCanvas, "oklch", quantPeaks);
 
       function applyQuantOrientation() {
         const rot = `rotate(${-quantState.h}deg)`;
