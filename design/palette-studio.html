@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palette Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ink:    #1a1a1a;
+  --muted:  #6a6a6a;
+  --rule:   #d8d8d8;
+  --card:   #ffffff;
+  --page:   #eeeeee;
+  --chip:   #f2f2f2;
+  --accent: oklch(55% 0.14 260);
+  --accent-text: #ffffff;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--page);
+  color: var(--ink);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card);
+  border-bottom: solid 1px var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  flex-wrap: wrap;
+}
+.toolbar .title {
+  font-weight: 500;
+  font-size: 14px;
+  margin-right: auto;
+}
+.toolbar .title small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+
+.hue-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.hue-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.hue-group input[type="range"] {
+  width: 140px;
+}
+.hue-group .hue-swatch {
+  width: 16px; height: 16px; border-radius: 3px; border: solid 1px var(--rule);
+}
+.hue-group output {
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+.hue-group.disabled { opacity: 0.45; }
+.hue-group.disabled input[type="range"] { pointer-events: none; }
+
+button.primary, button.ghost {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 5px;
+  border: 0;
+  cursor: pointer;
+}
+button.primary { background: var(--accent); color: var(--accent-text); }
+button.primary:hover { filter: brightness(1.1); }
+button.ghost { background: transparent; color: var(--muted); padding: 4px 8px; font-size: 11px; }
+button.ghost:hover { color: var(--ink); background: var(--chip); }
+
+main { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px; }
+
+.candidate {
+  background: var(--card);
+  border: solid 1px var(--rule);
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: grid;
+  gap: 12px;
+}
+.candidate header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.candidate h2 {
+  font-size: 13px;
+  font-weight: 500;
+}
+.candidate .notes { color: var(--muted); font-size: 11px; }
+.candidate .badges { display: flex; gap: 6px; }
+.candidate .badge {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 1px 7px;
+  border: solid 1px var(--rule);
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.candidate .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.strips {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 3px 10px;
+  align-items: center;
+  font-size: 10px;
+}
+.strips .label { color: var(--muted); text-align: right; }
+.strip {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+  height: 24px;
+}
+.strip .swatch {
+  border-radius: 3px;
+  border: solid 1px rgba(0, 0, 0, 0.08);
+  min-width: 0;
+  position: relative;
+}
+.strip .swatch::after {
+  content: attr(data-step);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  color: var(--fg, rgba(0, 0, 0, 0.4));
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+.strip .swatch:hover::after { opacity: 1; }
+
+.previews {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  height: 68dvh;
+  min-height: 520px;
+}
+.preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: solid 1px var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.preview .preview-label {
+  padding: 4px 10px;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--card);
+  border-bottom: solid 1px var(--rule);
+}
+.preview iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}
+
+/* Designer overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgba(30, 30, 30, 0.55);
+  display: none;
+}
+.overlay.open { display: block; }
+.overlay .frame-wrap {
+  position: absolute;
+  inset: 16px;
+  background: #111;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.overlay .frame-wrap iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}
+.overlay .overlay-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 1;
+  font-size: 18px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+.overlay .overlay-close:hover { background: rgba(0, 0, 0, 0.8); }
+.overlay .overlay-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="title">Palette Studio <small>scrollable gallery — delete any card that isn't working</small></div>
+
+  <div class="hue-group" id="global-hue">
+    <label><input type="checkbox" id="global-hue-enabled"> override hue</label>
+    <label>
+      surface
+      <input type="range" id="global-surface-hue" min="0" max="359" value="162" step="1">
+      <output for="global-surface-hue">162</output>
+      <span class="hue-swatch" id="global-surface-swatch"></span>
+    </label>
+    <label>
+      accent
+      <input type="range" id="global-accent-hue" min="0" max="359" value="162" step="1">
+      <output for="global-accent-hue">162</output>
+      <span class="hue-swatch" id="global-accent-swatch"></span>
+    </label>
+  </div>
+
+  <button class="primary" id="open-designer">+ New candidate</button>
+</div>
+
+<main id="gallery"></main>
+
+<div class="overlay" id="designer-overlay" aria-hidden="true">
+  <div class="frame-wrap">
+    <button class="overlay-close" id="overlay-close" aria-label="Close designer">×</button>
+    <iframe id="designer-iframe" title="Color System Designer"></iframe>
+    <div class="overlay-hint">Esc to close · click <strong>Save as candidate</strong> in the designer to add it to the gallery</div>
+  </div>
+</div>
+
+<script type="module">
+/*
+ * A CANDIDATE is authored one of three ways:
+ *   - baseline: id === "baseline", no overrides
+ *   - designer: saved from the modal (has `designer` state)
+ *   - manual:   hand-written overridesCss (edit localStorage or this file)
+ *
+ * Global hue, when enabled, overrides every candidate's surface/accent
+ * hue at render time. Per-candidate hue is ignored while the toggle is on.
+ */
+
+const LS_KEY = "palette-studio.candidates";
+const LS_GLOBAL_HUE = "palette-studio.global-hue";
+
+const ROLES = [
+  { name: "--color-bg-base",        source: "surface-1  (app bg)" },
+  { name: "--color-bg-raised",      source: "surface-2  (raised panel)" },
+  { name: "--color-bg-panel",       source: "surface-3  (panel / surface)" },
+  { name: "--color-bg-hover",       source: "surface-4  (hovered row)" },
+  { name: "--color-border-subtle",  source: "surface-5  (subtle border)" },
+  { name: "--color-border-strong",  source: "surface-7  (strong border)" },
+  { name: "--color-text-tertiary",  source: "surface-9  (tertiary text)" },
+  { name: "--color-text-secondary", source: "surface-11 (secondary text)" },
+  { name: "--color-text-primary",   source: "surface-12 (primary text)" },
+  { name: "--color-accent",         source: "accent-9   (solid accent)" },
+  { name: "--color-accent-subtle",  source: "accent-3   (accent wash)" },
+  { name: "--color-accent-text",    source: "surface-1  (text on accent)" },
+];
+
+function loadCandidates() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return [
+    {
+      id: "baseline",
+      name: "baseline",
+      notes: "Current style.css — surface & accent hue 162, 12 steps, chroma peak at step 9",
+      kind: "baseline",
+    },
+  ];
+}
+
+function saveCandidates() {
+  localStorage.setItem(LS_KEY, JSON.stringify(candidates));
+}
+
+function loadGlobalHue() {
+  try {
+    const raw = localStorage.getItem(LS_GLOBAL_HUE);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { enabled: false, surface: 162, accent: 162 };
+}
+
+function saveGlobalHue() {
+  localStorage.setItem(LS_GLOBAL_HUE, JSON.stringify(globalHue));
+}
+
+const candidates = loadCandidates();
+const globalHue = loadGlobalHue();
+
+// ─── Gallery rendering ───────────────────────────────────────────
+const gallery = document.getElementById("gallery");
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k === "style") node.setAttribute("style", v);
+    else if (k.startsWith("data-")) node.setAttribute(k, v);
+    else node[k] = v;
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    node.append(c.nodeType ? c : document.createTextNode(c));
+  }
+  return node;
+}
+
+function candidateOverridesCss(cand) {
+  // Baseline: no candidate-owned overrides.
+  if (cand.kind === "baseline") return "";
+  // Designer-derived: set both hues from designer state.
+  if (cand.designer) {
+    const hue = Math.round(cand.designer.hue ?? 162);
+    return `:root { --surface-hue: ${hue}; --accent-hue: ${hue}; }`;
+  }
+  return cand.overridesCss || "";
+}
+
+function globalHueCss() {
+  if (!globalHue.enabled) return "";
+  return `:root { --surface-hue: ${globalHue.surface}; --accent-hue: ${globalHue.accent}; }`;
+}
+
+function renderCandidate(cand) {
+  const section = el("section", { class: "candidate", id: `c-${cand.id}` });
+
+  const header = el("header", {},
+    el("h2", {}, cand.name),
+    el("span", { class: "notes" }, cand.notes || ""),
+  );
+  const badges = el("div", { class: "badges" });
+  if (cand.kind === "baseline") badges.append(el("span", { class: "badge" }, "baseline"));
+  if (cand.designer) {
+    badges.append(el("span", { class: "badge" }, `space: ${cand.designer.space}`));
+    badges.append(el("span", { class: "badge" }, `hue: ${Math.round(cand.designer.hue)}`));
+  }
+  if (badges.children.length) header.append(badges);
+
+  const actions = el("div", { class: "actions" });
+  if (cand.designer) {
+    const editBtn = el("button", { class: "ghost", type: "button" }, "edit");
+    editBtn.addEventListener("click", () => openDesigner(cand));
+    actions.append(editBtn);
+  }
+  if (cand.kind !== "baseline") {
+    const delBtn = el("button", { class: "ghost", type: "button" }, "delete");
+    delBtn.addEventListener("click", () => deleteCandidate(cand.id));
+    actions.append(delBtn);
+  }
+  header.append(actions);
+  section.append(header);
+
+  const strips = el("div", { class: "strips" });
+  for (const [label, scale, theme] of [
+    ["dark surface",  "surface", "dark"],
+    ["dark accent",   "accent",  "dark"],
+    ["light surface", "surface", "light"],
+    ["light accent",  "accent",  "light"],
+  ]) {
+    strips.append(el("div", { class: "label" }, label));
+    const strip = el("div", { class: "strip", "data-scale": scale, "data-theme": theme });
+    for (let step = 1; step <= 12; step++) {
+      strip.append(el("div", { class: "swatch", "data-step": step }));
+    }
+    strips.append(strip);
+  }
+  section.append(strips);
+
+  const previews = el("div", { class: "previews" });
+  for (const theme of ["light", "dark"]) {
+    const wrap = el("div", { class: "preview" });
+    wrap.append(el("div", { class: "preview-label" }, theme));
+    const iframe = el("iframe", {
+      src: "/index.html",
+      title: `${cand.name} / ${theme}`,
+      loading: "lazy",
+      "data-theme": theme,
+      "data-candidate": cand.id,
+    });
+    iframe.addEventListener("load", () => applyToIframe(cand, iframe, theme, section));
+    wrap.append(iframe);
+    previews.append(wrap);
+  }
+  section.append(previews);
+
+  return section;
+}
+
+function applyToIframe(cand, iframe, theme, section) {
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+  doc.documentElement.dataset.theme = theme;
+
+  const candCss = candidateOverridesCss(cand);
+  const globalCss = globalHueCss();
+
+  upsertStyle(doc, "palette-studio-candidate", candCss);
+  upsertStyle(doc, "palette-studio-global",    globalCss);
+
+  requestAnimationFrame(() => readIntoStrips(doc, section, theme));
+}
+
+function upsertStyle(doc, id, css) {
+  let el = doc.getElementById(id);
+  if (!el) {
+    el = doc.createElement("style");
+    el.id = id;
+    doc.head.appendChild(el);
+  }
+  el.textContent = css;
+}
+
+function refreshIframe(iframe, section, candId) {
+  const cand = candidates.find(c => c.id === candId);
+  if (!cand) return;
+  const theme = iframe.dataset.theme;
+  applyToIframe(cand, iframe, theme, section);
+}
+
+function refreshAllIframes() {
+  for (const section of gallery.querySelectorAll(".candidate")) {
+    for (const iframe of section.querySelectorAll("iframe")) {
+      refreshIframe(iframe, section, iframe.dataset.candidate);
+    }
+  }
+}
+
+function readIntoStrips(doc, section, theme) {
+  const cs = getComputedStyle(doc.documentElement);
+  for (const scale of ["surface", "accent"]) {
+    const strip = section.querySelector(
+      `.strip[data-scale="${scale}"][data-theme="${theme}"]`
+    );
+    if (!strip) continue;
+    const swatches = strip.querySelectorAll(".swatch");
+    for (let i = 0; i < 12; i++) {
+      const val = cs.getPropertyValue(`--${scale}-${i + 1}`).trim();
+      if (val) {
+        swatches[i].style.background = val;
+        const L = extractL(val);
+        if (L != null) {
+          swatches[i].style.setProperty(
+            "--fg",
+            L < 0.55 ? "rgba(255, 255, 255, 0.72)" : "rgba(0, 0, 0, 0.55)"
+          );
+        }
+      }
+    }
+  }
+}
+
+function extractL(s) {
+  const m = s.match(/oklch\(\s*([\d.]+)%?/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  return s.includes("%") || n > 1 ? n / 100 : n;
+}
+
+function addCandidate(cand) {
+  candidates.push(cand);
+  saveCandidates();
+  gallery.append(renderCandidate(cand));
+  section(cand.id).scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function section(id) { return document.getElementById(`c-${id}`); }
+
+function deleteCandidate(id) {
+  if (!confirm("Delete this candidate?")) return;
+  const i = candidates.findIndex(c => c.id === id);
+  if (i < 0) return;
+  candidates.splice(i, 1);
+  saveCandidates();
+  section(id)?.remove();
+}
+
+// ─── Global hue toolbar ─────────────────────────────────────────
+const enabledCb = document.getElementById("global-hue-enabled");
+const surfaceInput = document.getElementById("global-surface-hue");
+const accentInput = document.getElementById("global-accent-hue");
+const surfaceOut = surfaceInput.nextElementSibling;
+const accentOut = accentInput.nextElementSibling;
+const surfaceSwatch = document.getElementById("global-surface-swatch");
+const accentSwatch = document.getElementById("global-accent-swatch");
+const hueGroup = document.getElementById("global-hue");
+
+function renderGlobalHueUi() {
+  enabledCb.checked = globalHue.enabled;
+  surfaceInput.value = globalHue.surface;
+  accentInput.value = globalHue.accent;
+  surfaceOut.textContent = globalHue.surface;
+  accentOut.textContent = globalHue.accent;
+  surfaceSwatch.style.background = `oklch(60% 0.12 ${globalHue.surface})`;
+  accentSwatch.style.background = `oklch(60% 0.18 ${globalHue.accent})`;
+  hueGroup.classList.toggle("disabled", !globalHue.enabled);
+}
+
+enabledCb.addEventListener("change", () => {
+  globalHue.enabled = enabledCb.checked;
+  renderGlobalHueUi();
+  saveGlobalHue();
+  refreshAllIframes();
+});
+for (const [input, key] of [[surfaceInput, "surface"], [accentInput, "accent"]]) {
+  input.addEventListener("input", () => {
+    globalHue[key] = +input.value;
+    renderGlobalHueUi();
+    saveGlobalHue();
+    if (globalHue.enabled) refreshAllIframes();
+  });
+}
+renderGlobalHueUi();
+
+// ─── Designer overlay ───────────────────────────────────────────
+const overlay = document.getElementById("designer-overlay");
+const designerIframe = document.getElementById("designer-iframe");
+const openDesignerBtn = document.getElementById("open-designer");
+const closeBtn = document.getElementById("overlay-close");
+
+let editingId = null;
+
+function openDesigner(forCand = null) {
+  editingId = forCand ? forCand.id : null;
+  overlay.classList.add("open");
+  overlay.setAttribute("aria-hidden", "false");
+  designerIframe.src = "/design/color-triangle.html";
+
+  if (forCand?.designer) {
+    designerIframe.addEventListener("load", () => {
+      designerIframe.contentWindow.postMessage({
+        type: "designer:load",
+        state: forCand.designer,
+      }, "*");
+    }, { once: true });
+  }
+}
+
+function closeDesigner() {
+  overlay.classList.remove("open");
+  overlay.setAttribute("aria-hidden", "true");
+  designerIframe.src = "about:blank";
+  editingId = null;
+}
+
+openDesignerBtn.addEventListener("click", () => openDesigner());
+closeBtn.addEventListener("click", closeDesigner);
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closeDesigner(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && overlay.classList.contains("open")) closeDesigner();
+});
+
+// Incoming save from the designer
+window.addEventListener("message", (ev) => {
+  const msg = ev.data;
+  if (!msg || msg.type !== "designer:save") return;
+  if (editingId) {
+    const cand = candidates.find(c => c.id === editingId);
+    if (cand) {
+      cand.name = msg.name || cand.name;
+      cand.designer = msg.state;
+      saveCandidates();
+      const oldSection = section(cand.id);
+      if (oldSection) {
+        const fresh = renderCandidate(cand);
+        oldSection.replaceWith(fresh);
+      }
+      closeDesigner();
+      return;
+    }
+  }
+  const cand = {
+    id: "c-" + Date.now().toString(36),
+    name: msg.name,
+    notes: "",
+    kind: "designer",
+    designer: msg.state,
+  };
+  addCandidate(cand);
+  closeDesigner();
+});
+
+// ─── Initial render ─────────────────────────────────────────────
+for (const cand of candidates) gallery.append(renderCandidate(cand));
+</script>
+</body>
+</html>

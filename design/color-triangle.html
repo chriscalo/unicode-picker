@@ -28,12 +28,33 @@
         background: var(--color-bg-base);
         border-bottom: 1px solid var(--color-border-subtle);
         padding: 14px 18px 12px;
+        position: relative;
       }
       header.workbench h1 {
         font-size: var(--text-lg);
         font-weight: var(--weight-medium);
         margin-bottom: 2px;
       }
+
+      /* Shown only when this doc is embedded in an iframe (studio). */
+      .save-candidate {
+        display: none;
+        position: absolute;
+        top: 14px;
+        right: 18px;
+        appearance: none;
+        font: inherit;
+        font-size: 12px;
+        font-weight: var(--weight-medium);
+        padding: 7px 14px;
+        border-radius: 5px;
+        border: 0;
+        background: var(--color-accent);
+        color: var(--color-accent-text);
+        cursor: pointer;
+      }
+      .save-candidate:hover { filter: brightness(1.08); }
+      :root[data-embedded] .save-candidate { display: inline-block; }
       header.workbench .lede {
         color: var(--color-text-secondary);
         font-size: var(--text-xs);
@@ -443,6 +464,7 @@
 
     <header class="workbench">
       <h1>Color System Designer</h1>
+      <button type="button" class="save-candidate" id="save-candidate">Save as candidate</button>
 
       <div class="controls">
         <div class="control">
@@ -2485,6 +2507,60 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
       repaintQuant();
       renderGrid();
       renderArcs();
+
+      // ═══════════════════════════════════════════════════════════
+      // Studio integration — only active when embedded in an iframe
+      // ═══════════════════════════════════════════════════════════
+
+      if (window.top !== window) {
+        document.documentElement.toggleAttribute("data-embedded", true);
+
+        // Let the studio preload a prior candidate by posting state.
+        window.addEventListener("message", (ev) => {
+          const msg = ev.data;
+          if (!msg || msg.type !== "designer:load") return;
+          const s = msg.state || {};
+          if (s.space) {
+            state.space = s.space;
+            const spaceSeg = document.querySelector('.seg[data-decision="space"]');
+            for (const btn of spaceSeg.querySelectorAll("button")) {
+              btn.setAttribute("aria-pressed", btn.dataset.value === s.space ? "true" : "false");
+            }
+          }
+          if (typeof s.hue === "number") state.hue = s.hue;
+          if (s.easing && typeof s.easing === "object") {
+            Object.assign(state.easing, s.easing);
+          }
+          if (typeof s.easingMag === "number") {
+            state.easingMag = s.easingMag;
+            const magSeg = document.querySelector('.seg[data-decision="easingMag"]');
+            for (const btn of magSeg.querySelectorAll("button")) {
+              btn.setAttribute("aria-pressed", +btn.dataset.value === s.easingMag ? "true" : "false");
+            }
+          }
+          syncEaseInputs();
+          repaintPicker();
+          repaintQuant();
+          renderGrid();
+          renderArcs();
+        });
+
+        document.getElementById("save-candidate").addEventListener("click", () => {
+          const name = prompt("Candidate name:", "system-" + (Date.now() % 10000));
+          if (!name) return;
+          const snapshot = {
+            type: "designer:save",
+            name: name.trim(),
+            state: {
+              space: state.space,
+              hue: Math.round(state.hue * 10) / 10,
+              easing: JSON.parse(JSON.stringify(state.easing)),
+              easingMag: state.easingMag,
+            },
+          };
+          window.parent.postMessage(snapshot, "*");
+        });
+      }
     </script>
   </body>
 </html>
