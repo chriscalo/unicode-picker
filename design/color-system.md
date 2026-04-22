@@ -208,17 +208,26 @@ Cheap to try. Builds intuition before we commit to a refactor.
   this until we know whether the model becomes (scale, L, C) — the
   right L resolution depends on whether C is a second axis.
 
-## 6. Next steps
+## 6. Task list
 
-1. **Extend the visualizer to show the full (L × C) plane** for each
-   scale / theme. Rows = L steps, cols = chroma levels. Overlay the
-   current 12 tokens on it. This makes the missing axis concrete and
-   gives us something to point at when deciding how much C resolution
-   we actually need.
-2. **Revisit Q4 with the grid in hand.** For each real UI mark, ask:
-   does it want an L that's off the current curve's default C? Log the
-   answers — that's the evidence base for Option A vs B.
-3. **Decide Option A (per-mark chroma lever on top of today's model)
-   vs Option B (reparameterize in HWB).** A is lower-risk but keeps
-   the step index as the organizing idea; B matches the mental model
-   but is a bigger refactor.
+- [x] **Visualizer: named + numbered scales per theme.**
+  `design/color-scales.html`, both scales × both themes, with step
+  number, OKLCH breakdown, and role hint per swatch.
+- [x] **Visualizer: (L × C) plane per scale / theme.** Rows = L steps,
+  cols = chroma levels. Outlines mark the 12 current tokens.
+- [ ] **Revisit Q4 with the grid in hand.** For each real UI mark,
+  ask: does it want an L that's off the current curve's default C?
+  Log the answers — that's the evidence base for Option A vs B.
+  - candidates: secondary text vs link/accent text at same L
+  - hover bg vs accent-active bg at same L
+  - subtle border vs focus ring at same L
+- [ ] **Prototype Option A (per-mark chroma lever).** Add a
+  `--{role}-c` knob that overrides the step's default chroma per
+  role. Ship behind the harness first; see if it changes the way we
+  reason about marks.
+- [ ] **Prototype Option B (HWB authoring surface).** Spike the
+  triangle picker on one scale; decide whether it's worth the
+  refactor. Depends on Option A's answer.
+- [ ] **Decide A vs B.** Based on the previous two spikes + Q4.
+- [ ] **Revisit step count (12 vs 10 vs 100).** Park until the
+  (scale, L, C) model is settled.
