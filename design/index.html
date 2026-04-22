@@ -312,12 +312,22 @@
       /* Theme-aware swatch backgrounds. --step-3 is tile surface,
          --step-9 is solid accent; both flip L between themes, so
          the preview matches how the chosen hue/chroma actually
-         renders in the current theme. */
+         renders in the current theme. --sw-h falls back to the
+         scale's live hue so chroma swatches follow the selected
+         hue (they omit --sw-h). */
       .swatch[data-role="neutral"] {
-        background: oklch(var(--step-3) var(--sw-c) var(--sw-h));
+        background: oklch(
+          var(--step-3)
+          var(--sw-c)
+          var(--sw-h, var(--neutral-hue))
+        );
       }
       .swatch[data-role="accent"] {
-        background: oklch(var(--step-9) var(--sw-c) var(--sw-h));
+        background: oklch(
+          var(--step-9)
+          var(--sw-c)
+          var(--sw-h, var(--accent-hue))
+        );
       }
       .swatch[aria-pressed="true"]::after {
         content: "";
@@ -831,41 +841,48 @@
         --color-toggle-icon:    var(--neutral-1);
       }
 
+      /* Hue / chroma overrides set on html (the root) so both the
+         picker AND the design-harness swatches (which live outside
+         unicode-picker) inherit them. The var() lookups inside
+         each --neutral-N / --accent-N declaration on unicode-picker
+         resolve against the using element's cascade, so root-level
+         overrides flow through. */
+
       /* Same hue set for both scales — the same hue ID maps to
          the same angle on each. Rendered swatches differ because
          neutral uses step-3 L and accent uses step-9 L. */
-      html[data-neutral-hue="red"]     unicode-picker { --neutral-hue:  20; }
-      html[data-neutral-hue="orange"]  unicode-picker { --neutral-hue:  45; }
-      html[data-neutral-hue="yellow"]  unicode-picker { --neutral-hue:  90; }
-      html[data-neutral-hue="green"]   unicode-picker { --neutral-hue: 150; }
-      html[data-neutral-hue="teal"]    unicode-picker { --neutral-hue: 195; }
-      html[data-neutral-hue="blue"]    unicode-picker { --neutral-hue: 250; }
-      html[data-neutral-hue="violet"]  unicode-picker { --neutral-hue: 285; }
-      html[data-neutral-hue="magenta"] unicode-picker { --neutral-hue: 340; }
+      html[data-neutral-hue="red"]     { --neutral-hue:  20; }
+      html[data-neutral-hue="orange"]  { --neutral-hue:  45; }
+      html[data-neutral-hue="yellow"]  { --neutral-hue:  90; }
+      html[data-neutral-hue="green"]   { --neutral-hue: 150; }
+      html[data-neutral-hue="teal"]    { --neutral-hue: 195; }
+      html[data-neutral-hue="blue"]    { --neutral-hue: 250; }
+      html[data-neutral-hue="violet"]  { --neutral-hue: 285; }
+      html[data-neutral-hue="magenta"] { --neutral-hue: 340; }
 
-      html[data-accent-hue="red"]     unicode-picker { --accent-hue:  20; }
-      html[data-accent-hue="orange"]  unicode-picker { --accent-hue:  45; }
-      html[data-accent-hue="yellow"]  unicode-picker { --accent-hue:  90; }
-      html[data-accent-hue="green"]   unicode-picker { --accent-hue: 150; }
-      html[data-accent-hue="teal"]    unicode-picker { --accent-hue: 195; }
-      html[data-accent-hue="blue"]    unicode-picker { --accent-hue: 250; }
-      html[data-accent-hue="violet"]  unicode-picker { --accent-hue: 285; }
-      html[data-accent-hue="magenta"] unicode-picker { --accent-hue: 340; }
+      html[data-accent-hue="red"]     { --accent-hue:  20; }
+      html[data-accent-hue="orange"]  { --accent-hue:  45; }
+      html[data-accent-hue="yellow"]  { --accent-hue:  90; }
+      html[data-accent-hue="green"]   { --accent-hue: 150; }
+      html[data-accent-hue="teal"]    { --accent-hue: 195; }
+      html[data-accent-hue="blue"]    { --accent-hue: 250; }
+      html[data-accent-hue="violet"]  { --accent-hue: 285; }
+      html[data-accent-hue="magenta"] { --accent-hue: 340; }
 
       /* Shared chroma labels (none/low/medium/high/vivid), scaled
          per role: neutral tops out low (paper shouldn't scream),
          accent goes much higher. */
-      html[data-neutral-chroma="none"]   unicode-picker { --neutral-chroma: 0;     }
-      html[data-neutral-chroma="low"]    unicode-picker { --neutral-chroma: 0.004; }
-      html[data-neutral-chroma="medium"] unicode-picker { --neutral-chroma: 0.010; }
-      html[data-neutral-chroma="high"]   unicode-picker { --neutral-chroma: 0.018; }
-      html[data-neutral-chroma="vivid"]  unicode-picker { --neutral-chroma: 0.030; }
+      html[data-neutral-chroma="none"]   { --neutral-chroma: 0;     }
+      html[data-neutral-chroma="low"]    { --neutral-chroma: 0.004; }
+      html[data-neutral-chroma="medium"] { --neutral-chroma: 0.010; }
+      html[data-neutral-chroma="high"]   { --neutral-chroma: 0.018; }
+      html[data-neutral-chroma="vivid"]  { --neutral-chroma: 0.030; }
 
-      html[data-accent-chroma="none"]   unicode-picker { --accent-chroma: 0;     }
-      html[data-accent-chroma="low"]    unicode-picker { --accent-chroma: 0.050; }
-      html[data-accent-chroma="medium"] unicode-picker { --accent-chroma: 0.100; }
-      html[data-accent-chroma="high"]   unicode-picker { --accent-chroma: 0.140; }
-      html[data-accent-chroma="vivid"]  unicode-picker { --accent-chroma: 0.180; }
+      html[data-accent-chroma="none"]   { --accent-chroma: 0;     }
+      html[data-accent-chroma="low"]    { --accent-chroma: 0.050; }
+      html[data-accent-chroma="medium"] { --accent-chroma: 0.100; }
+      html[data-accent-chroma="high"]   { --accent-chroma: 0.140; }
+      html[data-accent-chroma="vivid"]  { --accent-chroma: 0.180; }
 
       /* Phase 2 — per-element contrast controls.
          Each role-* decision re-points one semantic token at a
@@ -1224,14 +1241,14 @@
           ],
           default: "yellow" },
         { id: "neutral-chroma", step: "surface", label: "Neutral chroma",
-          help: "How tinted the paper reads.",
+          help: "How tinted the paper reads. Hue follows the selected neutral hue.",
           kind: "swatch-palette",
           options: [
-            ["none",   "None",   { role: "neutral", h: 90, c: 0 }],
-            ["low",    "Low",    { role: "neutral", h: 90, c: 0.004 }, { preferred: true }],
-            ["medium", "Medium", { role: "neutral", h: 90, c: 0.010 }],
-            ["high",   "High",   { role: "neutral", h: 90, c: 0.018 }],
-            ["vivid",  "Vivid",  { role: "neutral", h: 90, c: 0.030 }],
+            ["none",   "None",   { role: "neutral", c: 0 }],
+            ["low",    "Low",    { role: "neutral", c: 0.004 }, { preferred: true }],
+            ["medium", "Medium", { role: "neutral", c: 0.010 }],
+            ["high",   "High",   { role: "neutral", c: 0.018 }],
+            ["vivid",  "Vivid",  { role: "neutral", c: 0.030 }],
           ],
           default: "low" },
         { id: "accent-hue", step: "surface", label: "Accent hue",
@@ -1249,14 +1266,14 @@
           ],
           default: "green" },
         { id: "accent-chroma", step: "surface", label: "Accent chroma",
-          help: "How saturated the accent reads.",
+          help: "How saturated the accent reads. Hue follows the selected accent hue.",
           kind: "swatch-palette",
           options: [
-            ["none",   "None",   { role: "accent", h: 150, c: 0 }],
-            ["low",    "Low",    { role: "accent", h: 150, c: 0.050 }],
-            ["medium", "Medium", { role: "accent", h: 150, c: 0.100 }, { preferred: true }],
-            ["high",   "High",   { role: "accent", h: 150, c: 0.140 }],
-            ["vivid",  "Vivid",  { role: "accent", h: 150, c: 0.180 }],
+            ["none",   "None",   { role: "accent", c: 0 }],
+            ["low",    "Low",    { role: "accent", c: 0.050 }],
+            ["medium", "Medium", { role: "accent", c: 0.100 }, { preferred: true }],
+            ["high",   "High",   { role: "accent", c: 0.140 }],
+            ["vivid",  "Vivid",  { role: "accent", c: 0.180 }],
           ],
           default: "medium" },
 
@@ -1411,14 +1428,19 @@
                       ? `(rejected${meta.reason ? ": " + meta.reason : ""})`
                       : "",
                   ].filter(Boolean).join(" ");
-                  /* spec is either { role, h, c } (theme-aware,
-                     uses --step-3 or --step-9 for L) or a raw
+                  /* spec is either { role, h?, c? } (theme-aware,
+                     uses --step-3 or --step-9 for L; omitted h
+                     falls back to the scale's live hue via the
+                     CSS custom-property fallback) or a raw
                      color string (fallback for legacy options). */
                   let dataRole = "";
                   let style = "";
                   if (spec && typeof spec === "object") {
                     dataRole = ` data-role="${spec.role}"`;
-                    style = `--sw-h:${spec.h};--sw-c:${spec.c};`;
+                    const parts = [];
+                    if (spec.h != null) parts.push(`--sw-h:${spec.h}`);
+                    if (spec.c != null) parts.push(`--sw-c:${spec.c}`);
+                    style = parts.join(";") + (parts.length ? ";" : "");
                   } else if (spec) {
                     style = `background:${spec};`;
                   } else {
