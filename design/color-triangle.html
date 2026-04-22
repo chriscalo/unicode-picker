@@ -132,11 +132,6 @@
         transform: translate(-50%, -50%);
         pointer-events: none;
       }
-      .hue-cursor {
-        width: 18px;
-        height: 18px;
-        border-width: 3px;
-      }
 
       .tri-controls {
         display: flex;
@@ -204,6 +199,58 @@
         border-radius: 50%;
         margin-right: 6px;
         vertical-align: middle;
+      }
+
+      .quant-dot {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid oklch(95% 0 0);
+        box-shadow: 0 0 0 1px oklch(10% 0 0);
+        transform: translate(-50%, -50%);
+        pointer-events: auto;
+        cursor: help;
+      }
+
+      .quant-controls {
+        display: flex;
+        gap: 16px;
+        align-items: baseline;
+        margin-bottom: 12px;
+      }
+      .quant-controls label {
+        font-size: var(--text-xs);
+        color: var(--color-text-secondary);
+      }
+      .quant-controls select {
+        font: inherit;
+        font-size: var(--text-sm);
+      }
+
+      .token-table {
+        display: grid;
+        grid-template-columns: 18px auto auto auto;
+        column-gap: 12px;
+        row-gap: 2px;
+        font-size: var(--text-xs);
+        font-family: var(--font-ui);
+        font-variant-numeric: tabular-nums;
+      }
+      .token-table .th {
+        font-weight: var(--weight-medium);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 9.5px;
+        padding-bottom: 4px;
+      }
+      .token-table .sw {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid var(--color-border-subtle);
+        align-self: center;
       }
 
       .pair-grid {
@@ -540,8 +587,9 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return [min, 1 - max];
       }
 
-      // OKLab → linear sRGB matrix (Björn Ottosson). L in [0,1].
-      function oklchToSrgb(L, C, H) {
+      // OKLab → linear sRGB (Björn Ottosson). Returns unclamped
+      // linear RGB so callers can test gamut.
+      function oklchToLinearRgb(L, C, H) {
         const hRad = H * Math.PI / 180;
         const a = C * Math.cos(hRad);
         const b = C * Math.sin(hRad);
@@ -554,17 +602,59 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const m = mp * mp * mp;
         const s = sp * sp * sp;
 
-        let r_ = +4.0767245293 * l - 3.3072168827 * m + 0.2307590544 * s;
-        let g_ = -1.2681437731 * l + 2.6093323231 * m - 0.3411344290 * s;
-        let b_ = -0.0041119885 * l - 0.7034763098 * m + 1.7068625689 * s;
+        return [
+          +4.0767245293 * l - 3.3072168827 * m + 0.2307590544 * s,
+          -1.2681437731 * l + 2.6093323231 * m - 0.3411344290 * s,
+          -0.0041119885 * l - 0.7034763098 * m + 1.7068625689 * s,
+        ];
+      }
 
-        return [linearToSrgb(r_), linearToSrgb(g_), linearToSrgb(b_)];
+      function oklchToSrgb(L, C, H) {
+        const [r, g, b] = oklchToLinearRgb(L, C, H);
+        return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
       }
 
       function linearToSrgb(c) {
         const cc = Math.max(0, Math.min(1, c));
         if (cc <= 0.0031308) return 12.92 * cc;
         return 1.055 * Math.pow(cc, 1 / 2.4) - 0.055;
+      }
+
+      function inSrgbGamut(L, C, H, epsilon = 0) {
+        const [r, g, b] = oklchToLinearRgb(L, C, H);
+        return r >= -epsilon && r <= 1 + epsilon
+            && g >= -epsilon && g <= 1 + epsilon
+            && b >= -epsilon && b <= 1 + epsilon;
+      }
+
+      // For a given hue, find the sRGB gamut cusp — the (L, C) on
+      // the hue plane that maximises chroma. The cusp becomes the
+      // C vertex for that hue so the picker reaches real saturation
+      // limits instead of a conservative universal peak.
+      function findCusp(hue) {
+        let bestL = 0.5, bestC = 0;
+        for (let L = 0.02; L < 0.99; L += 0.01) {
+          let lo = 0, hi = 0.5;
+          for (let i = 0; i < 22; i++) {
+            const mid = (lo + hi) / 2;
+            if (inSrgbGamut(L, mid, hue, 0.001)) lo = mid;
+            else hi = mid;
+          }
+          if (lo > bestC) { bestC = lo; bestL = L; }
+        }
+        // Pull inside by a hair so edges don't clip ugly.
+        return [bestL, bestC * 0.98];
+      }
+
+      const CUSP_LUT = (() => {
+        const lut = new Array(361);
+        for (let h = 0; h <= 360; h++) lut[h] = findCusp(h);
+        return lut;
+      })();
+
+      function cusp(hue) {
+        const h = ((hue % 360) + 360) % 360;
+        return CUSP_LUT[Math.round(h)];
       }
 
       // Read sRGB bytes the browser renders for any CSS color.
@@ -589,13 +679,22 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
       // "pure color" corner pointing at the same spot on the
       // imagined / rendered ring.
 
+      // All layout constants are in CSS px; paint functions scale
+      // them to the canvas's internal resolution. This guarantees
+      // the ring canvas (2× internal) and the body canvas (1×)
+      // agree on where the ring band lives, so a cursor positioned
+      // from geometry sits exactly on the painted band.
+      const DISPLAY_SIZE = 420;
+
       function geometry(size, { hasRing = false, hue = 0 } = {}) {
+        const scale = size / DISPLAY_SIZE;
+        const px = v => v * scale;
         const cx = size / 2, cy = size / 2;
-        const ringOuter = hasRing ? size / 2 - 6 : 0;
-        const ringWidth = 40;
+        const ringOuter = hasRing ? size / 2 - px(4) : 0;
+        const ringWidth = px(26);
         const ringInner = hasRing ? ringOuter - ringWidth : 0;
-        const ringGap   = hasRing ? 16 : 0;
-        const triR      = hasRing ? ringInner - ringGap : size / 2 - 20;
+        const ringGap   = hasRing ? px(14) : 0;
+        const triR      = hasRing ? ringInner - ringGap : size / 2 - px(20);
         const angles = { C: hue, W: hue + 120, B: hue + 240 };
         const verts = {};
         for (const [k, deg] of Object.entries(angles)) {
@@ -649,9 +748,13 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
             if (distSq < rInnerSq || distSq > rOuterSq) continue;
             const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
             const pixelHue = (angle + 360) % 360;
-            const rgb = mode === "oklch"
-              ? oklchToSrgb(L_PEAK, C_PEAK, pixelHue)
-              : hsvToRgb(pixelHue, 1, 1);
+            let rgb;
+            if (mode === "oklch") {
+              const [Lp, Cp] = cusp(pixelHue);
+              rgb = oklchToSrgb(Lp, Cp, pixelHue);
+            } else {
+              rgb = hsvToRgb(pixelHue, 1, 1);
+            }
             const i = (y * width + x) * 4;
             data[i]     = Math.round(rgb[0] * 255);
             data[i + 1] = Math.round(rgb[1] * 255);
@@ -694,6 +797,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         const a2 = (y3 - y1) * invDet;
         const b2 = (x1 - x3) * invDet;
 
+        const [hueLpeak, hueCpeak] = cusp(hue);
+
         for (let y = yMin; y < yMax; y++) {
           const dy = y - y3;
           for (let x = xMin; x < xMax; x++) {
@@ -707,8 +812,8 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
             let rgb;
             if (mode === "oklch") {
               const cc = c < 0 ? 0 : c;
-              const L = wc + cc * L_PEAK;
-              const C = cc * C_PEAK;
+              const L = wc + cc * hueLpeak;
+              const C = cc * hueCpeak;
               rgb = oklchToSrgb(L, C, hue);
             } else {
               rgb = hwbToRgb(hue, wc, bc);
@@ -767,9 +872,10 @@ accent-w3-b0    tinted accent (washed toward white)</pre>
         return geo;
       }
 
-      // Peak lightness and chroma for the C vertex. Tuned to stay
-      // mostly within sRGB across hues; out-of-gamut points get
-      // clamped. A hue-aware peak lookup would be more faithful.
+      // L_PEAK/C_PEAK are now per-hue — the (L*, C*) of the sRGB
+      // gamut cusp for that hue, computed in CUSP_LUT above. The
+      // legacy constants remain for any caller that still wants a
+      // safe universal fallback.
       const L_PEAK = 0.65;
       const C_PEAK = 0.22;
 
