@@ -37,24 +37,27 @@
       }
 
       /* Shown only when this doc is embedded in an iframe (studio). */
-      .save-candidate {
+      .save-candidate-group {
         display: none;
         position: absolute;
         top: 14px;
         right: 18px;
+        gap: 6px;
+      }
+      :root[data-embedded] .save-candidate-group { display: inline-flex; }
+      .save-candidate-group button {
         appearance: none;
         font: inherit;
         font-size: 12px;
         font-weight: var(--weight-medium);
-        padding: 7px 14px;
+        padding: 7px 12px;
         border-radius: 5px;
         border: 0;
         background: var(--color-accent);
         color: var(--color-accent-text);
         cursor: pointer;
       }
-      .save-candidate:hover { filter: brightness(1.08); }
-      :root[data-embedded] .save-candidate { display: inline-block; }
+      .save-candidate-group button:hover { filter: brightness(1.08); }
       header.workbench .lede {
         color: var(--color-text-secondary);
         font-size: var(--text-xs);
@@ -464,7 +467,10 @@
 
     <header class="workbench">
       <h1>Color System Designer</h1>
-      <button type="button" class="save-candidate" id="save-candidate">Save as candidate</button>
+      <div class="save-candidate-group">
+        <button type="button" id="save-tonalarc">Save as tonalarc</button>
+        <button type="button" id="save-tonalgrid">Save as tonalgrid</button>
+      </div>
 
       <div class="controls">
         <div class="control">
@@ -2545,21 +2551,114 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
           renderArcs();
         });
 
-        document.getElementById("save-candidate").addEventListener("click", () => {
-          const name = prompt("Candidate name:", "system-" + (Date.now() % 10000));
-          if (!name) return;
-          const snapshot = {
-            type: "designer:save",
-            name: name.trim(),
-            state: {
-              space: state.space,
-              hue: Math.round(state.hue * 10) / 10,
-              easing: JSON.parse(JSON.stringify(state.easing)),
-              easingMag: state.easingMag,
-            },
+        // ─── Export helpers (designer is the source of truth) ────
+        function pctLabel(n) {
+          const v = Math.round(n);
+          return v < 10 ? "0" + v : String(v);
+        }
+        function hueKey(angle) {
+          return "h" + String(Math.round(angle)).padStart(3, "0");
+        }
+        function rgbToHex(rgb) {
+          const c = v => Math.max(0, Math.min(255, Math.round(v * 255)))
+            .toString(16).padStart(2, "0");
+          return "#" + c(rgb[0]) + c(rgb[1]) + c(rgb[2]);
+        }
+        function currentCurves() {
+          const e = getEasing();
+          return {
+            tint: e.w, shade: e.b, pure: e.c,
+            magnitude: state.easingMag,
           };
-          window.parent.postMessage(snapshot, "*");
-        });
+        }
+        function exportTonalArc() {
+          const hueCount = state.nHues || 24;
+          const arcs = state.arcCount;
+          const N = state.arcN;
+          const stops = {};
+          const peakPcts = [];
+          const stepPcts = [];
+          for (let a = 0; a < arcs; a++) {
+            peakPcts.push(Math.round((arcs > 1 ? a / (arcs - 1) : 0) * 100));
+          }
+          for (let j = 0; j < N; j++) {
+            stepPcts.push(Math.round((N > 1 ? j / (N - 1) : 0) * 100));
+          }
+          for (let h = 0; h < hueCount; h++) {
+            const hue = (h * 360) / hueCount;
+            const hk = hueKey(hue);
+            for (let a = 0; a < arcs; a++) {
+              const peak = peakPcts[a] / 100;
+              const samples = arcSamples(peak, N);
+              for (let j = 0; j < N; j++) {
+                const [w, b, c] = samples[j].bary;
+                const rgb = atBaryEased(hue, w, b, c);
+                stops[`${hk} c${pctLabel(peakPcts[a])}-${pctLabel(stepPcts[j])}`] =
+                  rgbToHex(rgb);
+              }
+            }
+          }
+          return {
+            meta: {
+              model: "tonalarc",
+              space: state.space,
+              hueCount, arcs, N,
+              curves: currentCurves(),
+              peakPcts, stepPcts,
+            },
+            stops,
+          };
+        }
+        function exportTonalGrid() {
+          const hueCount = state.nHues || 24;
+          const N = state.N;
+          const stops = {};
+          const kPcts = [], iPcts = [];
+          for (let v = 0; v <= N; v++) kPcts.push(Math.round((v / N) * 100));
+          for (let v = 0; v <= N; v++) iPcts.push(Math.round((v / N) * 100));
+          for (let h = 0; h < hueCount; h++) {
+            const hue = (h * 360) / hueCount;
+            const hk = hueKey(hue);
+            for (let k = 0; k <= N; k++) {
+              for (let i = 0; i + k <= N; i++) {
+                const j = N - i - k;
+                const w = i / N, b = j / N, c = k / N;
+                const rgb = atBaryEased(hue, w, b, c);
+                stops[`${hk} c${pctLabel(kPcts[k])}-l${pctLabel(iPcts[i])}`] =
+                  rgbToHex(rgb);
+              }
+            }
+          }
+          return {
+            meta: {
+              model: "tonalgrid",
+              space: state.space,
+              hueCount, N,
+              scheme: state.scheme,
+              curves: currentCurves(),
+              kPcts, iPcts,
+            },
+            stops,
+          };
+        }
+        function postExport(model) {
+          const exp = model === "tonalarc" ? exportTonalArc() : exportTonalGrid();
+          const defaultName =
+            `${model} · ${exp.meta.space} · ` +
+            (model === "tonalarc"
+              ? `${exp.meta.arcs} × ${exp.meta.N}`
+              : `N=${exp.meta.N}`);
+          const name = prompt("Candidate name:", defaultName);
+          if (!name) return;
+          window.parent.postMessage(
+            { type: "designer:save", name: name.trim(), meta: exp.meta, stops: exp.stops },
+            "*",
+          );
+        }
+        document.getElementById("save-tonalarc")
+          .addEventListener("click", () => postExport("tonalarc"));
+        document.getElementById("save-tonalgrid")
+          .addEventListener("click", () => postExport("tonalgrid"));
       }
     </script>
   </body>

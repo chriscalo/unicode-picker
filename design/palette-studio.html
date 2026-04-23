@@ -758,37 +758,31 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && overlay.classList.contains("open")) closeDesigner();
 });
 
-// Incoming save from the designer — produces a CANDIDATE: { meta, stops }.
-// The designer is expected to send { name, meta }; the studio runs the
-// exporter to materialise the stops table. (Future: have the designer
-// emit the stops table directly so it bakes in any per-space math the
-// studio's palette.js doesn't know about.)
+// Incoming save from the designer. The designer is the source of truth
+// for color math (all 8 spaces). It sends a fully-baked { meta, stops }
+// — the studio just stores and renders it.
 window.addEventListener("message", (ev) => {
   const msg = ev.data;
   if (!msg || msg.type !== "designer:save") return;
-  const meta = msg.meta || {
-    model: "tonalarc",
-    space: msg.state?.space || "oklch",
-    arcs: 11,
-    N: 11,
-    curves: { tint: 0, shade: 0, pure: 0, magnitude: 2 },
-  };
-
+  if (!msg.meta || !msg.stops) {
+    console.warn("[palette-studio] save message missing meta or stops");
+    return;
+  }
   const id = editingId || ("c-" + Date.now().toString(36));
-  const built = buildCandidate({ id, name: msg.name, notes: "", meta });
+  const cand = { id, name: msg.name, notes: "", meta: msg.meta, stops: msg.stops };
 
   if (editingId) {
     const idx = candidates.findIndex(c => c.id === editingId);
     if (idx >= 0) {
-      candidates[idx] = built;
+      candidates[idx] = cand;
       saveCandidates();
-      sectionEl(editingId)?.replaceWith(renderCandidate(built));
+      sectionEl(editingId)?.replaceWith(renderCandidate(cand));
       refreshAllIframes();
       closeDesigner();
       return;
     }
   }
-  addCandidate(built);
+  addCandidate(cand);
   refreshAllIframes();
   closeDesigner();
 });
