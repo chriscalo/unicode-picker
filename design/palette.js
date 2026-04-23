@@ -191,11 +191,11 @@ export function hueKey(angle) {
 export function arcSuffix(peakPct, stepPct) {
   return `c${pctLabel(peakPct)}-${pctLabel(stepPct)}`;
 }
-// Grid stop suffix: b{bPct}-w{wPct}.
-// Origin (b00-w00) is pure color; (b00-w100) is pure white;
-// (b100-w00) is pure black; chroma = 100 - b - w (implicit).
+// Grid stop suffix: {bPct}b-{wPct}w.
+// Origin (00b-00w) is pure color; (00b-100w) is pure white;
+// (100b-00w) is pure black; chroma = 100 - b - w (implicit).
 export function gridSuffix(bPct, wPct) {
-  return `b${pctLabel(bPct)}-w${pctLabel(wPct)}`;
+  return `${pctLabel(bPct)}b-${pctLabel(wPct)}w`;
 }
 
 // Swap suffixes for dark-mode lookup (W ↔ B).
@@ -203,11 +203,12 @@ export function arcSuffixSwap(suffix) {
   const [cPart, stepPart] = suffix.split("-");
   return `${cPart}-${pctLabel(100 - Number(stepPart))}`;
 }
+// "{b}b-{w}w" → "{w}b-{b}w"
 export function gridSuffixSwap(suffix) {
   const [bPart, wPart] = suffix.split("-");
-  const bPct = Number(bPart.slice(1));
-  const wPct = Number(wPart.slice(1));
-  return gridSuffix(wPct, bPct); // swap b and w
+  const bPct = Number(bPart.slice(0, -1));
+  const wPct = Number(wPart.slice(0, -1));
+  return gridSuffix(wPct, bPct);
 }
 
 // Nearest-match: snap a desired percentage value to the closest one
@@ -234,8 +235,8 @@ export function nearestArcSuffix(suffix, meta) {
 
 export function nearestGridSuffix(suffix, meta) {
   const [bPart, wPart] = suffix.split("-");
-  const bPct = Number(bPart.slice(1));
-  const wPct = Number(wPart.slice(1));
+  const bPct = Number(bPart.slice(0, -1));
+  const wPct = Number(wPart.slice(0, -1));
   const b = nearestPct(bPct, meta.bPcts);
   const validW = meta.wPcts.filter(v => v + b <= 100);
   const w = nearestPct(wPct, validW.length ? validW : [0]);

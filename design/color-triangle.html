@@ -636,13 +636,6 @@
                 <button data-value="20">20</button>
               </div>
             </div>
-            <div class="inline-control">
-              <span class="inline-control__label">Naming</span>
-              <div class="seg" data-decision="scheme">
-                <button data-value="bw" aria-pressed="true">b00-w00</button>
-                <button data-value="nbw">00b-00w</button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -663,7 +656,7 @@
         N:      10,   // ternary-grid resolution (tiles 2 and 3 share this)
         arcN:   11,   // arc color-stop count per arc (tile 4)
         arcCount: 11, // number of arcs in tile 4
-        scheme: "bw",
+        scheme: "nbw",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 5, k: 5, geo: null },
         // Per-axis easing curves on the barycentric weights,
@@ -2008,8 +2001,7 @@
       function tokenName(i, j, k, N) {
         const iPct = pctLabel(Math.round((i / N) * 100));
         const jPct = pctLabel(Math.round((j / N) * 100));
-        if (state.scheme === "nbw") return `${jPct}b-${iPct}w`;
-        return `b${jPct}-w${iPct}`;
+        return `${jPct}b-${iPct}w`;
       }
 
       function renderGrid() {
@@ -2638,7 +2630,7 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
                 const cIdx = N - wIdx - bIdx;
                 const w = wIdx / N, b = bIdx / N, c = cIdx / N;
                 const rgb = atBaryEased(hue, w, b, c);
-                stops[`${hk} b${pctLabel(bPcts[bIdx])}-w${pctLabel(wPcts[wIdx])}`] =
+                stops[`${hk} ${pctLabel(bPcts[bIdx])}b-${pctLabel(wPcts[wIdx])}w`] =
                   rgbToHex(rgb);
               }
             }
