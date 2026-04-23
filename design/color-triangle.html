@@ -382,6 +382,7 @@
         font-size: 9px;
         cursor: default;
         min-width: 0;
+        aspect-ratio: 1 / 1;
         min-height: 0;
       }
       .token-grid .cell[data-empty] {
@@ -2019,8 +2020,8 @@
         const grid = document.createElement("div");
         grid.className = "token-grid";
         grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(0, 1fr))`;
-        grid.style.gridTemplateRows    = `16px repeat(${rows}, minmax(0, 1fr))`;
-        grid.style.flex = "1 1 auto";
+        grid.style.gridTemplateRows    = `16px repeat(${rows}, auto)`;
+        grid.style.alignSelf = "start";
         grid.style.minHeight = "0";
         grid.style.minWidth = "0";
 
@@ -2071,6 +2072,20 @@
 
         gridTarget.innerHTML = "";
         gridTarget.appendChild(grid);
+
+        // After layout, fit the grid into the available vertical space
+        // by clamping the column track width to whatever keeps the
+        // square rows shorter than the container. Square cells stay
+        // square; we just stop them growing past the container height.
+        requestAnimationFrame(() => {
+          const containerH = gridTarget.clientHeight;
+          if (!containerH) return;
+          const maxCell = Math.floor((containerH - 16 - rows * 3) / rows);
+          if (maxCell > 0) {
+            grid.style.gridTemplateColumns =
+              `26px repeat(${cols}, minmax(0, ${maxCell}px))`;
+          }
+        });
       }
 
       // ═══════════════════════════════════════════════════════════
