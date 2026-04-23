@@ -1855,7 +1855,6 @@
         const w = i / N, b = j / N, c = k / N;
         const rows = [
           ["token", tokenName(i, j, k, N)],
-          ["address", `i=${Math.round((i/N)*100)}, j=${Math.round((j/N)*100)}, k=${Math.round((k/N)*100)}`],
           ...strat().readout(state.hue, w, b),
         ];
         quantReadouts.innerHTML = rows.map(([key, v]) => `<dt>${key}</dt><dd>${v}</dd>`).join("");
