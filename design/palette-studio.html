@@ -351,28 +351,29 @@ const ROLE_ORDER = [
 // Each role names a stop in BOTH model namings:
 //   arc:  "c{peakPct}-{stepPct}"
 //         step 0 = pure black, step 100 = pure white, mid-step = peak chroma.
-//   grid: "c{kPct}-l{iPct}"
-//         k = chroma fraction, i = white fraction (i+k ≤ 100).
+//   grid: "b{bPct}-w{wPct}"
+//         origin (b00-w00) = pure color; (b00-w100) = pure white;
+//         (b100-w00) = pure black; chroma = 100 - b - w (implicit).
 // All values authored for LIGHT MODE. Dark mode swaps W ↔ B.
 const ROLE_MAP = {
-  "--color-bg-base":        { scale: "surface", arc: "c00-100", grid: "c00-l100" },
-  "--color-bg-raised":      { scale: "surface", arc: "c00-90",  grid: "c00-l90"  },
-  "--color-bg-panel":       { scale: "surface", arc: "c00-80",  grid: "c00-l80"  },
-  "--color-bg-hover":       { scale: "surface", arc: "c00-70",  grid: "c00-l70"  },
-  "--color-input-bg":       { scale: "surface", arc: "c00-70",  grid: "c00-l70"  },
-  "--color-border-subtle":  { scale: "surface", arc: "c00-50",  grid: "c00-l50"  },
-  "--color-border-strong":  { scale: "surface", arc: "c00-30",  grid: "c00-l30"  },
-  "--color-text-tertiary":  { scale: "surface", arc: "c00-20",  grid: "c00-l20"  },
-  "--color-text-secondary": { scale: "surface", arc: "c00-10",  grid: "c00-l10"  },
-  "--color-text-primary":   { scale: "surface", arc: "c00-00",  grid: "c00-l00"  },
-  "--color-accent":         { scale: "accent",  arc: "c50-40",  grid: "c50-l30"  },
-  "--color-accent-subtle":  { scale: "accent",  arc: "c10-90",  grid: "c10-l80"  },
-  "--color-accent-text":    { scale: "surface", arc: "c00-100", grid: "c00-l100" },
-  "--color-toggle-track":   { scale: "surface", arc: "c00-80",  grid: "c00-l80"  },
-  "--color-toggle-thumb":   { scale: "surface", arc: "c50-40",  grid: "c50-l30"  },
-  "--color-toggle-icon":    { scale: "surface", arc: "c00-100", grid: "c00-l100" },
-  "--color-glyph-bg":       { scale: "accent",  arc: "c50-40",  grid: "c50-l30",  alpha: 0.06 },
-  "--color-focus":          { scale: "accent",  arc: "c50-40",  grid: "c50-l30",  alpha: 0.45 },
+  "--color-bg-base":        { scale: "surface", arc: "c00-100", grid: "b00-w100" },
+  "--color-bg-raised":      { scale: "surface", arc: "c00-90",  grid: "b10-w90"  },
+  "--color-bg-panel":       { scale: "surface", arc: "c00-80",  grid: "b20-w80"  },
+  "--color-bg-hover":       { scale: "surface", arc: "c00-70",  grid: "b30-w70"  },
+  "--color-input-bg":       { scale: "surface", arc: "c00-70",  grid: "b30-w70"  },
+  "--color-border-subtle":  { scale: "surface", arc: "c00-50",  grid: "b50-w50"  },
+  "--color-border-strong":  { scale: "surface", arc: "c00-30",  grid: "b70-w30"  },
+  "--color-text-tertiary":  { scale: "surface", arc: "c00-20",  grid: "b80-w20"  },
+  "--color-text-secondary": { scale: "surface", arc: "c00-10",  grid: "b90-w10"  },
+  "--color-text-primary":   { scale: "surface", arc: "c00-00",  grid: "b100-w00" },
+  "--color-accent":         { scale: "accent",  arc: "c50-40",  grid: "b20-w30"  },
+  "--color-accent-subtle":  { scale: "accent",  arc: "c10-90",  grid: "b10-w80"  },
+  "--color-accent-text":    { scale: "surface", arc: "c00-100", grid: "b00-w100" },
+  "--color-toggle-track":   { scale: "surface", arc: "c00-80",  grid: "b20-w80"  },
+  "--color-toggle-thumb":   { scale: "surface", arc: "c50-40",  grid: "b20-w30"  },
+  "--color-toggle-icon":    { scale: "surface", arc: "c00-100", grid: "b00-w100" },
+  "--color-glyph-bg":       { scale: "accent",  arc: "c50-40",  grid: "b20-w30", alpha: 0.06 },
+  "--color-focus":          { scale: "accent",  arc: "c50-40",  grid: "b20-w30", alpha: 0.45 },
 };
 
 // Quantized hue choices — every candidate exports at hueCount = 24.

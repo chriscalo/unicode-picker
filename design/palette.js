@@ -191,9 +191,11 @@ export function hueKey(angle) {
 export function arcSuffix(peakPct, stepPct) {
   return `c${pctLabel(peakPct)}-${pctLabel(stepPct)}`;
 }
-// Grid stop suffix: c{kPct}-l{iPct}  (c-l scheme; TODO: wb / num).
-export function gridSuffix(kPct, iPct) {
-  return `c${pctLabel(kPct)}-l${pctLabel(iPct)}`;
+// Grid stop suffix: b{bPct}-w{wPct}.
+// Origin (b00-w00) is pure color; (b00-w100) is pure white;
+// (b100-w00) is pure black; chroma = 100 - b - w (implicit).
+export function gridSuffix(bPct, wPct) {
+  return `b${pctLabel(bPct)}-w${pctLabel(wPct)}`;
 }
 
 // Swap suffixes for dark-mode lookup (W ↔ B).
@@ -202,10 +204,10 @@ export function arcSuffixSwap(suffix) {
   return `${cPart}-${pctLabel(100 - Number(stepPart))}`;
 }
 export function gridSuffixSwap(suffix) {
-  const [cPart, lPart] = suffix.split("-");
-  const kPct = Number(cPart.slice(1));
-  const iPct = Number(lPart.slice(1));
-  return `c${pctLabel(kPct)}-l${pctLabel(100 - iPct - kPct)}`;
+  const [bPart, wPart] = suffix.split("-");
+  const bPct = Number(bPart.slice(1));
+  const wPct = Number(wPart.slice(1));
+  return gridSuffix(wPct, bPct); // swap b and w
 }
 
 // Nearest-match: snap a desired percentage value to the closest one
@@ -231,14 +233,13 @@ export function nearestArcSuffix(suffix, meta) {
 }
 
 export function nearestGridSuffix(suffix, meta) {
-  const [cPart, lPart] = suffix.split("-");
-  const kPct = Number(cPart.slice(1));
-  const iPct = Number(lPart.slice(1));
-  // Snap k first, then snap i within the constraint i + k ≤ 100.
-  const k = nearestPct(kPct, meta.kPcts);
-  const validI = meta.iPcts.filter(v => v + k <= 100);
-  const i = nearestPct(iPct, validI.length ? validI : [0]);
-  return gridSuffix(k, i);
+  const [bPart, wPart] = suffix.split("-");
+  const bPct = Number(bPart.slice(1));
+  const wPct = Number(wPart.slice(1));
+  const b = nearestPct(bPct, meta.bPcts);
+  const validW = meta.wPcts.filter(v => v + b <= 100);
+  const w = nearestPct(wPct, validW.length ? validW : [0]);
+  return gridSuffix(b, w);
 }
 
 // ─── System export — enumerate every stop at every hue ──────────
@@ -281,28 +282,30 @@ export function exportGridSystem({
   space = "oklch",
   hueCount = 24,
   N,                 // grid resolution
-  scheme = "cl",
+  scheme = "bw",
   curves = { tint: 0, shade: 0, pure: 0, magnitude: 2 },
 }) {
   const stops = {};
   for (let h = 0; h < hueCount; h++) {
     const hue = (h * 360) / hueCount;
     const hk = hueKey(hue);
-    for (let k = 0; k <= N; k++) {
-      const kPct = Math.round((k / N) * 100);
-      for (let i = 0; i + k <= N; i++) {
-        const iPct = Math.round((i / N) * 100);
-        const j = N - i - k;
-        const w = i / N, b = j / N, c = k / N;
-        stops[`${hk} ${gridSuffix(kPct, iPct)}`] =
+    // Outer loop = black axis (rows); inner = white axis (cols).
+    // (b_idx, w_idx) at top-left = (0, 0) = pure color.
+    for (let bIdx = 0; bIdx <= N; bIdx++) {
+      const bPct = Math.round((bIdx / N) * 100);
+      for (let wIdx = 0; wIdx + bIdx <= N; wIdx++) {
+        const wPct = Math.round((wIdx / N) * 100);
+        const cIdx = N - wIdx - bIdx;
+        const w = wIdx / N, b = bIdx / N, c = cIdx / N;
+        stops[`${hk} ${gridSuffix(bPct, wPct)}`] =
           hexFromBary(hue, w, b, c, curves, curves.magnitude ?? 2);
       }
     }
   }
-  const kPcts = Array.from({ length: N + 1 }, (_, k) => Math.round((k / N) * 100));
-  const iPcts = Array.from({ length: N + 1 }, (_, i) => Math.round((i / N) * 100));
+  const bPcts = Array.from({ length: N + 1 }, (_, k) => Math.round((k / N) * 100));
+  const wPcts = Array.from({ length: N + 1 }, (_, k) => Math.round((k / N) * 100));
   return {
-    meta: { model: "tonalgrid", space, hueCount, N, scheme, curves, kPcts, iPcts },
+    meta: { model: "tonalgrid", space, hueCount, N, scheme, curves, bPcts, wPcts },
     stops,
   };
 }

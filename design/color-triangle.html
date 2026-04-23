@@ -639,7 +639,8 @@
             <div class="inline-control">
               <span class="inline-control__label">Naming</span>
               <div class="seg" data-decision="scheme">
-                <button data-value="cl" aria-pressed="true">c-l</button>
+                <button data-value="bw" aria-pressed="true">b-w</button>
+                <button data-value="cl">c-l</button>
                 <button data-value="wb">w-b</button>
                 <button data-value="num">XY</button>
               </div>
@@ -664,7 +665,7 @@
         N:      10,   // ternary-grid resolution (tiles 2 and 3 share this)
         arcN:   11,   // arc color-stop count per arc (tile 4)
         arcCount: 11, // number of arcs in tile 4
-        scheme: "cl",
+        scheme: "bw",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 5, k: 5, geo: null },
         // Per-axis easing curves on the barycentric weights,
@@ -2010,10 +2011,11 @@
         const iPct = pctLabel(Math.round((i / N) * 100));
         const jPct = pctLabel(Math.round((j / N) * 100));
         const kPct = pctLabel(Math.round((k / N) * 100));
+        if (state.scheme === "bw")  return `b${jPct}-w${iPct}`;
         if (state.scheme === "cl")  return `c${kPct}-l${iPct}`;
         if (state.scheme === "wb")  return `w${iPct}b${jPct}`;
         if (state.scheme === "num") return `${kPct}-${iPct}`;
-        return `c${kPct}-l${iPct}`;
+        return `b${jPct}-w${iPct}`;
       }
 
       function renderGrid() {
@@ -2032,6 +2034,8 @@
         const corner = document.createElement("div");
         corner.className = "axis-label";
         grid.appendChild(corner);
+        // Column header labels = white-axis percentages (going right
+        // from pure color at top-left to pure white at top-right).
         for (let i = 0; i < cols; i++) {
           const hdr = document.createElement("div");
           hdr.className = "axis-label";
@@ -2039,20 +2043,23 @@
           grid.appendChild(hdr);
         }
 
-        for (let k = 0; k < rows; k++) {
+        // Row outer loop = black-axis index (j). Pure color sits at
+        // top-left (j=0, i=0); pure white at top-right (j=0, i=N);
+        // pure black at bottom-left (j=N, i=0).
+        for (let j = 0; j < rows; j++) {
           const rowLabel = document.createElement("div");
           rowLabel.className = "axis-label axis-label--row";
-          rowLabel.textContent = Math.round((k / N) * 100);
+          rowLabel.textContent = Math.round((j / N) * 100);
           grid.appendChild(rowLabel);
           for (let i = 0; i < cols; i++) {
             const cell = document.createElement("div");
             cell.className = "cell";
-            if (i + k > N) {
+            if (i + j > N) {
               cell.setAttribute("data-empty", "");
               grid.appendChild(cell);
               continue;
             }
-            const j = N - i - k;
+            const k = N - i - j;
             const w = i / N, b = j / N, c = k / N;
             const rgb = atBaryEased(hue, w, b, c);
             cell.style.background = cssFromRgb(rgb);
@@ -2613,18 +2620,20 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
           const hueCount = state.nHues || 24;
           const N = state.N;
           const stops = {};
-          const kPcts = [], iPcts = [];
-          for (let v = 0; v <= N; v++) kPcts.push(Math.round((v / N) * 100));
-          for (let v = 0; v <= N; v++) iPcts.push(Math.round((v / N) * 100));
+          const bPcts = [], wPcts = [];
+          for (let v = 0; v <= N; v++) bPcts.push(Math.round((v / N) * 100));
+          for (let v = 0; v <= N; v++) wPcts.push(Math.round((v / N) * 100));
+          // Outer = black axis (rows); inner = white axis (cols).
+          // Origin (b=0, w=0) is pure color.
           for (let h = 0; h < hueCount; h++) {
             const hue = (h * 360) / hueCount;
             const hk = hueKey(hue);
-            for (let k = 0; k <= N; k++) {
-              for (let i = 0; i + k <= N; i++) {
-                const j = N - i - k;
-                const w = i / N, b = j / N, c = k / N;
+            for (let bIdx = 0; bIdx <= N; bIdx++) {
+              for (let wIdx = 0; wIdx + bIdx <= N; wIdx++) {
+                const cIdx = N - wIdx - bIdx;
+                const w = wIdx / N, b = bIdx / N, c = cIdx / N;
                 const rgb = atBaryEased(hue, w, b, c);
-                stops[`${hk} c${pctLabel(kPcts[k])}-l${pctLabel(iPcts[i])}`] =
+                stops[`${hk} b${pctLabel(bPcts[bIdx])}-w${pctLabel(wPcts[wIdx])}`] =
                   rgbToHex(rgb);
               }
             }
@@ -2636,7 +2645,7 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
               hueCount, N,
               scheme: state.scheme,
               curves: currentCurves(),
-              kPcts, iPcts,
+              bPcts, wPcts,
             },
             stops,
           };
