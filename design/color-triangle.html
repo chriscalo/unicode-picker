@@ -114,10 +114,33 @@
         background: var(--color-text-primary);
         color: var(--color-bg-base);
       }
-      .ease-input {
+      .curve-editor {
         width: 140px;
-        margin: 0;
+        height: 70px;
+        border-radius: 3px;
+        border: 1px solid var(--color-border-subtle);
+        display: block;
+        cursor: crosshair;
+        touch-action: none;
       }
+      .edge-strip {
+        width: 140px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid var(--color-border-subtle);
+        display: block;
+        margin-top: 4px;
+      }
+      .curve-reset {
+        background: transparent;
+        border: 0;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        font-size: 10px;
+        padding: 0 4px;
+        margin-left: 4px;
+      }
+      .curve-reset:hover { color: var(--color-text-primary); }
       .toggle-control {
         display: flex;
         align-items: center;
@@ -496,33 +519,19 @@
         </div>
 
         <div class="control">
-          <div class="control__label">Tint curve <span id="ease-w-read" class="ease-read">0</span></div>
-          <input type="range" id="ease-w" class="ease-input" min="-1" max="1" step="0.05" value="0">
+          <div class="control__label">Tint curve (W↔B) <button type="button" class="curve-reset" data-edge="wb">reset</button></div>
+          <canvas id="curve-wb" class="curve-editor" width="140" height="70"></canvas>
+          <canvas id="edge-wb" class="edge-strip" width="140" height="14"></canvas>
         </div>
         <div class="control">
-          <div class="control__label">Shade curve <span id="ease-b-read" class="ease-read">0</span></div>
-          <input type="range" id="ease-b" class="ease-input" min="-1" max="1" step="0.05" value="0">
+          <div class="control__label">Shade curve (B↔C) <button type="button" class="curve-reset" data-edge="bc">reset</button></div>
+          <canvas id="curve-bc" class="curve-editor" width="140" height="70"></canvas>
+          <canvas id="edge-bc" class="edge-strip" width="140" height="14"></canvas>
         </div>
         <div class="control">
-          <div class="control__label">Pure curve <span id="ease-c-read" class="ease-read">0</span></div>
-          <input type="range" id="ease-c" class="ease-input" min="-1" max="1" step="0.05" value="0">
-        </div>
-
-        <div class="control">
-          <div class="control__label">Curve magnitude</div>
-          <div class="seg" data-decision="easingMag">
-            <button data-value="2" aria-pressed="true">2</button>
-            <button data-value="4">4</button>
-            <button data-value="8">8</button>
-          </div>
-        </div>
-
-        <div class="control">
-          <div class="control__label">Smooth L</div>
-          <label class="toggle-control">
-            <input type="checkbox" id="smooth-l-on">
-            <span>chroma.js correctLightness</span>
-          </label>
+          <div class="control__label">Pure curve (W↔C) <button type="button" class="curve-reset" data-edge="wc">reset</button></div>
+          <canvas id="curve-wc" class="curve-editor" width="140" height="70"></canvas>
+          <canvas id="edge-wc" class="edge-strip" width="140" height="14"></canvas>
         </div>
 
       </div>
@@ -674,165 +683,187 @@
         scheme: "nbw",
         picker: { w: 0.333, b: 0.333, geo: null },
         quant:  { i: 5, k: 5, geo: null },
-        // Per-axis easing curves on the barycentric weights,
-        // stored per color-space. Values in [-1, 1]:
-        //   0  → linear (no easing)
-        //   + → ease-out (fast toward the corner, slow settle)
-        //   − → ease-in  (slow start, fast finish)
-        // Applied as gamma = 2^(−v·2), i.e. v=1→γ=0.25, v=-1→γ=4.
-        easing: {},
-        easingMag: 2,   // γ = mag^(-v); +1 → 1/mag, -1 → mag.
-        // Smooth-L toggle: when on, piecewise chroma.js
-        // correctLightness anchored at the cusp Lp. Both halves
-        // (L < Lp and L > Lp) get re-warped so adjacent cells along
-        // any leg of the triangle have CIELAB-L*-uniform spacing.
-        // Corners (W, B, C) stay locked.
-        smoothL: false,
+        // Per-axis remap curves on the barycentric weights, stored
+        // per color-space. Each axis holds 3 output values at fixed
+        // inputs [0.25, 0.5, 0.75]. Endpoints (0 and 1) are locked
+        // at 0 and 1. Defaults to identity [0.25, 0.5, 0.75].
+        curves: {},
       };
 
-      // ─── Smooth-L scheme (per-hue cache) ──────────────────────
-      // For each hue we precompute 7 OKLab anchor colors:
-      //   the 3 corners (white, black, chromatic-corner-at-cusp),
-      //   the 3 edge midpoints (chroma.js correctLightness sample
-      //     at t=0.5 for each pair of corners), and
-      //   the centroid (chroma.js correctLightness sample at t=2/3
-      //     along the median from the chromatic corner through the
-      //     centroid to the white↔black edge midpoint).
-      // Adjacent cells inside the triangle then get their colors
-      // by piecewise barycentric interpolation in the 6 sub-triangles
-      // formed by the 3 medians — every leg of every sub-triangle is
-      // a perceptually-uniform 1D scale.
-      // NOTE: the cache is invalidated whenever easing or cusp changes.
-      // We key it by the string-encoded easing state so slider tweaks
-      // force recomputation.
-      const SMOOTH_TRI_CACHE = new Map();
-      function oklchToOklab(L, C, h) {
-        const r = h * Math.PI / 180;
-        return [L, C * Math.cos(r), C * Math.sin(r)];
+      // Per-axis remap curve. Stored as a list of knots including
+      // endpoints. Evaluated as cubic Hermite between knots with
+      // finite-difference slopes, output clamped to [0, 1]. Below
+      // the first knot's x, output clamps to its y (Levels-style
+      // black-point); same for above the last knot's x.
+      //   - Click empty area → add a knot there.
+      //   - Drag a knot     → move it (2D, can't cross neighbors).
+      //   - Double-click a  → remove (endpoints can't be removed).
+      //   - The two endpoints are draggable too: drag (0,0) right
+      //     to clip inputs below X to 0 (input black-point), drag
+      //     it up to lift the output floor (output black-point).
+      const CURVE_MIN_GAP = 0.01;
+      // The editor renders a slightly wider logical range than
+      // [0,1] so endpoints can be pulled past the corners (Levels-
+      // style "pull the black-point off the edge" moves).
+      const CURVE_PAD = 0.25;
+      function lxToPx(lx, W) {
+        return ((lx + CURVE_PAD) / (1 + 2 * CURVE_PAD)) * (W - 1);
       }
-      // Interpolate corner OKLab colors by eased barycentric weights.
-      // Each corner's "pull" is gamma-warped by the matching curve:
-      //   W ← tint curve, B ← shade curve, C ← pure curve.
-      function easedMixOklab(wW, wB, wC, corners) {
-        const e = getEasing();
-        const m = state.easingMag;
-        const gW = Math.pow(m, -e.w);
-        const gB = Math.pow(m, -e.b);
-        const gC = Math.pow(m, -e.c);
-        let xW = Math.pow(Math.max(0, wW), gW);
-        let xB = Math.pow(Math.max(0, wB), gB);
-        let xC = Math.pow(Math.max(0, wC), gC);
-        const sum = xW + xB + xC;
-        if (sum > 1e-9) { xW /= sum; xB /= sum; xC /= sum; }
-        return [
-          xW * corners.W[0] + xB * corners.B[0] + xC * corners.C[0],
-          xW * corners.W[1] + xB * corners.B[1] + xC * corners.C[1],
-          xW * corners.W[2] + xB * corners.B[2] + xC * corners.C[2],
-        ];
+      function pxToLx(px, W) {
+        return (px / (W - 1)) * (1 + 2 * CURVE_PAD) - CURVE_PAD;
       }
-      function easingCacheKey() {
-        const e = getEasing();
-        return `${state.space}|${e.w}|${e.b}|${e.c}|${state.easingMag}`;
+      function lyToPy(ly, H) {
+        return (1 - (ly + CURVE_PAD) / (1 + 2 * CURVE_PAD)) * (H - 1);
       }
-      function buildSmoothTri(hue) {
-        const hk = Math.round(((hue % 360) + 360) % 360);
-        const key = `${hk}|${easingCacheKey()}`;
-        if (SMOOTH_TRI_CACHE.has(key)) return SMOOTH_TRI_CACHE.get(key);
-        const [Lcusp, Ccusp] = OKLCH_CUSP[hk];
-        const W = [1, 0, 0];                          // pure white
-        const B = [0, 0, 0];                          // pure black
-        const C = oklchToOklab(Lcusp, Ccusp, hk);     // chromatic corner
-        const corners = { W, B, C };
-        // Edge midpoints: eased barycentric midpoint of each edge.
-        // Relevant curves fall out naturally because the excluded
-        // corner's weight is 0.
-        const M_WB = easedMixOklab(0.5, 0.5, 0, corners);
-        const M_WC = easedMixOklab(0.5, 0, 0.5, corners);
-        const M_BC = easedMixOklab(0, 0.5, 0.5, corners);
-        // Centroid: eased barycentric centroid — all three curves apply.
-        const centroid = easedMixOklab(1/3, 1/3, 1/3, corners);
-        const out = { W, B, C, M_WB, M_WC, M_BC, centroid };
-        SMOOTH_TRI_CACHE.set(key, out);
-        return out;
+      function pyToLy(py, H) {
+        return (1 - py / (H - 1)) * (1 + 2 * CURVE_PAD) - CURVE_PAD;
+      }
+      const CURVE_LO = -CURVE_PAD;
+      const CURVE_HI = 1 + CURVE_PAD;
+      function identityCurve() {
+        return { xs: [0, 1], ys: [0, 1] };
       }
 
-      // Sub-triangle identification: the largest barycentric coord
-      // names the corner; the next-largest names the adjacent edge.
-      function pickSubTri(w, b, c, sch) {
-        let corner, mid;
-        if (w >= b && w >= c) {
-          corner = sch.W;
-          mid = b >= c ? sch.M_WB : sch.M_WC;
-          return { corner, mid, vC: [1, 0, 0],
-                   vM: b >= c ? [0.5, 0.5, 0] : [0.5, 0, 0.5] };
+      function getCurves() {
+        if (!state.curves[state.space]) {
+          state.curves[state.space] = {
+            wb: identityCurve(),
+            bc: identityCurve(),
+            wc: identityCurve(),
+          };
         }
-        if (b >= w && b >= c) {
-          corner = sch.B;
-          mid = w >= c ? sch.M_WB : sch.M_BC;
-          return { corner, mid, vC: [0, 1, 0],
-                   vM: w >= c ? [0.5, 0.5, 0] : [0, 0.5, 0.5] };
+        return state.curves[state.space];
+      }
+      const CURVE_EDGES = ["wb", "bc", "wc"];
+
+      // Persist curves to localStorage, keyed per color space. The
+      // studio iframe shares the same origin so saves are shared.
+      const CURVE_STORAGE_KEY = "colorTriangle:curves:v2";
+      function loadCurvesFromStorage() {
+        let raw;
+        try { raw = localStorage.getItem(CURVE_STORAGE_KEY); } catch (_) { return; }
+        if (!raw) return;
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch (_) { return; }
+        if (!parsed || typeof parsed !== "object") return;
+        for (const [space, edges] of Object.entries(parsed)) {
+          if (!edges || typeof edges !== "object") continue;
+          const rec = {
+            wb: identityCurve(), bc: identityCurve(), wc: identityCurve(),
+          };
+          for (const eg of CURVE_EDGES) {
+            const v = edges[eg];
+            if (v && Array.isArray(v.xs) && Array.isArray(v.ys)
+                && v.xs.length === v.ys.length && v.xs.length >= 2) {
+              rec[eg] = { xs: v.xs.slice(), ys: v.ys.slice() };
+            }
+          }
+          state.curves[space] = rec;
         }
-        corner = sch.C;
-        mid = w >= b ? sch.M_WC : sch.M_BC;
-        return { corner, mid, vC: [0, 0, 1],
-                 vM: w >= b ? [0.5, 0, 0.5] : [0, 0.5, 0.5] };
+      }
+      function saveCurvesToStorage() {
+        try {
+          localStorage.setItem(CURVE_STORAGE_KEY, JSON.stringify(state.curves));
+        } catch (_) {}
       }
 
-      // Solve P = α·V1 + β·V2 + γ·V3 with α+β+γ=1.
-      // V1, V2, V3 are barycentric 3-vectors (sum to 1).
-      function subTriBary(P, V1, V2, V3) {
-        const x1 = V1[0], y1 = V1[1];
-        const x2 = V2[0], y2 = V2[1];
-        const x3 = V3[0], y3 = V3[1];
-        const det = (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3);
-        const a = ((P[0] - x3) * (y2 - y3) - (P[1] - y3) * (x2 - x3)) / det;
-        const b = ((x1 - x3) * (P[1] - y3) - (y1 - y3) * (P[0] - x3)) / det;
-        return [a, b, 1 - a - b];
+      function curveIsIdentity(cv) {
+        if (cv.xs.length !== 2) return false;
+        return cv.xs[0] === 0 && cv.ys[0] === 0
+          && cv.xs[1] === 1 && cv.ys[1] === 1;
       }
 
-      // Returns OKLab triple for (hue, w, b, c) using the smooth scheme.
-      function smoothTriOklab(hue, w, b, c) {
-        const sch = buildSmoothTri(hue);
-        const sub = pickSubTri(w, b, c, sch);
-        const [a, beta, g] = subTriBary([w, b, c], sub.vC, sub.vM, [1/3, 1/3, 1/3]);
-        return [
-          a * sub.corner[0] + beta * sub.mid[0] + g * sch.centroid[0],
-          a * sub.corner[1] + beta * sub.mid[1] + g * sch.centroid[1],
-          a * sub.corner[2] + beta * sub.mid[2] + g * sch.centroid[2],
-        ];
+      function precomputeCurve(cv) {
+        const xs = cv.xs, ys = cv.ys;
+        const n = xs.length;
+        const m = new Array(n);
+        for (let k = 0; k < n; k++) {
+          if (k === 0) {
+            m[k] = (ys[1] - ys[0]) / (xs[1] - xs[0]);
+          } else if (k === n - 1) {
+            m[k] = (ys[k] - ys[k - 1]) / (xs[k] - xs[k - 1]);
+          } else {
+            const d1 = (ys[k] - ys[k - 1]) / (xs[k] - xs[k - 1]);
+            const d2 = (ys[k + 1] - ys[k]) / (xs[k + 1] - xs[k]);
+            m[k] = 0.5 * (d1 + d2);
+          }
+        }
+        return { xs, ys, m, n };
       }
 
-      function oklabToLinearRgb(L, a, b) {
-        const lp = L + 0.3963377774 * a + 0.2158037573 * b;
-        const mp = L - 0.1055613458 * a - 0.0638541728 * b;
-        const sp = L - 0.0894841775 * a - 1.2914855480 * b;
-        const l = lp * lp * lp, m = mp * mp * mp, s = sp * sp * sp;
-        return [
-          +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
-        ];
+      function evalPrecomputed(p, x) {
+        const { xs, ys, m, n } = p;
+        if (x <= xs[0]) return ys[0];
+        if (x >= xs[n - 1]) return ys[n - 1];
+        let i = 0;
+        while (i < n - 2 && x > xs[i + 1]) i++;
+        const h = xs[i + 1] - xs[i];
+        const t = (x - xs[i]) / h;
+        const t2 = t * t, t3 = t2 * t;
+        const h00 = 2 * t3 - 3 * t2 + 1;
+        const h10 = t3 - 2 * t2 + t;
+        const h01 = -2 * t3 + 3 * t2;
+        const h11 = t3 - t2;
+        const y = h00 * ys[i] + h10 * h * m[i] + h01 * ys[i + 1] + h11 * h * m[i + 1];
+        return y < 0 ? 0 : y > 1 ? 1 : y;
       }
 
-
-      function getEasing() {
-        return state.easing[state.space] || (state.easing[state.space] = { w: 0, b: 0, c: 0 });
+      function applyCurve(cv, x) {
+        return evalPrecomputed(precomputeCurve(cv), x);
       }
 
-      // Apply the active space's easing to a barycentric triple,
-      // then renormalise so w + b + c = 1.
+      // Apply the three per-edge curves to a barycentric triple by
+      // summing the three pairwise shuffles each curve induces. Each
+      // edge curve is a 1-D remap t → t' of position along that edge.
+      // For an interior point we evaluate each curve at that point's
+      // pairwise ratio and apply the curve's delta (t' − t) scaled by
+      // the joint mass of the two incident corners. Sum of deltas is
+      // zero by construction, so barycentric normalisation is
+      // preserved. On each edge the off-edge curves contribute zero
+      // because their parameters land on the locked endpoints; the
+      // on-edge curve contributes its full remap. Corners are
+      // preserved for the same reason.
+      function edgeRemap(w, b, c, curves) {
+        let dw = 0, db = 0, dc = 0;
+        const sWB = w + b;
+        if (sWB > 1e-12) {
+          const t = b / sWB;
+          const dt = evalPrecomputed(curves.wb, t) - t;
+          db += dt * sWB;
+          dw -= dt * sWB;
+        }
+        const sBC = b + c;
+        if (sBC > 1e-12) {
+          const t = c / sBC;
+          const dt = evalPrecomputed(curves.bc, t) - t;
+          dc += dt * sBC;
+          db -= dt * sBC;
+        }
+        const sWC = w + c;
+        if (sWC > 1e-12) {
+          const t = c / sWC;
+          const dt = evalPrecomputed(curves.wc, t) - t;
+          dc += dt * sWC;
+          dw -= dt * sWC;
+        }
+        let wO = w + dw, bO = b + db, cO = c + dc;
+        // Clamp against rare negative overshoot from overlapping
+        // strong remaps, then renormalise so the result stays on the
+        // simplex.
+        if (wO < 0) wO = 0;
+        if (bO < 0) bO = 0;
+        if (cO < 0) cO = 0;
+        const s = wO + bO + cO;
+        if (s > 1e-12) { wO /= s; bO /= s; cO /= s; }
+        return [wO, bO, cO];
+      }
+
       function easeBary(w, b, c) {
-        const e = getEasing();
-        const m = state.easingMag;
-        const gW = Math.pow(m, -e.w);
-        const gB = Math.pow(m, -e.b);
-        const gC = Math.pow(m, -e.c);
-        let wE = Math.pow(Math.max(0, w), gW);
-        let bE = Math.pow(Math.max(0, b), gB);
-        let cE = Math.pow(Math.max(0, c), gC);
-        const sum = wE + bE + cE;
-        if (sum > 1e-9) { wE /= sum; bE /= sum; cE /= sum; }
-        return [wE, bE, cE];
+        const cv = getCurves();
+        const pWB = precomputeCurve(cv.wb);
+        const pBC = precomputeCurve(cv.bc);
+        const pWC = precomputeCurve(cv.wc);
+        return edgeRemap(w, b, c, { wb: pWB, bc: pBC, wc: pWC });
       }
 
       function atBaryEased(hue, w, b, c) {
@@ -1472,11 +1503,6 @@
             return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
           },
           atBary(hue, w, b, c) {
-            if (state.smoothL) {
-              const [L, a, bb] = smoothTriOklab(hue, w, b, c);
-              const [r, gc, bl] = oklabToLinearRgb(L, a, bb);
-              return [linearToSrgb(r), linearToSrgb(gc), linearToSrgb(bl)];
-            }
             const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
             const L = w + c * Lp;
             const C = c * Cp;
@@ -1784,15 +1810,15 @@
         const { width, height } = canvas;
         const geo = geoOverride || geometry(width, { hasRing: true, hue: 0 });
         const { cx, cy, triR, verts } = geo;
-        // Precompute easing gammas for this paint so the inner
+        // Precompute per-edge curves for this paint so the inner
         // loop stays tight.
-        const easeRec = getEasing();
-        const mag = state.easingMag;
-        const gW = Math.pow(mag, -easeRec.w);
-        const gB = Math.pow(mag, -easeRec.b);
-        const gC = Math.pow(mag, -easeRec.c);
+        const cv = getCurves();
         const needsEase =
-          easeRec.w !== 0 || easeRec.b !== 0 || easeRec.c !== 0;
+          !curveIsIdentity(cv.wb) || !curveIsIdentity(cv.bc) || !curveIsIdentity(cv.wc);
+        const pWB = precomputeCurve(cv.wb);
+        const pBC = precomputeCurve(cv.bc);
+        const pWC = precomputeCurve(cv.wc);
+        const remapCurves = { wb: pWB, bc: pBC, wc: pWC };
         ctx.clearRect(0, 0, width, height);
 
         const yMin = Math.max(0, Math.floor(cy - triR - 1));
@@ -1825,11 +1851,8 @@
             let bc = Math.max(0, b);
             let cc = Math.max(0, c);
             if (needsEase) {
-              wc = Math.pow(wc, gW);
-              bc = Math.pow(bc, gB);
-              cc = Math.pow(cc, gC);
-              const sm = wc + bc + cc;
-              if (sm > 1e-9) { wc /= sm; bc /= sm; cc /= sm; }
+              const r = edgeRemap(wc, bc, cc, remapCurves);
+              wc = r[0]; bc = r[1]; cc = r[2];
             }
             const rgb = s.atBary(hue, wc, bc, cc);
             const i = ((y - yMin) * boxW + (x - xMin)) * 4;
@@ -2533,7 +2556,46 @@
         repaintQuant();
         renderGrid();
         renderArcs();
+        renderEdgeStrips();
       }
+      // Three 1D edge scales drawn as canvas strips beneath each
+      // curve slider. Each strip shows one edge of the triangle
+      // at the current hue + easing so you can see how the slider
+      // reshapes the blend along that edge.
+      //   Tint slider  → W↔B edge
+      //   Shade slider → B↔C edge
+      //   Pure slider  → W↔C edge
+      const EDGE_STRIPS = [
+        { id: "edge-wb", coords: t => [1 - t, t, 0] },
+        { id: "edge-bc", coords: t => [0, 1 - t, t] },
+        { id: "edge-wc", coords: t => [1 - t, 0, t] },
+      ];
+      function renderEdgeStrips() {
+        for (const { id, coords } of EDGE_STRIPS) {
+          const canvas = document.getElementById(id);
+          if (!canvas) continue;
+          const ctx = canvas.getContext("2d");
+          const W = canvas.width, H = canvas.height;
+          const img = ctx.createImageData(W, H);
+          for (let x = 0; x < W; x++) {
+            const t = x / (W - 1);
+            const [w, b, c] = coords(t);
+            const rgb = atBaryEased(state.hue, w, b, c);
+            const r8 = Math.round(rgb[0] * 255);
+            const g8 = Math.round(rgb[1] * 255);
+            const b8 = Math.round(rgb[2] * 255);
+            for (let y = 0; y < H; y++) {
+              const i = (y * W + x) * 4;
+              img.data[i]     = r8;
+              img.data[i + 1] = g8;
+              img.data[i + 2] = b8;
+              img.data[i + 3] = 255;
+            }
+          }
+          ctx.putImageData(img, 0, 0);
+        }
+      }
+
       function onHueChanged() {
         if (activeDrag === "picker") {
           repaintPicker();
@@ -2547,6 +2609,7 @@
           renderGrid();
           renderArcs();
         }
+        renderEdgeStrips();
       }
       function onDragEnd() {
         activeDrag = null;
@@ -2611,55 +2674,208 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
         });
       });
 
-      const easeW = document.getElementById("ease-w");
-      const easeB = document.getElementById("ease-b");
-      const easeC = document.getElementById("ease-c");
-      const easeWRead = document.getElementById("ease-w-read");
-      const easeBRead = document.getElementById("ease-b-read");
-      const easeCRead = document.getElementById("ease-c-read");
+      // Curve editors. Each canvas hosts a 5-point remap: endpoints
+      // locked at (0,0) and (1,1); three draggable handles at inputs
+      // 0.25 / 0.5 / 0.75. Drag up/down to change the output value.
+      // Double-click a handle to reset it to the identity position.
+      const CURVE_EDITORS = [
+        { id: "curve-wb", edge: "wb" },
+        { id: "curve-bc", edge: "bc" },
+        { id: "curve-wc", edge: "wc" },
+      ];
 
-      function syncEaseInputs() {
-        const e = getEasing();
-        easeW.value = String(e.w);
-        easeB.value = String(e.b);
-        easeC.value = String(e.c);
-        easeWRead.textContent = e.w.toFixed(2);
-        easeBRead.textContent = e.b.toFixed(2);
-        easeCRead.textContent = e.c.toFixed(2);
+      function setupHiDPICanvas(canvas) {
+        if (canvas._dpr) return;
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = canvas.width, cssH = canvas.height;
+        canvas.style.width = cssW + "px";
+        canvas.style.height = cssH + "px";
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        canvas._dpr = dpr;
+        canvas._cssW = cssW;
+        canvas._cssH = cssH;
       }
-      function onEaseChanged(axis, v) {
-        getEasing()[axis] = v;
-        syncEaseInputs();
+
+      function drawCurveEditor(canvas, edge) {
+        setupHiDPICanvas(canvas);
+        const ctx = canvas.getContext("2d");
+        const W = canvas._cssW, H = canvas._cssH;
+        ctx.setTransform(canvas._dpr, 0, 0, canvas._dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        // Padded area (canvas background).
+        ctx.fillStyle = "oklch(14% 0 0)";
+        ctx.fillRect(0, 0, W, H);
+        // Inner [0,1] box in a slightly brighter shade.
+        const x0 = lxToPx(0, W);
+        const x1 = lxToPx(1, W);
+        const y0 = lyToPy(0, H);
+        const y1 = lyToPy(1, H);
+        ctx.fillStyle = "oklch(18% 0 0)";
+        ctx.fillRect(x0, y1, x1 - x0, y0 - y1);
+        ctx.strokeStyle = "oklch(30% 0 0)";
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+          const gx = Math.round(lxToPx(i / 4, W)) + 0.5;
+          ctx.beginPath();
+          ctx.moveTo(gx, y1); ctx.lineTo(gx, y0); ctx.stroke();
+          const gy = Math.round(lyToPy(i / 4, H)) + 0.5;
+          ctx.beginPath();
+          ctx.moveTo(x0, gy); ctx.lineTo(x1, gy); ctx.stroke();
+        }
+        ctx.strokeStyle = "oklch(38% 0 0)";
+        ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y1) + 0.5,
+          Math.round(x1 - x0), Math.round(y0 - y1));
+        ctx.strokeStyle = "oklch(45% 0 0)";
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const cv = getCurves()[edge];
+        const p = precomputeCurve(cv);
+        ctx.strokeStyle = "oklch(90% 0 0)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let px = 0; px < W; px++) {
+          const xv = pxToLx(px, W);
+          const yv = evalPrecomputed(p, xv);
+          const py = lyToPy(yv, H);
+          if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        for (let i = 0; i < cv.xs.length; i++) {
+          const x = lxToPx(cv.xs[i], W);
+          const y = lyToPy(cv.ys[i], H);
+          ctx.fillStyle = "oklch(96% 0 0)";
+          ctx.strokeStyle = "oklch(20% 0 0)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        }
+      }
+
+      function drawAllCurves() {
+        for (const { id, edge } of CURVE_EDITORS) {
+          const canvas = document.getElementById(id);
+          if (canvas) drawCurveEditor(canvas, edge);
+        }
+      }
+
+      function onCurveChanged() {
+        drawAllCurves();
         repaintPicker();
         repaintQuant();
         renderGrid();
         renderArcs();
+        renderEdgeStrips();
+        saveCurvesToStorage();
       }
-      easeW.addEventListener("input", () => onEaseChanged("w", +easeW.value));
-      easeB.addEventListener("input", () => onEaseChanged("b", +easeB.value));
-      easeC.addEventListener("input", () => onEaseChanged("c", +easeC.value));
 
-      document.querySelectorAll('[data-decision="easingMag"] button').forEach(btn => {
+      function nearestHandle(canvas, mx, my) {
+        const W = canvas._cssW || canvas.width;
+        const H = canvas._cssH || canvas.height;
+        const cv = getCurves()[canvas.dataset.edge];
+        let best = -1, bestD = Infinity;
+        for (let i = 0; i < cv.xs.length; i++) {
+          const x = lxToPx(cv.xs[i], W);
+          const y = lyToPy(cv.ys[i], H);
+          const d = Math.hypot(mx - x, my - y);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        return { index: best, dist: bestD };
+      }
+
+      function canvasPos(canvas, e) {
+        const r = canvas.getBoundingClientRect();
+        const mx = e.clientX - r.left;
+        const my = e.clientY - r.top;
+        return { mx, my };
+      }
+
+      for (const { id, edge } of CURVE_EDITORS) {
+        const canvas = document.getElementById(id);
+        canvas.dataset.edge = edge;
+        setupHiDPICanvas(canvas);
+        let dragging = -1;
+        canvas.addEventListener("pointerdown", (e) => {
+          const { mx, my } = canvasPos(canvas, e);
+          const cv = getCurves()[edge];
+          const { index, dist } = nearestHandle(canvas, mx, my);
+          if (index >= 0 && dist < 12) {
+            dragging = index;
+          } else {
+            let nx = pxToLx(mx, canvas._cssW);
+            let ny = pyToLy(my, canvas._cssH);
+            nx = Math.max(CURVE_LO, Math.min(CURVE_HI, nx));
+            ny = Math.max(CURVE_LO, Math.min(CURVE_HI, ny));
+            let insertAt = cv.xs.length;
+            for (let i = 0; i < cv.xs.length; i++) {
+              if (nx < cv.xs[i]) { insertAt = i; break; }
+            }
+            // Must sit strictly between existing knots.
+            if (insertAt === 0 || insertAt === cv.xs.length) return;
+            const leftX = cv.xs[insertAt - 1];
+            const rightX = cv.xs[insertAt];
+            if (nx - leftX < CURVE_MIN_GAP) nx = leftX + CURVE_MIN_GAP;
+            if (rightX - nx < CURVE_MIN_GAP) nx = rightX - CURVE_MIN_GAP;
+            cv.xs.splice(insertAt, 0, nx);
+            cv.ys.splice(insertAt, 0, ny);
+            dragging = insertAt;
+          }
+          canvas.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          onCurveChanged();
+        });
+        canvas.addEventListener("pointermove", (e) => {
+          if (dragging < 0) return;
+          const { mx, my } = canvasPos(canvas, e);
+          let nx = pxToLx(mx, canvas._cssW);
+          let ny = pyToLy(my, canvas._cssH);
+          nx = Math.max(CURVE_LO, Math.min(CURVE_HI, nx));
+          ny = Math.max(CURVE_LO, Math.min(CURVE_HI, ny));
+          const cv = getCurves()[edge];
+          const n = cv.xs.length;
+          const minX = dragging === 0 ? CURVE_LO : cv.xs[dragging - 1] + CURVE_MIN_GAP;
+          const maxX = dragging === n - 1 ? CURVE_HI : cv.xs[dragging + 1] - CURVE_MIN_GAP;
+          nx = Math.max(minX, Math.min(maxX, nx));
+          cv.xs[dragging] = nx;
+          cv.ys[dragging] = ny;
+          onCurveChanged();
+        });
+        const endDrag = (e) => {
+          if (dragging >= 0) {
+            dragging = -1;
+            try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+          }
+        };
+        canvas.addEventListener("pointerup", endDrag);
+        canvas.addEventListener("pointercancel", endDrag);
+        canvas.addEventListener("dblclick", (e) => {
+          const { mx, my } = canvasPos(canvas, e);
+          const { index, dist } = nearestHandle(canvas, mx, my);
+          if (index >= 0 && dist < 12) {
+            const cv = getCurves()[edge];
+            // Endpoints can't be removed.
+            if (index === 0 || index === cv.xs.length - 1) return;
+            cv.xs.splice(index, 1);
+            cv.ys.splice(index, 1);
+            onCurveChanged();
+          }
+        });
+      }
+
+      document.querySelectorAll(".curve-reset").forEach(btn => {
         btn.addEventListener("click", () => {
-          state.easingMag = +btn.dataset.value;
-          setSegActive(btn.parentElement, state.easingMag);
-          repaintPicker();
-          repaintQuant();
-          renderGrid();
-          renderArcs();
+          getCurves()[btn.dataset.edge] = identityCurve();
+          onCurveChanged();
         });
       });
-      const smoothLOn = document.getElementById("smooth-l-on");
-      function repaintAll() {
-        repaintPicker();
-        repaintQuant();
-        renderGrid();
-        renderArcs();
+
+      function syncEaseInputs() {
+        drawAllCurves();
       }
-      smoothLOn.addEventListener("change", () => {
-        state.smoothL = smoothLOn.checked;
-        repaintAll();
-      });
       document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
         btn.addEventListener("click", () => {
           state.nHues = +btn.dataset.value;
@@ -2674,11 +2890,13 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
       // Initial paint
       // ═══════════════════════════════════════════════════════════
 
+      loadCurvesFromStorage();
       syncEaseInputs();
       repaintPicker();
       repaintQuant();
       renderGrid();
       renderArcs();
+      renderEdgeStrips();
 
       // ═══════════════════════════════════════════════════════════
       // Studio integration — only active when embedded in an iframe
@@ -2700,14 +2918,21 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
             }
           }
           if (typeof s.hue === "number") state.hue = s.hue;
-          if (s.easing && typeof s.easing === "object") {
-            Object.assign(state.easing, s.easing);
-          }
-          if (typeof s.easingMag === "number") {
-            state.easingMag = s.easingMag;
-            const magSeg = document.querySelector('.seg[data-decision="easingMag"]');
-            for (const btn of magSeg.querySelectorAll("button")) {
-              btn.setAttribute("aria-pressed", +btn.dataset.value === s.easingMag ? "true" : "false");
+          if (s.curves && typeof s.curves === "object") {
+            for (const [space, edges] of Object.entries(s.curves)) {
+              if (!edges) continue;
+              const rec = state.curves[space] || (state.curves[space] = {
+                wb: identityCurve(),
+                bc: identityCurve(),
+                wc: identityCurve(),
+              });
+              for (const eg of CURVE_EDGES) {
+                const v = edges[eg];
+                if (v && Array.isArray(v.xs) && Array.isArray(v.ys)
+                    && v.xs.length === v.ys.length && v.xs.length >= 2) {
+                  rec[eg] = { xs: v.xs.slice(), ys: v.ys.slice() };
+                }
+              }
             }
           }
           syncEaseInputs();
@@ -2731,11 +2956,9 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
           return "#" + c(rgb[0]) + c(rgb[1]) + c(rgb[2]);
         }
         function currentCurves() {
-          const e = getEasing();
-          return {
-            tint: e.w, shade: e.b, pure: e.c,
-            magnitude: state.easingMag,
-          };
+          const cv = getCurves();
+          const dup = c => ({ xs: c.xs.slice(), ys: c.ys.slice() });
+          return { wb: dup(cv.wb), bc: dup(cv.bc), wc: dup(cv.wc) };
         }
         function exportTonalArc() {
           const hueCount = state.nHues || 24;
