@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>Color System Designer</title>
     <link rel="stylesheet" href="/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.4.2/chroma.min.js"></script>
     <style>
       html {
         height: 100dvh;
@@ -517,10 +518,10 @@
         </div>
 
         <div class="control">
-          <div class="control__label">ΔE-equal triangle</div>
+          <div class="control__label">Smooth L</div>
           <label class="toggle-control">
-            <input type="checkbox" id="equi-toggle">
-            <span>pure-color → L=0.5</span>
+            <input type="checkbox" id="smooth-l-on">
+            <span>chroma.js correctLightness</span>
           </label>
         </div>
 
@@ -681,8 +682,49 @@
         // Applied as gamma = 2^(−v·2), i.e. v=1→γ=0.25, v=-1→γ=4.
         easing: {},
         easingMag: 2,   // γ = mag^(-v); +1 → 1/mag, -1 → mag.
-        equiTriangle: false, // pin pure-C at L=0.5 for ΔE-balanced grid
+        // Smooth-L toggle: when on, piecewise chroma.js
+        // correctLightness anchored at the cusp Lp. Both halves
+        // (L < Lp and L > Lp) get re-warped so adjacent cells along
+        // any leg of the triangle have CIELAB-L*-uniform spacing.
+        // Corners (W, B, C) stay locked.
+        smoothL: false,
       };
+
+      // Cache chroma.js correctLightness scales per hue. Each hue
+      // gets two piecewise scales, anchored at the cusp.
+      const SMOOTH_L_CACHE = new Map();
+      function smoothLScales(hue) {
+        const key = Math.round(((hue % 360) + 360) % 360);
+        if (SMOOTH_L_CACHE.has(key)) return SMOOTH_L_CACHE.get(key);
+        const [Lp, Cp] = OKLCH_CUSP[key];
+        // Cusp color in chroma.js terms (oklch L is 0–1, chroma 0–0.4ish).
+        const cuspColor = chroma.oklch(Lp, Cp, key);
+        const dark = chroma.scale(["#000000", cuspColor])
+          .mode("oklab").correctLightness();
+        const light = chroma.scale([cuspColor, "#ffffff"])
+          .mode("oklab").correctLightness();
+        const out = { Lp, dark, light };
+        SMOOTH_L_CACHE.set(key, out);
+        return out;
+      }
+
+      // Apply the L-axis warp. Keeps L=0, L=Lp, L=1 fixed.
+      // For L below Lp: walk the dark scale at parameter L/Lp.
+      // For L above Lp: walk the light scale at parameter (L-Lp)/(1-Lp).
+      // chroma.js correctLightness ensures CIELAB L* uniformity along
+      // each scale, which matches "perceived steps feel even".
+      function warpL(L, Lp, hue) {
+        if (!state.smoothL || Lp <= 0) return L;
+        if (L === Lp) return Lp;
+        const scales = smoothLScales(hue);
+        const t = L < Lp
+          ? L / Lp
+          : (L - Lp) / (1 - Lp);
+        const c = (L < Lp ? scales.dark : scales.light)(t);
+        // Read back the OKLab L of the corrected color.
+        const lab = c.oklab();
+        return lab[0];
+      }
 
 
       function getEasing() {
@@ -705,23 +747,8 @@
         return [wE, bE, cE];
       }
 
-      // Pull pure-C toward the centroid by α so the W/B/C corners
-      // form a more equilateral triangle in the strategy's perceptual
-      // space.
-      //   α=0    → identity (default)
-      //   α=0.25 → moderate balance: pure-C still recognisably the hue
-      //   α=0.4  → near-equilateral, but pure-C nearly grey
-      //   α=0.5  → degenerate (C collapses to the greyscale midpoint)
-      const EQUI_ALPHA = 0.25;
-      function applyEqui(w, b, c) {
-        if (!state.equiTriangle) return [w, b, c];
-        const a = EQUI_ALPHA;
-        return [w + a * c, b + a * c, c * (1 - 2 * a)];
-      }
-
       function atBaryEased(hue, w, b, c) {
-        let [wE, bE, cE] = easeBary(w, b, c);
-        [wE, bE, cE] = applyEqui(wE, bE, cE);
+        const [wE, bE, cE] = easeBary(w, b, c);
         return strat().atBary(hue, wE, bE, cE);
       }
 
@@ -1358,7 +1385,8 @@
           },
           atBary(hue, w, b, c) {
             const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
-            const L = w + c * Lp;
+            const Lraw = w + c * Lp;
+            const L = warpL(Lraw, Lp, hue);
             const C = c * Cp;
             const [r, gc, bl] = oklchToLinearRgb(L, C, hue);
             return [linearToSrgb(r), linearToSrgb(gc), linearToSrgb(bl)];
@@ -1366,7 +1394,8 @@
           readout(hue, w, b) {
             const c = 1 - w - b;
             const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
-            const L = w + c * Lp;
+            const Lraw = w + c * Lp;
+            const L = warpL(Lraw, Lp, hue);
             const C = c * Cp;
             return [
               ["hue",    `${hue.toFixed(0)}°`],
@@ -1589,6 +1618,7 @@
         const ringInner = hasRing ? ringOuter - px(ringWidth) : 0;
         const gap = hasRing ? px(ringGap) : 0;
         const triR = hasRing ? ringInner - gap : size / 2 - px(triPad);
+
         // `flipped` swaps W and B angles so the triangle reads
         // "black bottom-left, white bottom-right" at hue=90 (C-top).
         const angles = flipped
@@ -1672,9 +1702,6 @@
         const gC = Math.pow(mag, -easeRec.c);
         const needsEase =
           easeRec.w !== 0 || easeRec.b !== 0 || easeRec.c !== 0;
-        const equiOn = state.equiTriangle;
-        const equiA = EQUI_ALPHA;
-        const equiCk = 1 - 2 * equiA;
         ctx.clearRect(0, 0, width, height);
 
         const yMin = Math.max(0, Math.floor(cy - triR - 1));
@@ -1712,12 +1739,6 @@
               cc = Math.pow(cc, gC);
               const sm = wc + bc + cc;
               if (sm > 1e-9) { wc /= sm; bc /= sm; cc /= sm; }
-            }
-            if (equiOn) {
-              const cAdd = equiA * cc;
-              wc = wc + cAdd;
-              bc = bc + cAdd;
-              cc = cc * equiCk;
             }
             const rgb = s.atBary(hue, wc, bc, cc);
             const i = ((y - yMin) * boxW + (x - xMin)) * 4;
@@ -2537,15 +2558,16 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
           renderArcs();
         });
       });
-      document.getElementById("equi-toggle").addEventListener("change", (e) => {
-        state.equiTriangle = e.target.checked;
-        // Cusp-derived ring colors change too — full repaint.
-        paintRing(pickerRing);
-        paintRing(quantRing);
+      const smoothLOn = document.getElementById("smooth-l-on");
+      function repaintAll() {
         repaintPicker();
         repaintQuant();
         renderGrid();
         renderArcs();
+      }
+      smoothLOn.addEventListener("change", () => {
+        state.smoothL = smoothLOn.checked;
+        repaintAll();
       });
       document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
         btn.addEventListener("click", () => {
