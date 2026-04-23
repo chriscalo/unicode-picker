@@ -702,34 +702,55 @@
       // by piecewise barycentric interpolation in the 6 sub-triangles
       // formed by the 3 medians — every leg of every sub-triangle is
       // a perceptually-uniform 1D scale.
+      // NOTE: the cache is invalidated whenever easing or cusp changes.
+      // We key it by the string-encoded easing state so slider tweaks
+      // force recomputation.
       const SMOOTH_TRI_CACHE = new Map();
       function oklchToOklab(L, C, h) {
         const r = h * Math.PI / 180;
         return [L, C * Math.cos(r), C * Math.sin(r)];
       }
-      function chromaMidOklab(c1, c2) {
-        const a = chroma.oklab(c1[0], c1[1], c1[2]);
-        const b = chroma.oklab(c2[0], c2[1], c2[2]);
-        return chroma.scale([a, b]).mode("oklab").correctLightness()(0.5).oklab();
+      // Interpolate corner OKLab colors by eased barycentric weights.
+      // Each corner's "pull" is gamma-warped by the matching curve:
+      //   W ← tint curve, B ← shade curve, C ← pure curve.
+      function easedMixOklab(wW, wB, wC, corners) {
+        const e = getEasing();
+        const m = state.easingMag;
+        const gW = Math.pow(m, -e.w);
+        const gB = Math.pow(m, -e.b);
+        const gC = Math.pow(m, -e.c);
+        let xW = Math.pow(Math.max(0, wW), gW);
+        let xB = Math.pow(Math.max(0, wB), gB);
+        let xC = Math.pow(Math.max(0, wC), gC);
+        const sum = xW + xB + xC;
+        if (sum > 1e-9) { xW /= sum; xB /= sum; xC /= sum; }
+        return [
+          xW * corners.W[0] + xB * corners.B[0] + xC * corners.C[0],
+          xW * corners.W[1] + xB * corners.B[1] + xC * corners.C[1],
+          xW * corners.W[2] + xB * corners.B[2] + xC * corners.C[2],
+        ];
       }
-      function chromaSampleOklab(c1, c2, t) {
-        const a = chroma.oklab(c1[0], c1[1], c1[2]);
-        const b = chroma.oklab(c2[0], c2[1], c2[2]);
-        return chroma.scale([a, b]).mode("oklab").correctLightness()(t).oklab();
+      function easingCacheKey() {
+        const e = getEasing();
+        return `${state.space}|${e.w}|${e.b}|${e.c}|${state.easingMag}`;
       }
       function buildSmoothTri(hue) {
-        const key = Math.round(((hue % 360) + 360) % 360);
+        const hk = Math.round(((hue % 360) + 360) % 360);
+        const key = `${hk}|${easingCacheKey()}`;
         if (SMOOTH_TRI_CACHE.has(key)) return SMOOTH_TRI_CACHE.get(key);
-        const [Lcusp, Ccusp] = OKLCH_CUSP[key];
+        const [Lcusp, Ccusp] = OKLCH_CUSP[hk];
         const W = [1, 0, 0];                          // pure white
         const B = [0, 0, 0];                          // pure black
-        const C = oklchToOklab(Lcusp, Ccusp, key);    // chromatic corner
-        const M_WB = chromaMidOklab(W, B);
-        const M_WC = chromaMidOklab(W, C);
-        const M_BC = chromaMidOklab(B, C);
-        // Centroid: 2/3 along the median from C through the centroid
-        // to the W↔B edge midpoint, with chroma.js correctLightness.
-        const centroid = chromaSampleOklab(C, M_WB, 2 / 3);
+        const C = oklchToOklab(Lcusp, Ccusp, hk);     // chromatic corner
+        const corners = { W, B, C };
+        // Edge midpoints: eased barycentric midpoint of each edge.
+        // Relevant curves fall out naturally because the excluded
+        // corner's weight is 0.
+        const M_WB = easedMixOklab(0.5, 0.5, 0, corners);
+        const M_WC = easedMixOklab(0.5, 0, 0.5, corners);
+        const M_BC = easedMixOklab(0, 0.5, 0.5, corners);
+        // Centroid: eased barycentric centroid — all three curves apply.
+        const centroid = easedMixOklab(1/3, 1/3, 1/3, corners);
         const out = { W, B, C, M_WB, M_WC, M_BC, centroid };
         SMOOTH_TRI_CACHE.set(key, out);
         return out;
