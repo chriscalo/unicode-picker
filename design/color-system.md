@@ -282,6 +282,21 @@ paint to stay tight.
 - Add **HCT** (CAM16-UCS). ~300+ lines of math; haven't prioritised.
 - Replace the current 12-step token scale in `style.css` with the
   winning designer output once we commit to a scheme.
+- **Hue-name vocabulary**. The current `HUE_ANCHORS` only carry
+  coarse names (red / orange / yellow / chartreuse / green / teal /
+  cyan / blue / indigo / violet / magenta / rose). Need finer
+  nuance — distinguish lime vs hunter vs forest in the green band,
+  lemon vs mango vs banana in the yellow band, etc. Open questions:
+  - Is there a public dataset that maps hue (or hue + chroma + L) to
+    a curated English name with sub-100° granularity? (xkcd color
+    survey, Wikipedia color lists, Pantone, NBS/ISCC come to mind.)
+  - Could we *generate* a mapping by clustering color-name corpora
+    against an LCh space and picking the modal name per
+    fine-grained hue band?
+  - At what granularity does naming stop carrying information —
+    e.g., is "tealish-blue 215°" useful or just noise?
+  - Output target: a function `hueName(hue, chroma, L) → string`
+    that the studio can use in tooltips and in role-map authoring.
 
 ### Deferred but resolved in spirit
 - OKHSL/OKHSV: **done and both cleaned up.** OKHSV had a bad port
