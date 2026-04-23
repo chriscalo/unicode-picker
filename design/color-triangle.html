@@ -640,9 +640,7 @@
               <span class="inline-control__label">Naming</span>
               <div class="seg" data-decision="scheme">
                 <button data-value="bw" aria-pressed="true">b-w</button>
-                <button data-value="cl">c-l</button>
                 <button data-value="wb">w-b</button>
-                <button data-value="num">XY</button>
               </div>
             </div>
           </div>
@@ -2010,11 +2008,7 @@
       function tokenName(i, j, k, N) {
         const iPct = pctLabel(Math.round((i / N) * 100));
         const jPct = pctLabel(Math.round((j / N) * 100));
-        const kPct = pctLabel(Math.round((k / N) * 100));
-        if (state.scheme === "bw")  return `b${jPct}-w${iPct}`;
-        if (state.scheme === "cl")  return `c${kPct}-l${iPct}`;
-        if (state.scheme === "wb")  return `w${iPct}b${jPct}`;
-        if (state.scheme === "num") return `${kPct}-${iPct}`;
+        if (state.scheme === "wb") return `w${iPct}b${jPct}`;
         return `b${jPct}-w${iPct}`;
       }
 
