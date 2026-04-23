@@ -690,40 +690,107 @@
         smoothL: false,
       };
 
-      // Cache chroma.js correctLightness scales per hue. Each hue
-      // gets two piecewise scales, anchored at the cusp.
-      const SMOOTH_L_CACHE = new Map();
-      function smoothLScales(hue) {
+      // ─── Smooth-L scheme (per-hue cache) ──────────────────────
+      // For each hue we precompute 7 OKLab anchor colors:
+      //   the 3 corners (white, black, chromatic-corner-at-cusp),
+      //   the 3 edge midpoints (chroma.js correctLightness sample
+      //     at t=0.5 for each pair of corners), and
+      //   the centroid (chroma.js correctLightness sample at t=2/3
+      //     along the median from the chromatic corner through the
+      //     centroid to the white↔black edge midpoint).
+      // Adjacent cells inside the triangle then get their colors
+      // by piecewise barycentric interpolation in the 6 sub-triangles
+      // formed by the 3 medians — every leg of every sub-triangle is
+      // a perceptually-uniform 1D scale.
+      const SMOOTH_TRI_CACHE = new Map();
+      function oklchToOklab(L, C, h) {
+        const r = h * Math.PI / 180;
+        return [L, C * Math.cos(r), C * Math.sin(r)];
+      }
+      function chromaMidOklab(c1, c2) {
+        const a = chroma.oklab(c1[0], c1[1], c1[2]);
+        const b = chroma.oklab(c2[0], c2[1], c2[2]);
+        return chroma.scale([a, b]).mode("oklab").correctLightness()(0.5).oklab();
+      }
+      function chromaSampleOklab(c1, c2, t) {
+        const a = chroma.oklab(c1[0], c1[1], c1[2]);
+        const b = chroma.oklab(c2[0], c2[1], c2[2]);
+        return chroma.scale([a, b]).mode("oklab").correctLightness()(t).oklab();
+      }
+      function buildSmoothTri(hue) {
         const key = Math.round(((hue % 360) + 360) % 360);
-        if (SMOOTH_L_CACHE.has(key)) return SMOOTH_L_CACHE.get(key);
-        const [Lp, Cp] = OKLCH_CUSP[key];
-        // Cusp color in chroma.js terms (oklch L is 0–1, chroma 0–0.4ish).
-        const cuspColor = chroma.oklch(Lp, Cp, key);
-        const dark = chroma.scale(["#000000", cuspColor])
-          .mode("oklab").correctLightness();
-        const light = chroma.scale([cuspColor, "#ffffff"])
-          .mode("oklab").correctLightness();
-        const out = { Lp, dark, light };
-        SMOOTH_L_CACHE.set(key, out);
+        if (SMOOTH_TRI_CACHE.has(key)) return SMOOTH_TRI_CACHE.get(key);
+        const [Lcusp, Ccusp] = OKLCH_CUSP[key];
+        const W = [1, 0, 0];                          // pure white
+        const B = [0, 0, 0];                          // pure black
+        const C = oklchToOklab(Lcusp, Ccusp, key);    // chromatic corner
+        const M_WB = chromaMidOklab(W, B);
+        const M_WC = chromaMidOklab(W, C);
+        const M_BC = chromaMidOklab(B, C);
+        // Centroid: 2/3 along the median from C through the centroid
+        // to the W↔B edge midpoint, with chroma.js correctLightness.
+        const centroid = chromaSampleOklab(C, M_WB, 2 / 3);
+        const out = { W, B, C, M_WB, M_WC, M_BC, centroid };
+        SMOOTH_TRI_CACHE.set(key, out);
         return out;
       }
 
-      // Apply the L-axis warp. Keeps L=0, L=Lp, L=1 fixed.
-      // For L below Lp: walk the dark scale at parameter L/Lp.
-      // For L above Lp: walk the light scale at parameter (L-Lp)/(1-Lp).
-      // chroma.js correctLightness ensures CIELAB L* uniformity along
-      // each scale, which matches "perceived steps feel even".
-      function warpL(L, Lp, hue) {
-        if (!state.smoothL || Lp <= 0) return L;
-        if (L === Lp) return Lp;
-        const scales = smoothLScales(hue);
-        const t = L < Lp
-          ? L / Lp
-          : (L - Lp) / (1 - Lp);
-        const c = (L < Lp ? scales.dark : scales.light)(t);
-        // Read back the OKLab L of the corrected color.
-        const lab = c.oklab();
-        return lab[0];
+      // Sub-triangle identification: the largest barycentric coord
+      // names the corner; the next-largest names the adjacent edge.
+      function pickSubTri(w, b, c, sch) {
+        let corner, mid;
+        if (w >= b && w >= c) {
+          corner = sch.W;
+          mid = b >= c ? sch.M_WB : sch.M_WC;
+          return { corner, mid, vC: [1, 0, 0],
+                   vM: b >= c ? [0.5, 0.5, 0] : [0.5, 0, 0.5] };
+        }
+        if (b >= w && b >= c) {
+          corner = sch.B;
+          mid = w >= c ? sch.M_WB : sch.M_BC;
+          return { corner, mid, vC: [0, 1, 0],
+                   vM: w >= c ? [0.5, 0.5, 0] : [0, 0.5, 0.5] };
+        }
+        corner = sch.C;
+        mid = w >= b ? sch.M_WC : sch.M_BC;
+        return { corner, mid, vC: [0, 0, 1],
+                 vM: w >= b ? [0.5, 0, 0.5] : [0, 0.5, 0.5] };
+      }
+
+      // Solve P = α·V1 + β·V2 + γ·V3 with α+β+γ=1.
+      // V1, V2, V3 are barycentric 3-vectors (sum to 1).
+      function subTriBary(P, V1, V2, V3) {
+        const x1 = V1[0], y1 = V1[1];
+        const x2 = V2[0], y2 = V2[1];
+        const x3 = V3[0], y3 = V3[1];
+        const det = (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3);
+        const a = ((P[0] - x3) * (y2 - y3) - (P[1] - y3) * (x2 - x3)) / det;
+        const b = ((x1 - x3) * (P[1] - y3) - (y1 - y3) * (P[0] - x3)) / det;
+        return [a, b, 1 - a - b];
+      }
+
+      // Returns OKLab triple for (hue, w, b, c) using the smooth scheme.
+      function smoothTriOklab(hue, w, b, c) {
+        const sch = buildSmoothTri(hue);
+        const sub = pickSubTri(w, b, c, sch);
+        const [a, beta, g] = subTriBary([w, b, c], sub.vC, sub.vM, [1/3, 1/3, 1/3]);
+        return [
+          a * sub.corner[0] + beta * sub.mid[0] + g * sch.centroid[0],
+          a * sub.corner[1] + beta * sub.mid[1] + g * sch.centroid[1],
+          a * sub.corner[2] + beta * sub.mid[2] + g * sch.centroid[2],
+        ];
+      }
+
+      function oklabToLinearRgb(L, a, b) {
+        const lp = L + 0.3963377774 * a + 0.2158037573 * b;
+        const mp = L - 0.1055613458 * a - 0.0638541728 * b;
+        const sp = L - 0.0894841775 * a - 1.2914855480 * b;
+        const l = lp * lp * lp, m = mp * mp * mp, s = sp * sp * sp;
+        return [
+          +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        ];
       }
 
 
@@ -1384,9 +1451,13 @@
             return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
           },
           atBary(hue, w, b, c) {
+            if (state.smoothL) {
+              const [L, a, bb] = smoothTriOklab(hue, w, b, c);
+              const [r, gc, bl] = oklabToLinearRgb(L, a, bb);
+              return [linearToSrgb(r), linearToSrgb(gc), linearToSrgb(bl)];
+            }
             const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
-            const Lraw = w + c * Lp;
-            const L = warpL(Lraw, Lp, hue);
+            const L = w + c * Lp;
             const C = c * Cp;
             const [r, gc, bl] = oklchToLinearRgb(L, C, hue);
             return [linearToSrgb(r), linearToSrgb(gc), linearToSrgb(bl)];
@@ -1394,8 +1465,7 @@
           readout(hue, w, b) {
             const c = 1 - w - b;
             const [Lp, Cp] = OKLCH_CUSP[Math.round(((hue%360)+360)%360)];
-            const Lraw = w + c * Lp;
-            const L = warpL(Lraw, Lp, hue);
+            const L = w + c * Lp;
             const C = c * Cp;
             return [
               ["hue",    `${hue.toFixed(0)}°`],
