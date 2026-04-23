@@ -116,3 +116,32 @@ export function cssAtGridDark({ i, k, N, hue, alpha }) {
   const { i: iD, k: kD } = invertGrid(i, k, N);
   return cssAtGrid({ i: iD, k: kD, N, hue, alpha });
 }
+
+// ─── Arc (Tonal Arc Scales) system ───────────────────────────────
+// An arc's parabolic parameterisation:
+//   peakFrac ∈ [0, 1]: how much pure color the arc pulls in at its midpoint
+//   stepFrac ∈ [0, 1]: position along the arc (0 = W corner, 1 = B corner)
+// At peakFrac = 0 the arc collapses to the W↔B greyscale edge.
+// At peakFrac = 1 the arc passes through the pure-C corner at stepFrac = 0.5.
+export function arcToBary(peakFrac, stepFrac) {
+  const t = stepFrac;
+  const c = peakFrac * 4 * t * (1 - t);
+  const rem = 1 - c;
+  return { w: rem * (1 - t), b: rem * t, c };
+}
+
+// Discretised: snap to an integer arc index a ∈ [0, arcCount-1] and
+// step index j ∈ [0, arcN-1] before evaluating.
+export function cssAtArc({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }) {
+  const a = Math.round(peakFrac * (arcCount - 1));
+  const j = Math.round(stepFrac * (arcN - 1));
+  const pF = arcCount > 1 ? a / (arcCount - 1) : 0;
+  const sF = arcN     > 1 ? j / (arcN     - 1) : 0;
+  const { w, c } = arcToBary(pF, sF);
+  return oklchCss(oklchAtBary(hue, w, c), alpha);
+}
+
+// Dark-mode arc variant: mirror stepFrac across 0.5 (swap W ↔ B).
+export function cssAtArcDark({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }) {
+  return cssAtArc({ peakFrac, stepFrac: 1 - stepFrac, arcCount, arcN, hue, alpha });
+}

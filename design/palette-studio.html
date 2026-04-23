@@ -294,7 +294,10 @@ main { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px
 </div>
 
 <script type="module">
-import { cssAtGrid, cssAtGridDark } from "./palette.js";
+import {
+  cssAtGrid, cssAtGridDark,
+  cssAtArc,  cssAtArcDark,
+} from "./palette.js";
 
 /*
  * CONCEPTUAL MODEL
@@ -337,40 +340,36 @@ const ROLE_ORDER = [
 ];
 
 // Shared role mapping — the SAME for all candidates.
-// Stored as proportional coordinates (iFrac, kFrac in [0..1]) so a
-// single mapping applies to any grid N. System renders at runtime by
-// rounding to the nearest integer (i, k) for that system's N.
-// Higher iFrac = more white; higher kFrac = more pure hue.
-// j is implicit: jFrac = 1 - iFrac - kFrac, must be ≥ 0.
+// Each entry carries BOTH a grid coord and an arc coord, pre-authored
+// so they address the same target color. Candidates pick the matching
+// field based on their system's kind.
+//
+//   grid: { iFrac, kFrac } — higher iFrac = more white, higher kFrac = more pure
+//   arc:  { peakFrac, stepFrac } — peakFrac = chroma pull, stepFrac = 0 (W) → 1 (B)
+//
+// On the greyscale edge (kFrac = 0): arc peakFrac = 0, stepFrac = 1 - iFrac.
+// For interior points, arc's stepFrac = (1 - iFrac - kFrac) / (1 - kFrac),
+// and peakFrac = kFrac / (4 * stepFrac * (1 - stepFrac)).
 const ROLE_MAP = {
-  "--color-bg-base":        { scale: "surface", iFrac: 1.0, kFrac: 0.0 },  // pure white
-  "--color-bg-raised":      { scale: "surface", iFrac: 0.9, kFrac: 0.0 },
-  "--color-bg-panel":       { scale: "surface", iFrac: 0.8, kFrac: 0.0 },
-  "--color-bg-hover":       { scale: "surface", iFrac: 0.7, kFrac: 0.0 },
-  "--color-input-bg":       { scale: "surface", iFrac: 0.7, kFrac: 0.0 },
-  "--color-border-subtle":  { scale: "surface", iFrac: 0.5, kFrac: 0.0 },
-  "--color-border-strong":  { scale: "surface", iFrac: 0.3, kFrac: 0.0 },
-  "--color-text-tertiary":  { scale: "surface", iFrac: 0.2, kFrac: 0.0 },
-  "--color-text-secondary": { scale: "surface", iFrac: 0.1, kFrac: 0.0 },
-  "--color-text-primary":   { scale: "surface", iFrac: 0.0, kFrac: 0.0 },  // pure black
-  "--color-accent":         { scale: "accent",  iFrac: 0.3, kFrac: 0.5 },
-  "--color-accent-subtle":  { scale: "accent",  iFrac: 0.8, kFrac: 0.1 },
-  "--color-accent-text":    { scale: "surface", iFrac: 1.0, kFrac: 0.0 },
-  "--color-toggle-track":   { scale: "surface", iFrac: 0.8, kFrac: 0.0 },
-  "--color-toggle-thumb":   { scale: "surface", iFrac: 0.3, kFrac: 0.5 },
-  "--color-toggle-icon":    { scale: "surface", iFrac: 1.0, kFrac: 0.0 },
-  "--color-glyph-bg":       { scale: "accent",  iFrac: 0.3, kFrac: 0.5, alpha: 0.06 },
-  "--color-focus":          { scale: "accent",  iFrac: 0.3, kFrac: 0.5, alpha: 0.45 },
+  "--color-bg-base":        { scale: "surface", grid: { iFrac: 1.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.0 } },
+  "--color-bg-raised":      { scale: "surface", grid: { iFrac: 0.9, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.1 } },
+  "--color-bg-panel":       { scale: "surface", grid: { iFrac: 0.8, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.2 } },
+  "--color-bg-hover":       { scale: "surface", grid: { iFrac: 0.7, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.3 } },
+  "--color-input-bg":       { scale: "surface", grid: { iFrac: 0.7, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.3 } },
+  "--color-border-subtle":  { scale: "surface", grid: { iFrac: 0.5, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.5 } },
+  "--color-border-strong":  { scale: "surface", grid: { iFrac: 0.3, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.7 } },
+  "--color-text-tertiary":  { scale: "surface", grid: { iFrac: 0.2, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.8 } },
+  "--color-text-secondary": { scale: "surface", grid: { iFrac: 0.1, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.9 } },
+  "--color-text-primary":   { scale: "surface", grid: { iFrac: 0.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 1.0 } },
+  "--color-accent":         { scale: "accent",  grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 } },
+  "--color-accent-subtle":  { scale: "accent",  grid: { iFrac: 0.8, kFrac: 0.1 }, arc: { peakFrac: 0.125, stepFrac: 0.11 } },
+  "--color-accent-text":    { scale: "surface", grid: { iFrac: 1.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.0 } },
+  "--color-toggle-track":   { scale: "surface", grid: { iFrac: 0.8, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.2 } },
+  "--color-toggle-thumb":   { scale: "surface", grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 } },
+  "--color-toggle-icon":    { scale: "surface", grid: { iFrac: 1.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.0 } },
+  "--color-glyph-bg":       { scale: "accent",  grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 }, alpha: 0.06 },
+  "--color-focus":          { scale: "accent",  grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 }, alpha: 0.45 },
 };
-
-function makeDefaultCandidate() {
-  return {
-    id: "baseline",
-    name: "grid · oklch · N=10",
-    notes: "Ternary grid at N=10 in OKLCH — starter reference.",
-    system: { kind: "grid", space: "oklch", N: 10 },
-  };
-}
 
 function loadCandidates() {
   try {
@@ -381,18 +380,29 @@ function loadCandidates() {
     }
   } catch (e) {}
   return [
-    makeDefaultCandidate(),
     {
-      id: "c-alt-n6",
+      id: "grid-n10",
+      name: "grid · oklch · N=10",
+      notes: "Ternary grid. Roles addressable by (i, k).",
+      system: { kind: "grid", space: "oklch", N: 10 },
+    },
+    {
+      id: "grid-n6",
       name: "grid · oklch · N=6",
       notes: "Coarser grid — fewer in-between stops, colors snap harder.",
       system: { kind: "grid", space: "oklch", N: 6 },
     },
     {
-      id: "c-alt-n20",
-      name: "grid · oklch · N=20",
-      notes: "Finer grid — more granularity for role placement.",
-      system: { kind: "grid", space: "oklch", N: 20 },
+      id: "arc-a11-n11",
+      name: "arc · oklch · 11 arcs × 11 stops",
+      notes: "Family of tonal arcs. Roles addressable by (peakFrac, stepFrac).",
+      system: { kind: "arc", space: "oklch", arcCount: 11, arcN: 11 },
+    },
+    {
+      id: "arc-a5-n9",
+      name: "arc · oklch · 5 arcs × 9 stops",
+      notes: "Coarser arc family.",
+      system: { kind: "arc", space: "oklch", arcCount: 5, arcN: 9 },
     },
   ];
 }
@@ -418,22 +428,44 @@ const hues = loadHues();
 
 // ─── CSS generation — system + shared role map + shared hues ────
 
-// Snap proportional role coordinate to an integer grid cell for this N.
-function snapRole(role, N) {
-  const i = Math.round(role.iFrac * N);
-  const kRaw = Math.round(role.kFrac * N);
-  // Enforce i + k <= N by pulling k down if the proportional form
-  // would over-constrain (rare on edge roles).
-  const k = Math.min(kRaw, N - i);
-  return { i, k, alpha: role.alpha };
+// Given a role, produce a {light, dark, labelBits} triple for the
+// candidate's system. Branches on system.kind.
+function resolveRole(role, system, hueSurface, hueAccent) {
+  const hue = role.scale === "accent" ? hueAccent : hueSurface;
+  const { alpha } = role;
+
+  if (system.kind === "grid") {
+    const { N } = system;
+    const i = Math.round(role.grid.iFrac * N);
+    const kRaw = Math.round(role.grid.kFrac * N);
+    const k = Math.min(kRaw, N - i);
+    return {
+      light: cssAtGrid({ i, k, N, hue, alpha }),
+      dark:  cssAtGridDark({ i, k, N, hue, alpha }),
+      label: `i=${i} k=${k}`,
+    };
+  }
+
+  if (system.kind === "arc") {
+    const { arcCount, arcN } = system;
+    const { peakFrac, stepFrac } = role.arc;
+    const a = Math.round(peakFrac * (arcCount - 1));
+    const j = Math.round(stepFrac * (arcN - 1));
+    return {
+      light: cssAtArc({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }),
+      dark:  cssAtArcDark({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }),
+      label: `a=${a} j=${j}`,
+    };
+  }
+
+  return { light: "", dark: "", label: "" };
 }
 
-// Returns { lightCss, darkCss, roleColors: { name: { light, dark, snap } } }
+// Returns { lightCss, darkCss, roleColors: { name: { light, dark, label, role } } }
 function resolveCandidate(cand) {
   const { system } = cand;
   if (!system) return { lightCss: "", darkCss: "", roleColors: {} };
 
-  const { N } = system;
   const roleColors = {};
   const lightLines = [];
   const darkLines = [];
@@ -441,13 +473,10 @@ function resolveCandidate(cand) {
   for (const name of ROLE_ORDER) {
     const role = ROLE_MAP[name];
     if (!role) continue;
-    const hue = role.scale === "accent" ? hues.accent : hues.surface;
-    const { i, k, alpha } = snapRole(role, N);
-    const light = cssAtGrid({ i, k, N, hue, alpha });
-    const dark = cssAtGridDark({ i, k, N, hue, alpha });
+    const { light, dark, label } = resolveRole(role, system, hues.surface, hues.accent);
     lightLines.push(`  ${name}: ${light};`);
     darkLines.push(`  ${name}: ${dark};`);
-    roleColors[name] = { light, dark, snap: { i, k, alpha }, role };
+    roleColors[name] = { light, dark, label, role };
   }
 
   // style.css's default (no data-theme) is dark; [data-theme="light"] overrides.
@@ -495,7 +524,12 @@ function renderCandidate(cand) {
   if (cand.system) {
     const sys = cand.system;
     badges.append(el("span", { class: "badge" }, `${sys.kind} · ${sys.space}`));
-    if (sys.N) badges.append(el("span", { class: "badge" }, `N=${sys.N}`));
+    if (sys.kind === "grid" && sys.N) {
+      badges.append(el("span", { class: "badge" }, `N=${sys.N}`));
+    }
+    if (sys.kind === "arc") {
+      badges.append(el("span", { class: "badge" }, `${sys.arcCount}×${sys.arcN}`));
+    }
   }
   if (badges.children.length) header.append(badges);
 
@@ -508,6 +542,7 @@ function renderCandidate(cand) {
   header.append(actions);
   section.append(header);
 
+  const { roleColors } = resolveCandidate(cand);
   const mocks = el("div", { class: "mocks" });
   for (const theme of ["light", "dark"]) {
     const palette = el("div", { class: "role-col", "data-theme": theme });
@@ -515,12 +550,12 @@ function renderCandidate(cand) {
     for (const name of ROLE_ORDER) {
       const role = ROLE_MAP[name];
       if (!role) continue;
-      const snap = snapRole(role, cand.system.N);
+      const info = roleColors[name];
       const chip = el("div", {
         class: "role-chip",
         "data-role": name,
         "data-theme": theme,
-        "data-label": `${roleShortLabel(name)} · ${role.scale} i=${snap.i} k=${snap.k}`,
+        "data-label": `${roleShortLabel(name)} · ${role.scale} ${info?.label ?? ""}`,
       });
       if (role.alpha != null) chip.setAttribute("data-alpha", role.alpha);
       palette.append(chip);
