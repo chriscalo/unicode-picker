@@ -268,14 +268,14 @@ main { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px
   <div class="hue-group" id="global-hue">
     <label>
       surface hue
-      <input type="range" id="global-surface-hue" min="0" max="359" value="162" step="1">
-      <output for="global-surface-hue">162</output>
+      <input type="range" id="global-surface-hue" min="0" max="345" value="165" step="15">
+      <output for="global-surface-hue">165</output>
       <span class="hue-swatch" id="global-surface-swatch"></span>
     </label>
     <label>
       accent hue
-      <input type="range" id="global-accent-hue" min="0" max="359" value="162" step="1">
-      <output for="global-accent-hue">162</output>
+      <input type="range" id="global-accent-hue" min="0" max="345" value="165" step="15">
+      <output for="global-accent-hue">165</output>
       <span class="hue-swatch" id="global-accent-swatch"></span>
     </label>
   </div>
@@ -295,23 +295,31 @@ main { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px
 
 <script type="module">
 import {
-  cssAtGrid, cssAtGridDark,
-  cssAtArc,  cssAtArcDark,
+  exportArcSystem,
+  exportGridSystem,
+  hueKey,
+  arcSuffixSwap,
+  gridSuffixSwap,
+  nearestArcSuffix,
+  nearestGridSuffix,
 } from "./palette.js";
 
 /*
  * CONCEPTUAL MODEL
  *
- *   system      = hue-agnostic shape. Only this varies between
- *                 candidates. For "grid": {kind, space, N}.
- *                 Defines what coordinates exist at any hue.
+ *   candidate = { meta, stops } — meta describes how the system was
+ *               generated; stops is a flat table of every named color
+ *               at every hue, like Material Red 050 / 100 / 200 / ...
  *
  *   Studio-wide (not per candidate):
- *     hues     — surface + accent brand choices
- *     ROLE_MAP — semantic role → scale + coord
+ *     hues     — surface + accent hue picks (snap to one of hueCount)
+ *     ROLE_MAP — semantic role → { scale, arc-suffix, grid-suffix }
  *
- *   A role entry's coord is stored in LIGHT-MODE convention.
- *   Dark mode auto-flips W and B (keeps C); {i, k} → (N - i - k, k).
+ *   Render flow per role:
+ *     1. Pick scale's hue → "h180" prefix
+ *     2. Pick model-specific suffix from role → "c80-40"
+ *     3. Look up "h180 c80-40" in the candidate's stops table
+ *     4. Dark mode = look up the swapped suffix instead.
  */
 
 const LS_KEY = "palette-studio.candidates";
@@ -340,36 +348,59 @@ const ROLE_ORDER = [
 ];
 
 // Shared role mapping — the SAME for all candidates.
-// Each entry carries BOTH a grid coord and an arc coord, pre-authored
-// so they address the same target color. Candidates pick the matching
-// field based on their system's kind.
-//
-//   grid: { iFrac, kFrac } — higher iFrac = more white, higher kFrac = more pure
-//   arc:  { peakFrac, stepFrac } — peakFrac = chroma pull, stepFrac = 0 (W) → 1 (B)
-//
-// On the greyscale edge (kFrac = 0): arc peakFrac = 0, stepFrac = 1 - iFrac.
-// For interior points, arc's stepFrac = (1 - iFrac - kFrac) / (1 - kFrac),
-// and peakFrac = kFrac / (4 * stepFrac * (1 - stepFrac)).
+// Each role names a stop in BOTH model namings:
+//   arc:  "c{peakPct}-{stepPct}"
+//         step 0 = pure black, step 100 = pure white, mid-step = peak chroma.
+//   grid: "c{kPct}-l{iPct}"
+//         k = chroma fraction, i = white fraction (i+k ≤ 100).
+// All values authored for LIGHT MODE. Dark mode swaps W ↔ B.
 const ROLE_MAP = {
-  "--color-bg-base":        { scale: "surface", grid: { iFrac: 1.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.0 } },
-  "--color-bg-raised":      { scale: "surface", grid: { iFrac: 0.9, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.1 } },
-  "--color-bg-panel":       { scale: "surface", grid: { iFrac: 0.8, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.2 } },
-  "--color-bg-hover":       { scale: "surface", grid: { iFrac: 0.7, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.3 } },
-  "--color-input-bg":       { scale: "surface", grid: { iFrac: 0.7, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.3 } },
-  "--color-border-subtle":  { scale: "surface", grid: { iFrac: 0.5, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.5 } },
-  "--color-border-strong":  { scale: "surface", grid: { iFrac: 0.3, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.7 } },
-  "--color-text-tertiary":  { scale: "surface", grid: { iFrac: 0.2, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.8 } },
-  "--color-text-secondary": { scale: "surface", grid: { iFrac: 0.1, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.9 } },
-  "--color-text-primary":   { scale: "surface", grid: { iFrac: 0.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 1.0 } },
-  "--color-accent":         { scale: "accent",  grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 } },
-  "--color-accent-subtle":  { scale: "accent",  grid: { iFrac: 0.8, kFrac: 0.1 }, arc: { peakFrac: 0.125, stepFrac: 0.11 } },
-  "--color-accent-text":    { scale: "surface", grid: { iFrac: 1.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.0 } },
-  "--color-toggle-track":   { scale: "surface", grid: { iFrac: 0.8, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.2 } },
-  "--color-toggle-thumb":   { scale: "surface", grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 } },
-  "--color-toggle-icon":    { scale: "surface", grid: { iFrac: 1.0, kFrac: 0.0 }, arc: { peakFrac: 0.0, stepFrac: 0.0 } },
-  "--color-glyph-bg":       { scale: "accent",  grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 }, alpha: 0.06 },
-  "--color-focus":          { scale: "accent",  grid: { iFrac: 0.3, kFrac: 0.5 }, arc: { peakFrac: 0.52, stepFrac: 0.4 }, alpha: 0.45 },
+  "--color-bg-base":        { scale: "surface", arc: "c00-100", grid: "c00-l100" },
+  "--color-bg-raised":      { scale: "surface", arc: "c00-90",  grid: "c00-l90"  },
+  "--color-bg-panel":       { scale: "surface", arc: "c00-80",  grid: "c00-l80"  },
+  "--color-bg-hover":       { scale: "surface", arc: "c00-70",  grid: "c00-l70"  },
+  "--color-input-bg":       { scale: "surface", arc: "c00-70",  grid: "c00-l70"  },
+  "--color-border-subtle":  { scale: "surface", arc: "c00-50",  grid: "c00-l50"  },
+  "--color-border-strong":  { scale: "surface", arc: "c00-30",  grid: "c00-l30"  },
+  "--color-text-tertiary":  { scale: "surface", arc: "c00-20",  grid: "c00-l20"  },
+  "--color-text-secondary": { scale: "surface", arc: "c00-10",  grid: "c00-l10"  },
+  "--color-text-primary":   { scale: "surface", arc: "c00-00",  grid: "c00-l00"  },
+  "--color-accent":         { scale: "accent",  arc: "c50-40",  grid: "c50-l30"  },
+  "--color-accent-subtle":  { scale: "accent",  arc: "c10-90",  grid: "c10-l80"  },
+  "--color-accent-text":    { scale: "surface", arc: "c00-100", grid: "c00-l100" },
+  "--color-toggle-track":   { scale: "surface", arc: "c00-80",  grid: "c00-l80"  },
+  "--color-toggle-thumb":   { scale: "surface", arc: "c50-40",  grid: "c50-l30"  },
+  "--color-toggle-icon":    { scale: "surface", arc: "c00-100", grid: "c00-l100" },
+  "--color-glyph-bg":       { scale: "accent",  arc: "c50-40",  grid: "c50-l30",  alpha: 0.06 },
+  "--color-focus":          { scale: "accent",  arc: "c50-40",  grid: "c50-l30",  alpha: 0.45 },
 };
+
+// Quantized hue choices — every candidate exports at hueCount = 24.
+const HUE_COUNT = 24;
+const HUE_STEP_DEG = 360 / HUE_COUNT;
+const HUE_ANGLES = Array.from({ length: HUE_COUNT }, (_, i) =>
+  Math.round(i * HUE_STEP_DEG)
+);
+function snapHue(angle) {
+  const idx = Math.round(((angle % 360) + 360) % 360 / HUE_STEP_DEG) % HUE_COUNT;
+  return HUE_ANGLES[idx];
+}
+
+// Materialise a candidate by exporting from its meta.
+function buildCandidate({ id, name, notes, meta }) {
+  const exporter = meta.model === "tonalarc" ? exportArcSystem : exportGridSystem;
+  const { stops, meta: filledMeta } = exporter({
+    space: meta.space,
+    hueCount: HUE_COUNT,
+    N: meta.N,
+    arcs: meta.arcs,
+    scheme: meta.scheme,
+    curves: meta.curves,
+  });
+  return { id, name, notes, meta: { ...meta, ...filledMeta }, stops };
+}
+
+const DEFAULT_CURVES = { tint: 0, shade: 0, pure: 0, magnitude: 2 };
 
 function loadCandidates() {
   try {
@@ -380,30 +411,30 @@ function loadCandidates() {
     }
   } catch (e) {}
   return [
-    {
-      id: "grid-n10",
-      name: "grid · oklch · N=10",
-      notes: "Ternary grid. Roles addressable by (i, k).",
-      system: { kind: "grid", space: "oklch", N: 10 },
-    },
-    {
-      id: "grid-n6",
-      name: "grid · oklch · N=6",
-      notes: "Coarser grid — fewer in-between stops, colors snap harder.",
-      system: { kind: "grid", space: "oklch", N: 6 },
-    },
-    {
-      id: "arc-a11-n11",
-      name: "arc · oklch · 11 arcs × 11 stops",
-      notes: "Family of tonal arcs. Roles addressable by (peakFrac, stepFrac).",
-      system: { kind: "arc", space: "oklch", arcCount: 11, arcN: 11 },
-    },
-    {
-      id: "arc-a5-n9",
-      name: "arc · oklch · 5 arcs × 9 stops",
+    buildCandidate({
+      id: "arc-11x11",
+      name: "tonalarc · oklch · 11 × 11",
+      notes: "Tonal arc scales: 11 arcs × 11 stops, OKLCH, no easing.",
+      meta: { model: "tonalarc", space: "oklch", arcs: 11, N: 11, curves: DEFAULT_CURVES },
+    }),
+    buildCandidate({
+      id: "arc-5x9",
+      name: "tonalarc · oklch · 5 × 9",
       notes: "Coarser arc family.",
-      system: { kind: "arc", space: "oklch", arcCount: 5, arcN: 9 },
-    },
+      meta: { model: "tonalarc", space: "oklch", arcs: 5, N: 9, curves: DEFAULT_CURVES },
+    }),
+    buildCandidate({
+      id: "grid-n10",
+      name: "tonalgrid · oklch · N=10",
+      notes: "Ternary grid at N=10.",
+      meta: { model: "tonalgrid", space: "oklch", N: 10, scheme: "cl", curves: DEFAULT_CURVES },
+    }),
+    buildCandidate({
+      id: "grid-n5",
+      name: "tonalgrid · oklch · N=5",
+      notes: "Coarser ternary grid.",
+      meta: { model: "tonalgrid", space: "oklch", N: 5, scheme: "cl", curves: DEFAULT_CURVES },
+    }),
   ];
 }
 
@@ -414,9 +445,12 @@ function saveCandidates() {
 function loadHues() {
   try {
     const raw = localStorage.getItem(LS_HUES);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { surface: snapHue(parsed.surface), accent: snapHue(parsed.accent) };
+    }
   } catch (e) {}
-  return { surface: 162, accent: 162 };
+  return { surface: snapHue(165), accent: snapHue(165) };
 }
 
 function saveHues() {
@@ -426,46 +460,39 @@ function saveHues() {
 const candidates = loadCandidates();
 const hues = loadHues();
 
-// ─── CSS generation — system + shared role map + shared hues ────
+// ─── CSS generation — flat lookup in candidate.stops ────────────
 
-// Given a role, produce a {light, dark, labelBits} triple for the
-// candidate's system. Branches on system.kind.
-function resolveRole(role, system, hueSurface, hueAccent) {
-  const hue = role.scale === "accent" ? hueAccent : hueSurface;
-  const { alpha } = role;
-
-  if (system.kind === "grid") {
-    const { N } = system;
-    const i = Math.round(role.grid.iFrac * N);
-    const kRaw = Math.round(role.grid.kFrac * N);
-    const k = Math.min(kRaw, N - i);
-    return {
-      light: cssAtGrid({ i, k, N, hue, alpha }),
-      dark:  cssAtGridDark({ i, k, N, hue, alpha }),
-      label: `i=${i} k=${k}`,
-    };
-  }
-
-  if (system.kind === "arc") {
-    const { arcCount, arcN } = system;
-    const { peakFrac, stepFrac } = role.arc;
-    const a = Math.round(peakFrac * (arcCount - 1));
-    const j = Math.round(stepFrac * (arcN - 1));
-    return {
-      light: cssAtArc({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }),
-      dark:  cssAtArcDark({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }),
-      label: `a=${a} j=${j}`,
-    };
-  }
-
-  return { light: "", dark: "", label: "" };
+function applyAlpha(hex, alpha) {
+  if (alpha == null || alpha >= 1) return hex;
+  const a = Math.max(0, Math.min(1, alpha));
+  // rgba() with hex base — emit the hex plus an alpha channel via
+  // an 8-digit hex (browser-friendly).
+  const aHex = Math.round(a * 255).toString(16).padStart(2, "0");
+  return hex + aHex;
 }
 
-// Returns { lightCss, darkCss, roleColors: { name: { light, dark, label, role } } }
-function resolveCandidate(cand) {
-  const { system } = cand;
-  if (!system) return { lightCss: "", darkCss: "", roleColors: {} };
+function lookupRole(role, cand, hue) {
+  const { meta, stops } = cand;
+  const target = meta.model === "tonalarc" ? role.arc : role.grid;
+  if (!target) return null;
+  const nearest = meta.model === "tonalarc" ? nearestArcSuffix : nearestGridSuffix;
+  const swap = meta.model === "tonalarc" ? arcSuffixSwap : gridSuffixSwap;
 
+  // Snap the role's target stop to the nearest one this candidate has.
+  const snapLight = nearest(target, meta);
+  const snapDark = nearest(swap(snapLight), meta);
+  const hk = hueKey(hue);
+  const lightHex = stops[`${hk} ${snapLight}`];
+  const darkHex = stops[`${hk} ${snapDark}`];
+  return {
+    light: applyAlpha(lightHex || "#ff00ff", role.alpha),
+    dark:  applyAlpha(darkHex  || "#ff00ff", role.alpha),
+    label: `${meta.model === "tonalarc" ? "arc" : "grid"} ${snapLight}`,
+  };
+}
+
+function resolveCandidate(cand) {
+  if (!cand?.stops) return { lightCss: "", darkCss: "", roleColors: {} };
   const roleColors = {};
   const lightLines = [];
   const darkLines = [];
@@ -473,10 +500,12 @@ function resolveCandidate(cand) {
   for (const name of ROLE_ORDER) {
     const role = ROLE_MAP[name];
     if (!role) continue;
-    const { light, dark, label } = resolveRole(role, system, hues.surface, hues.accent);
-    lightLines.push(`  ${name}: ${light};`);
-    darkLines.push(`  ${name}: ${dark};`);
-    roleColors[name] = { light, dark, label, role };
+    const hue = role.scale === "accent" ? hues.accent : hues.surface;
+    const out = lookupRole(role, cand, hue);
+    if (!out) continue;
+    lightLines.push(`  ${name}: ${out.light};`);
+    darkLines.push(`  ${name}: ${out.dark};`);
+    roleColors[name] = { light: out.light, dark: out.dark, label: out.label, role };
   }
 
   // style.css's default (no data-theme) is dark; [data-theme="light"] overrides.
@@ -521,15 +550,16 @@ function renderCandidate(cand) {
     el("span", { class: "notes" }, cand.notes || ""),
   );
   const badges = el("div", { class: "badges" });
-  if (cand.system) {
-    const sys = cand.system;
-    badges.append(el("span", { class: "badge" }, `${sys.kind} · ${sys.space}`));
-    if (sys.kind === "grid" && sys.N) {
-      badges.append(el("span", { class: "badge" }, `N=${sys.N}`));
+  if (cand.meta) {
+    const m = cand.meta;
+    badges.append(el("span", { class: "badge" }, `${m.model} · ${m.space}`));
+    if (m.model === "tonalarc") {
+      badges.append(el("span", { class: "badge" }, `${m.arcs} arcs × ${m.N} stops`));
+    } else if (m.model === "tonalgrid") {
+      badges.append(el("span", { class: "badge" }, `N=${m.N}`));
+      if (m.scheme) badges.append(el("span", { class: "badge" }, `scheme=${m.scheme}`));
     }
-    if (sys.kind === "arc") {
-      badges.append(el("span", { class: "badge" }, `${sys.arcCount}×${sys.arcN}`));
-    }
+    badges.append(el("span", { class: "badge" }, `${Object.keys(cand.stops).length} stops`));
   }
   if (badges.children.length) header.append(badges);
 
@@ -679,7 +709,7 @@ function renderHueUi() {
 
 for (const [input, key] of [[surfaceInput, "surface"], [accentInput, "accent"]]) {
   input.addEventListener("input", () => {
-    hues[key] = +input.value;
+    hues[key] = snapHue(+input.value);
     renderHueUi();
     saveHues();
     refreshAllIframes();
@@ -728,45 +758,37 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && overlay.classList.contains("open")) closeDesigner();
 });
 
-// Incoming save from the designer — a new or updated SYSTEM.
-// The designer's hue becomes the studio surface hue (convenience).
+// Incoming save from the designer — produces a CANDIDATE: { meta, stops }.
+// The designer is expected to send { name, meta }; the studio runs the
+// exporter to materialise the stops table. (Future: have the designer
+// emit the stops table directly so it bakes in any per-space math the
+// studio's palette.js doesn't know about.)
 window.addEventListener("message", (ev) => {
   const msg = ev.data;
   if (!msg || msg.type !== "designer:save") return;
+  const meta = msg.meta || {
+    model: "tonalarc",
+    space: msg.state?.space || "oklch",
+    arcs: 11,
+    N: 11,
+    curves: { tint: 0, shade: 0, pure: 0, magnitude: 2 },
+  };
 
-  // Adopt the designer's hue as the studio surface hue.
-  if (typeof msg.state?.hue === "number") {
-    hues.surface = Math.round(msg.state.hue);
-    saveHues();
-    renderHueUi();
-  }
-
-  const newSystem = { kind: "grid", space: msg.state?.space || "oklch", N: 10 };
+  const id = editingId || ("c-" + Date.now().toString(36));
+  const built = buildCandidate({ id, name: msg.name, notes: "", meta });
 
   if (editingId) {
-    const cand = candidates.find(c => c.id === editingId);
-    if (cand) {
-      cand.name = msg.name || cand.name;
-      cand.system = newSystem;
+    const idx = candidates.findIndex(c => c.id === editingId);
+    if (idx >= 0) {
+      candidates[idx] = built;
       saveCandidates();
-      const oldSection = sectionEl(cand.id);
-      if (oldSection) {
-        const fresh = renderCandidate(cand);
-        oldSection.replaceWith(fresh);
-      }
+      sectionEl(editingId)?.replaceWith(renderCandidate(built));
       refreshAllIframes();
       closeDesigner();
       return;
     }
   }
-
-  const cand = {
-    id: "c-" + Date.now().toString(36),
-    name: msg.name,
-    notes: "",
-    system: newSystem,
-  };
-  addCandidate(cand);
+  addCandidate(built);
   refreshAllIframes();
   closeDesigner();
 });

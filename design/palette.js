@@ -1,8 +1,8 @@
-// Minimal OKLCH-triangle helpers extracted from color-triangle.html.
-// Exposes enough to take a grid (i, k) coordinate at resolution N and
-// render it as an oklch() CSS color for a given hue.
+// OKLCH-triangle helpers ported verbatim from color-triangle.html.
+// Exposes enough to enumerate every named color stop in a system
+// (tonalarc or tonalgrid) at every hue, as hex strings.
 
-// ─── OKLab / OKLCH math ──────────────────────────────────────────
+// ─── OKLab / OKLCH math ─────────────────────────────────────────
 function oklabUnitToLinearRgb(L, a, b) {
   const l_ = L + a *  0.3963377774 + b *  0.2158037573;
   const m_ = L + a * -0.1055613458 + b * -0.0638541728;
@@ -31,12 +31,9 @@ function oklchCuspRaw(hue) {
   const a = Math.cos(hRad);
   const b = Math.sin(hRad);
   const S = findMaxSaturation(a, b);
-  const k_l =  0.3963377774 * a + 0.2158037573 * b;
-  const k_m = -0.1055613458 * a - 0.0638541728 * b;
-  const k_s = -0.0894841775 * a - 1.2914855480 * b;
-  const l_ = 1 + S * k_l;
-  const m_ = 1 + S * k_m;
-  const s_ = 1 + S * k_s;
+  const l_ = 1 + S * (0.3963377774 * a + 0.2158037573 * b);
+  const m_ = 1 + S * (-0.1055613458 * a - 0.0638541728 * b);
+  const s_ = 1 + S * (-0.0894841775 * a - 1.2914855480 * b);
   const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
   const rgbMax = Math.max(
     +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
@@ -72,76 +69,218 @@ const OKLCH_CUSP = (() => {
   return smoothLut(lut, 5);
 })();
 
-// ─── Grid + barycentric + color-emission ─────────────────────────
-
-// Grid (i, k) at resolution N → barycentric (w, b, c). j = N - i - k.
-//   w = i/N  (tint / white fraction)
-//   b = j/N  (shade / black fraction)
-//   c = k/N  (pure-color fraction)
-// Valid cells satisfy i + k <= N.
-export function gridToBary(i, k, N) {
-  const j = N - i - k;
-  return { w: i / N, b: j / N, c: k / N };
+// Eased barycentric — applies per-axis easing then renormalises.
+// Matches the designer's easeBary exactly.
+function easedBary(w, b, c, curves, magnitude) {
+  const m = magnitude;
+  const gW = Math.pow(m, -(curves.tint  || 0));
+  const gB = Math.pow(m, -(curves.shade || 0));
+  const gC = Math.pow(m, -(curves.pure  || 0));
+  let wE = Math.pow(Math.max(0, w), gW);
+  let bE = Math.pow(Math.max(0, b), gB);
+  let cE = Math.pow(Math.max(0, c), gC);
+  const sum = wE + bE + cE;
+  if (sum > 1e-9) { wE /= sum; bE /= sum; cE /= sum; }
+  return [wE, bE, cE];
 }
 
-// Inverse on the light ↔ dark mirror (swap w and b, keep c).
-// Grid form: dark(i, k) == light(N - i - k, k).
-export function invertGrid(i, k, N) {
-  return { i: N - i - k, k };
-}
-
-// OKLCH barycentric evaluation. Returns {L, C, hue} in OKLCH.
-export function oklchAtBary(hue, w, c) {
+// OKLCH atBary (eased): returns [L, C, hue] in OKLCH coords.
+function oklchAtBary(hue, w, c) {
   const h = ((hue % 360) + 360) % 360;
   const [Lp, Cp] = OKLCH_CUSP[Math.round(h)];
-  return { L: w + c * Lp, C: c * Cp, hue: h };
+  return [w + c * Lp, c * Cp, h];
 }
 
-// Emit a CSS `oklch()` color, optionally with an alpha channel.
-export function oklchCss({ L, C, hue }, alpha) {
-  const core = `${(L * 100).toFixed(2)}% ${C.toFixed(4)} ${hue.toFixed(1)}`;
-  return alpha == null || alpha >= 1
-    ? `oklch(${core})`
-    : `oklch(${core} / ${alpha.toFixed(3)})`;
+function oklchToLinearRgb(L, C, hue) {
+  const h = hue * Math.PI / 180;
+  return oklabUnitToLinearRgb(L, C * Math.cos(h), C * Math.sin(h));
 }
 
-// Compose everything: grid (i, k) at N + hue → CSS string.
-export function cssAtGrid({ i, k, N, hue, alpha }) {
-  const { w, c } = gridToBary(i, k, N);
-  return oklchCss(oklchAtBary(hue, w, c), alpha);
+function linearToSrgb(x) {
+  const v = Math.max(0, Math.min(1, x));
+  return v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
 }
 
-// Dark-mode variant: swap W and B (which is swapping i and j), keep k.
-export function cssAtGridDark({ i, k, N, hue, alpha }) {
-  const { i: iD, k: kD } = invertGrid(i, k, N);
-  return cssAtGrid({ i: iD, k: kD, N, hue, alpha });
+function rgbToHex(r, g, b) {
+  const toHex = v =>
+    Math.max(0, Math.min(255, Math.round(v * 255))).toString(16).padStart(2, "0");
+  return "#" + toHex(r) + toHex(g) + toHex(b);
 }
 
-// ─── Arc (Tonal Arc Scales) system ───────────────────────────────
-// An arc's parabolic parameterisation:
-//   peakFrac ∈ [0, 1]: how much pure color the arc pulls in at its midpoint
-//   stepFrac ∈ [0, 1]: position along the arc (0 = W corner, 1 = B corner)
-// At peakFrac = 0 the arc collapses to the W↔B greyscale edge.
-// At peakFrac = 1 the arc passes through the pure-C corner at stepFrac = 0.5.
-export function arcToBary(peakFrac, stepFrac) {
-  const t = stepFrac;
-  const c = peakFrac * 4 * t * (1 - t);
-  const rem = 1 - c;
-  return { w: rem * (1 - t), b: rem * t, c };
+// Full pipeline: hue + eased barycentric → sRGB hex.
+function hexFromBary(hue, w, b, c, curves, magnitude) {
+  const [wE, , cE] = easedBary(w, b, c, curves, magnitude);
+  const [L, C, h] = oklchAtBary(hue, wE, cE);
+  const [rL, gL, bL] = oklchToLinearRgb(L, C, h);
+  return rgbToHex(linearToSrgb(rL), linearToSrgb(gL), linearToSrgb(bL));
 }
 
-// Discretised: snap to an integer arc index a ∈ [0, arcCount-1] and
-// step index j ∈ [0, arcN-1] before evaluating.
-export function cssAtArc({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }) {
-  const a = Math.round(peakFrac * (arcCount - 1));
-  const j = Math.round(stepFrac * (arcN - 1));
-  const pF = arcCount > 1 ? a / (arcCount - 1) : 0;
-  const sF = arcN     > 1 ? j / (arcN     - 1) : 0;
-  const { w, c } = arcToBary(pF, sF);
-  return oklchCss(oklchAtBary(hue, w, c), alpha);
+// ─── Arc geometry (ported from color-triangle.html) ─────────────
+function arcBary(t, peak) {
+  const alpha = 2 - peak;
+  const u = Math.abs(2 * t - 1);
+  const c = peak * (1 - Math.pow(u, alpha));
+  const w0 = (1 - peak) * t       + peak * Math.max(0, 2 * t - 1);
+  const b0 = (1 - peak) * (1 - t) + peak * Math.max(0, 1 - 2 * t);
+  const denom = w0 + b0;
+  const scale = denom > 1e-10 ? (1 - c) / denom : 0;
+  return [w0 * scale, b0 * scale, c];
 }
 
-// Dark-mode arc variant: mirror stepFrac across 0.5 (swap W ↔ B).
-export function cssAtArcDark({ peakFrac, stepFrac, arcCount, arcN, hue, alpha }) {
-  return cssAtArc({ peakFrac, stepFrac: 1 - stepFrac, arcCount, arcN, hue, alpha });
+function arcSamples(peak, stops) {
+  const segs = 400;
+  const pts = [];
+  let len = 0;
+  let prev = arcBary(0, peak);
+  pts.push({ t: 0, s: 0, bary: prev });
+  for (let i = 1; i <= segs; i++) {
+    const t = i / segs;
+    const cur = arcBary(t, peak);
+    len += Math.hypot(cur[0] - prev[0], cur[1] - prev[1], cur[2] - prev[2]);
+    pts.push({ t, s: len, bary: cur });
+    prev = cur;
+  }
+  const out = [];
+  const divisor = Math.max(1, stops - 1);
+  for (let i = 0; i < stops; i++) {
+    const target = (i / divisor) * len;
+    let j = 0;
+    while (j < pts.length - 1 && pts[j + 1].s < target) j++;
+    const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
+    const frac = (b.s - a.s) > 0 ? (target - a.s) / (b.s - a.s) : 0;
+    const t = a.t + (b.t - a.t) * frac;
+    out.push({ t, bary: arcBary(t, peak) });
+  }
+  return out;
+}
+
+// ─── Naming helpers ────────────────────────────────────────────
+// "00", "10", ... "100" — zero-pad single digits but not 100.
+export function pctLabel(n) {
+  const v = Math.round(n);
+  return v < 10 ? "0" + v : String(v);
+}
+
+export function hueKey(angle) {
+  return "h" + String(Math.round(angle)).padStart(3, "0");
+}
+
+// Arc stop suffix: c{peakPct}-{stepPct}.
+export function arcSuffix(peakPct, stepPct) {
+  return `c${pctLabel(peakPct)}-${pctLabel(stepPct)}`;
+}
+// Grid stop suffix: c{kPct}-l{iPct}  (c-l scheme; TODO: wb / num).
+export function gridSuffix(kPct, iPct) {
+  return `c${pctLabel(kPct)}-l${pctLabel(iPct)}`;
+}
+
+// Swap suffixes for dark-mode lookup (W ↔ B).
+export function arcSuffixSwap(suffix) {
+  const [cPart, stepPart] = suffix.split("-");
+  return `${cPart}-${pctLabel(100 - Number(stepPart))}`;
+}
+export function gridSuffixSwap(suffix) {
+  const [cPart, lPart] = suffix.split("-");
+  const kPct = Number(cPart.slice(1));
+  const iPct = Number(lPart.slice(1));
+  return `c${pctLabel(kPct)}-l${pctLabel(100 - iPct - kPct)}`;
+}
+
+// Nearest-match: snap a desired percentage value to the closest one
+// the candidate actually has. Used when the role map names a stop
+// at e.g. 10% increments but the candidate only enumerates 20%.
+export function nearestPct(target, available) {
+  let best = available[0], bestD = Infinity;
+  for (const a of available) {
+    const d = Math.abs(a - target);
+    if (d < bestD) { bestD = d; best = a; }
+  }
+  return best;
+}
+
+export function nearestArcSuffix(suffix, meta) {
+  const [cPart, stepPart] = suffix.split("-");
+  const peakPct = Number(cPart.slice(1));
+  const stepPct = Number(stepPart);
+  return arcSuffix(
+    nearestPct(peakPct, meta.peakPcts),
+    nearestPct(stepPct, meta.stepPcts),
+  );
+}
+
+export function nearestGridSuffix(suffix, meta) {
+  const [cPart, lPart] = suffix.split("-");
+  const kPct = Number(cPart.slice(1));
+  const iPct = Number(lPart.slice(1));
+  // Snap k first, then snap i within the constraint i + k ≤ 100.
+  const k = nearestPct(kPct, meta.kPcts);
+  const validI = meta.iPcts.filter(v => v + k <= 100);
+  const i = nearestPct(iPct, validI.length ? validI : [0]);
+  return gridSuffix(k, i);
+}
+
+// ─── System export — enumerate every stop at every hue ──────────
+// Returns { meta, stops } where stops is a flat dict:
+//   { "h180 c80-40": "#2ea292", ... }
+export function exportArcSystem({
+  space = "oklch",
+  hueCount = 24,
+  N,                 // stops per arc
+  arcs,              // arc count
+  curves = { tint: 0, shade: 0, pure: 0, magnitude: 2 },
+}) {
+  const stops = {};
+  for (let h = 0; h < hueCount; h++) {
+    const hue = (h * 360) / hueCount;
+    const hk = hueKey(hue);
+    for (let a = 0; a < arcs; a++) {
+      const peak = arcs > 1 ? a / (arcs - 1) : 0;
+      const peakPct = Math.round(peak * 100);
+      const samples = arcSamples(peak, N);
+      for (let j = 0; j < N; j++) {
+        const stepPct = N > 1 ? Math.round((j / (N - 1)) * 100) : 0;
+        const [w, b, c] = samples[j].bary;
+        stops[`${hk} ${arcSuffix(peakPct, stepPct)}`] =
+          hexFromBary(hue, w, b, c, curves, curves.magnitude ?? 2);
+      }
+    }
+  }
+  const peakPcts = Array.from({ length: arcs }, (_, a) =>
+    Math.round((arcs > 1 ? a / (arcs - 1) : 0) * 100));
+  const stepPcts = Array.from({ length: N }, (_, j) =>
+    Math.round((N > 1 ? j / (N - 1) : 0) * 100));
+  return {
+    meta: { model: "tonalarc", space, hueCount, N, arcs, curves, peakPcts, stepPcts },
+    stops,
+  };
+}
+
+export function exportGridSystem({
+  space = "oklch",
+  hueCount = 24,
+  N,                 // grid resolution
+  scheme = "cl",
+  curves = { tint: 0, shade: 0, pure: 0, magnitude: 2 },
+}) {
+  const stops = {};
+  for (let h = 0; h < hueCount; h++) {
+    const hue = (h * 360) / hueCount;
+    const hk = hueKey(hue);
+    for (let k = 0; k <= N; k++) {
+      const kPct = Math.round((k / N) * 100);
+      for (let i = 0; i + k <= N; i++) {
+        const iPct = Math.round((i / N) * 100);
+        const j = N - i - k;
+        const w = i / N, b = j / N, c = k / N;
+        stops[`${hk} ${gridSuffix(kPct, iPct)}`] =
+          hexFromBary(hue, w, b, c, curves, curves.magnitude ?? 2);
+      }
+    }
+  }
+  const kPcts = Array.from({ length: N + 1 }, (_, k) => Math.round((k / N) * 100));
+  const iPcts = Array.from({ length: N + 1 }, (_, i) => Math.round((i / N) * 100));
+  return {
+    meta: { model: "tonalgrid", space, hueCount, N, scheme, curves, kPcts, iPcts },
+    stops,
+  };
 }
