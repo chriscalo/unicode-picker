@@ -2019,8 +2019,8 @@
         const cols = N + 1, rows = N + 1;
         const grid = document.createElement("div");
         grid.className = "token-grid";
-        grid.style.gridTemplateColumns = `26px repeat(${cols}, minmax(0, 1fr))`;
-        grid.style.gridTemplateRows    = `16px repeat(${rows}, auto)`;
+        grid.style.gridTemplateColumns = `38px repeat(${cols}, minmax(0, 1fr))`;
+        grid.style.gridTemplateRows    = `18px repeat(${rows}, auto)`;
         grid.style.alignSelf = "start";
         grid.style.minHeight = "0";
         grid.style.minWidth = "0";
@@ -2029,22 +2029,22 @@
         const corner = document.createElement("div");
         corner.className = "axis-label";
         grid.appendChild(corner);
-        // Column header labels = white-axis percentages (going right
-        // from pure color at top-left to pure white at top-right).
+        // Column headers carry the white-axis labels (00w, 10w, …).
         for (let i = 0; i < cols; i++) {
           const hdr = document.createElement("div");
           hdr.className = "axis-label";
-          hdr.textContent = Math.round((i / N) * 100);
+          hdr.textContent = pctLabel(Math.round((i / N) * 100)) + "w";
           grid.appendChild(hdr);
         }
 
-        // Row outer loop = black-axis index (j). Pure color sits at
-        // top-left (j=0, i=0); pure white at top-right (j=0, i=N);
-        // pure black at bottom-left (j=N, i=0).
+        // Row outer loop = black-axis index (j). Row headers carry
+        // the black-axis labels (00b, 10b, …). Pure color is at
+        // top-left (j=0, i=0); pure white at top-right; pure black
+        // at bottom-left.
         for (let j = 0; j < rows; j++) {
           const rowLabel = document.createElement("div");
           rowLabel.className = "axis-label axis-label--row";
-          rowLabel.textContent = Math.round((j / N) * 100);
+          rowLabel.textContent = pctLabel(Math.round((j / N) * 100)) + "b";
           grid.appendChild(rowLabel);
           for (let i = 0; i < cols; i++) {
             const cell = document.createElement("div");
@@ -2058,9 +2058,6 @@
             const w = i / N, b = j / N, c = k / N;
             const rgb = atBaryEased(hue, w, b, c);
             cell.style.background = cssFromRgb(rgb);
-            cell.textContent = tokenName(i, j, k, N);
-            const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-            cell.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
             cell.title = tokenName(i, j, k, N);
             cell.dataset.cellI = i;
             cell.dataset.cellK = k;
@@ -2080,10 +2077,10 @@
         requestAnimationFrame(() => {
           const containerH = gridTarget.clientHeight;
           if (!containerH) return;
-          const maxCell = Math.floor((containerH - 16 - rows * 3) / rows);
+          const maxCell = Math.floor((containerH - 18 - rows * 3) / rows);
           if (maxCell > 0) {
             grid.style.gridTemplateColumns =
-              `26px repeat(${cols}, minmax(0, ${maxCell}px))`;
+              `38px repeat(${cols}, minmax(0, ${maxCell}px))`;
           }
         });
       }
