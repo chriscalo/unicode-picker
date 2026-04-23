@@ -2,12 +2,36 @@
 // Exposes enough to enumerate every named color stop in a system
 // (tonalarc or tonalgrid) at every hue, as hex strings.
 
-// ─── OKLab / OKLCH math ─────────────────────────────────────────
-function oklabUnitToLinearRgb(L, a, b) {
-  const l_ = L + a *  0.3963377774 + b *  0.2158037573;
-  const m_ = L + a * -0.1055613458 + b * -0.0638541728;
-  const s_ = L + a * -0.0894841775 + b * -1.2914855480;
-  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+// ─── OKLab / OKLCH math (ported verbatim from color-triangle.html) ─
+
+// Generic OKLCH → linear sRGB.
+function oklchToLinearRgb(L, C, H) {
+  const hRad = H * Math.PI / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
+  const lp = L + 0.3963377774 * a + 0.2158037573 * b;
+  const mp = L - 0.1055613458 * a - 0.0638541728 * b;
+  const sp = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = lp * lp * lp;
+  const m = mp * mp * mp;
+  const s = sp * sp * sp;
+  return [
+    +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+}
+
+// Saturation-probe variant: holds L=1, scales chroma direction by S.
+// Used only by findMaxSaturation.
+function oklabSatProbe(S, a, b) {
+  const sa = S * a, sb = S * b;
+  const l_ = 1 + 0.3963377774 * sa + 0.2158037573 * sb;
+  const m_ = 1 - 0.1055613458 * sa - 0.0638541728 * sb;
+  const s_ = 1 - 0.0894841775 * sa - 1.2914855480 * sb;
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
   return [
     +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
     -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
@@ -19,7 +43,7 @@ function findMaxSaturation(a, b) {
   let lo = 0, hi = 2.0;
   for (let i = 0; i < 48; i++) {
     const mid = (lo + hi) / 2;
-    const [r, g, bc] = oklabUnitToLinearRgb(mid, a, b);
+    const [r, g, bc] = oklabSatProbe(mid, a, b);
     if (Math.min(r, g, bc) >= 0) lo = mid;
     else hi = mid;
   }
@@ -31,9 +55,12 @@ function oklchCuspRaw(hue) {
   const a = Math.cos(hRad);
   const b = Math.sin(hRad);
   const S = findMaxSaturation(a, b);
-  const l_ = 1 + S * (0.3963377774 * a + 0.2158037573 * b);
-  const m_ = 1 + S * (-0.1055613458 * a - 0.0638541728 * b);
-  const s_ = 1 + S * (-0.0894841775 * a - 1.2914855480 * b);
+  const k_l =  0.3963377774 * a + 0.2158037573 * b;
+  const k_m = -0.1055613458 * a - 0.0638541728 * b;
+  const k_s = -0.0894841775 * a - 1.2914855480 * b;
+  const l_ = 1 + S * k_l;
+  const m_ = 1 + S * k_m;
+  const s_ = 1 + S * k_s;
   const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
   const rgbMax = Math.max(
     +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
@@ -89,11 +116,6 @@ function oklchAtBary(hue, w, c) {
   const h = ((hue % 360) + 360) % 360;
   const [Lp, Cp] = OKLCH_CUSP[Math.round(h)];
   return [w + c * Lp, c * Cp, h];
-}
-
-function oklchToLinearRgb(L, C, hue) {
-  const h = hue * Math.PI / 180;
-  return oklabUnitToLinearRgb(L, C * Math.cos(h), C * Math.sin(h));
 }
 
 function linearToSrgb(x) {
