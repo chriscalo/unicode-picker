@@ -117,6 +117,15 @@
         width: 140px;
         margin: 0;
       }
+      .toggle-control {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+      }
+      .toggle-control input { margin: 0; }
       .ease-read {
         color: var(--color-text-secondary);
         font-family: var(--font-ui);
@@ -507,6 +516,14 @@
           </div>
         </div>
 
+        <div class="control">
+          <div class="control__label">ΔE-equal triangle</div>
+          <label class="toggle-control">
+            <input type="checkbox" id="equi-toggle">
+            <span>pure-color → L=0.5</span>
+          </label>
+        </div>
+
       </div>
     </header>
 
@@ -664,7 +681,9 @@
         // Applied as gamma = 2^(−v·2), i.e. v=1→γ=0.25, v=-1→γ=4.
         easing: {},
         easingMag: 2,   // γ = mag^(-v); +1 → 1/mag, -1 → mag.
+        equiTriangle: false, // pin pure-C at L=0.5 for ΔE-balanced grid
       };
+
 
       function getEasing() {
         return state.easing[state.space] || (state.easing[state.space] = { w: 0, b: 0, c: 0 });
@@ -686,8 +705,23 @@
         return [wE, bE, cE];
       }
 
+      // Pull pure-C toward the centroid by α so the W/B/C corners
+      // form a more equilateral triangle in the strategy's perceptual
+      // space.
+      //   α=0    → identity (default)
+      //   α=0.25 → moderate balance: pure-C still recognisably the hue
+      //   α=0.4  → near-equilateral, but pure-C nearly grey
+      //   α=0.5  → degenerate (C collapses to the greyscale midpoint)
+      const EQUI_ALPHA = 0.25;
+      function applyEqui(w, b, c) {
+        if (!state.equiTriangle) return [w, b, c];
+        const a = EQUI_ALPHA;
+        return [w + a * c, b + a * c, c * (1 - 2 * a)];
+      }
+
       function atBaryEased(hue, w, b, c) {
-        const [wE, bE, cE] = easeBary(w, b, c);
+        let [wE, bE, cE] = easeBary(w, b, c);
+        [wE, bE, cE] = applyEqui(wE, bE, cE);
         return strat().atBary(hue, wE, bE, cE);
       }
 
@@ -1638,6 +1672,9 @@
         const gC = Math.pow(mag, -easeRec.c);
         const needsEase =
           easeRec.w !== 0 || easeRec.b !== 0 || easeRec.c !== 0;
+        const equiOn = state.equiTriangle;
+        const equiA = EQUI_ALPHA;
+        const equiCk = 1 - 2 * equiA;
         ctx.clearRect(0, 0, width, height);
 
         const yMin = Math.max(0, Math.floor(cy - triR - 1));
@@ -1675,6 +1712,12 @@
               cc = Math.pow(cc, gC);
               const sm = wc + bc + cc;
               if (sm > 1e-9) { wc /= sm; bc /= sm; cc /= sm; }
+            }
+            if (equiOn) {
+              const cAdd = equiA * cc;
+              wc = wc + cAdd;
+              bc = bc + cAdd;
+              cc = cc * equiCk;
             }
             const rgb = s.atBary(hue, wc, bc, cc);
             const i = ((y - yMin) * boxW + (x - xMin)) * 4;
@@ -2493,6 +2536,16 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
           renderGrid();
           renderArcs();
         });
+      });
+      document.getElementById("equi-toggle").addEventListener("change", (e) => {
+        state.equiTriangle = e.target.checked;
+        // Cusp-derived ring colors change too — full repaint.
+        paintRing(pickerRing);
+        paintRing(quantRing);
+        repaintPicker();
+        repaintQuant();
+        renderGrid();
+        renderArcs();
       });
       document.querySelectorAll('[data-decision="nHues"] button').forEach(btn => {
         btn.addEventListener("click", () => {

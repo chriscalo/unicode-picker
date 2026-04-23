@@ -278,6 +278,39 @@ paint to stay tight.
 
 ## 11. Known TODOs / loose threads
 
+### Three open design questions (these are the headline)
+
+1. **Tonal arc scales vs tonal grid scales — which works better
+   for UI?** Both express the same colors; the question is purely
+   ease of use for designers when authoring role maps and reasoning
+   about palette tweaks. **Tentative: grid**, because direct
+   `(b, w)` addressability matches the movement vocabulary
+   ("toward white / black / pure") and the canonical 2D map is
+   easier to hold in your head than a family of 1D arcs. Not yet
+   committed; needs side-by-side use in the studio.
+
+2. **Which color space produces the most versatile and useful
+   color scales?** Six remain after dropping HSLuv/HPLuv (too
+   low-chroma for accents): HWB, OKLCH, OKHSL, OKHSV, LCh(ab),
+   Jzazbz. **Open.** Test: same model + role map across one
+   candidate per space, compare side-by-side in the studio.
+
+3. **How to fine-tune the blending between pure, white, and black
+   so scales feel perceptually uniform?** Diagnosed (see
+   `test/_uniformity-diagnostic.mjs`): the triangle in OKLab is
+   not equilateral — at most hues the cusp's L is close to white,
+   so steps toward black are ~5× the perceptual distance of steps
+   toward white. Easing curves redistribute *within* an axis but
+   can't fix this geometric asymmetry. **Partial fix shipped**: a
+   "ΔE-equal triangle" toggle in the designer header pulls the
+   pure-C corner toward the centroid by α=0.25 (space-agnostic
+   barycentric pre-transform). Result: all three triangle edges
+   come closer to equal length, at the cost of a less-saturated
+   pure-color. Not truly equilateral — full equilateral requires
+   α≈0.45 (pure-C nearly grey) or moving outside the gamut. Open
+   question: is the chosen α the right tradeoff, or should it be
+   a slider?
+
 ### Open in §12 of this doc (most are aspirational)
 - Add **HCT** (CAM16-UCS). ~300+ lines of math; haven't prioritised.
 - Replace the current 12-step token scale in `style.css` with the
@@ -287,16 +320,23 @@ paint to stay tight.
   cyan / blue / indigo / violet / magenta / rose). Need finer
   nuance — distinguish lime vs hunter vs forest in the green band,
   lemon vs mango vs banana in the yellow band, etc. Open questions:
-  - Is there a public dataset that maps hue (or hue + chroma + L) to
-    a curated English name with sub-100° granularity? (xkcd color
-    survey, Wikipedia color lists, Pantone, NBS/ISCC come to mind.)
+  - **CRITICAL: hue angles do NOT agree across color spaces.** OKLCH
+    hue 180° is not the same color as HSLuv hue 180° or LCh(ab) hue
+    180°. Any naming dataset must be keyed by a canonical, space-
+    independent representation — sRGB hex or sRGB linear (r, g, b).
+    Then for each space, we look up the name by converting the
+    color back to sRGB first.
+  - Is there a public dataset that maps sRGB color → curated English
+    name with finer-than-coarse granularity? (xkcd color survey,
+    Wikipedia color lists, Pantone, NBS/ISCC come to mind.)
   - Could we *generate* a mapping by clustering color-name corpora
-    against an LCh space and picking the modal name per
-    fine-grained hue band?
+    against sRGB and picking the modal name per fine-grained
+    region of color space?
   - At what granularity does naming stop carrying information —
-    e.g., is "tealish-blue 215°" useful or just noise?
-  - Output target: a function `hueName(hue, chroma, L) → string`
-    that the studio can use in tooltips and in role-map authoring.
+    e.g., is "tealish-blue" useful or just noise?
+  - Output target: a function `colorName(srgbHex) → string` that
+    the studio can use in tooltips and in role-map authoring. Spaces
+    convert to sRGB first.
 
 ### Deferred but resolved in spirit
 - OKHSL/OKHSV: **done and both cleaned up.** OKHSV had a bad port
