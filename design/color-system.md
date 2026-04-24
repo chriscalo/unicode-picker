@@ -119,12 +119,13 @@ Everything tile-level reads from one object. Key fields:
 ### Per-control ownership
 | Control | Lives in |
 |---|---|
-| Color space seg | header (global) |
-| Tint / Shade / Pure curve editors (W↔B, B↔C, W↔C) | header (per-space, per-edge; §10) |
+| Color space seg | tile 1 section-head (next to the title) |
+| Tint / Shade / Pure curve editors (W↔B, B↔C, W↔C) | tile 1 right panel (per-space, per-edge; §10) |
 | Hue steps seg | tile 2 (Quantized Color Picker) |
-| Ternary N seg | tile 4 (Tonal Grid Scale) — shared with tile 2 |
+| Ternary N seg | tile 4 (Tonal Grid Scale) — value is stop count (N + 1), not divisions |
 | Arc N seg + Arcs seg | tile 3 (Tonal Arc Scales) |
 | Scale-quality status bars | tile 3 + tile 4 bottoms (§13) |
+| Quantized-hue name list | tile 2 right panel (hovered dot on ring shows name; §14) |
 
 Hue itself has no slider — tile 1 and tile 3 rings *are* the hue
 picker.
@@ -392,12 +393,37 @@ perceptual-lightness refinement of OKLab. See §13.2 for why.
 
 ### Task B — Hue-name vocabulary (see §14)
 
-**Motivation**: the designer's hue readout and the studio's
-role-map tooltips currently use a 12-name coarse vocabulary
-(red / orange / yellow / chartreuse / green / teal / cyan / blue /
-indigo / violet / magenta / rose). Finer names (lime vs hunter vs
-forest; lemon vs mango vs banana; coral vs salmon; lavender vs
-mauve) would make palette authoring readable.
+Status: **v2 shipped — 35 canonical English hue names covering
+0–360°.** Every 15° quantized bin in every supported color
+space (HWB, OKLCH, OKHSL, OKHSV, LCh(ab), Jzazbz) resolves to a
+different name — no duplicates. Table lives as
+`HUE_NAME_RANGES` in `design/color-triangle.html`.
+
+Every designer readout resolves the active space's pure-corner
+sRGB → HSL hue → range lookup:
+
+- status-bar **name** in tiles 1 + 2
+- tile 2 right-side quantized-hue name list
+- tile 2 hue-step dot tooltips on the ring (hover-only)
+
+Derived from the cross-design-system survey at
+`design/hue-name-survey.html` (Tailwind, Material, Radix, Open
+Color, Primer, Adobe Spectrum, CSS named — 148 entries). 20
+core names have ≥2-source agreement; 15 more were added to give
+each quantized bin a unique name across every color space. All
+additions are recognized English hue names (some CSS single-word,
+some Crayola, some traditional).
+
+**Remaining open work:**
+
+- Calibrate range boundaries against real designer intuition —
+  they're eyeballed from the survey density strips plus the
+  bin-level diagnostic (`test/_hue-list-all-spaces.mjs`).
+- Decide whether to extend to 2-layer naming (family + modifier,
+  e.g. `light blue`, `deep purple`) for the studio's general
+  color-name-of-any-color feature — out of scope for v2.
+- Wire into the studio's role-map tooltips so palette tweaks read
+  in plain English.
 
 **Non-negotiable constraint**: **names MUST be keyed by the pure
 color's absolute sRGB hex value** (or equivalently linear sRGB),
@@ -1006,73 +1032,202 @@ curves (§10) control. So every curve edit shifts the ΔEs along
 
 ## 14. Task B detail — hue-name vocabulary
 
-Status: **not started**. Referenced from §11 Task B.
+Status: **v2 shipped.** Lives as `HUE_NAME_RANGES` in
+`design/color-triangle.html`. Surface: `hueNameAt(angle)`, which
+resolves the current space's pure-hue sRGB, converts to HSL,
+and returns the canonical name.
 
-### 14.1 Hard constraint
+### 14.1 Goals — why we name hues
 
-Names are a function of **sRGB hex**, not of color-space hue
-angle. Every consumer resolves its hue angle to pure-corner sRGB
-*first*, then calls the name lookup. Anything else is wrong.
+Designers want to say "the hue at 195° is called turquoise" when
+picking palettes, writing role maps, and comparing candidates
+across color spaces. Hex-codes and angles don't stick in people's
+heads; names do. Task A's score tells you *whether* a scale is
+working; Task B tells you *what hue you're looking at*.
 
-### 14.2 Candidate data sources
+Two hard constraints fell out of prior discussion:
 
-| Source | Entries | Notes |
-|---|---|---|
-| CSS named colors | 148 | Universal, coarse, already-known vocabulary. Good fallback. |
-| xkcd color survey | 954 | CC0. Curated names from a 222k-response public survey. Probably best single source for expressive names. |
-| Material Design hue labels | ~17 | Design lingua franca; good for family-level names. |
-| NBS/ISCC | 267 | Systematic boundaries over CIELAB; dated but well-defined. |
-| Wikipedia "List of colors" | ~1000 | Long-tail; watch for duplicates and Pantone-derived entries. |
-| Pantone | ~2000 | Proprietary; likely out-of-scope. |
+1. **Names are a function of sRGB, not angle.** OKLCH 180°, HSL
+   180°, and LCh(ab) 180° are three different colors. Any table
+   keyed on hue angle would be correct in one space and wrong in
+   the others.
+2. **Names must be real canonical English hue names.** Not
+   compound modifiers (`cloudy blue`, `dusty teal`), not
+   product-specific inventions (`tropical rain forest`), and
+   never an LLM-made-up name. Every name ships with evidence of
+   real-world use.
 
-### 14.3 Algorithm sketch
+### 14.2 How — decomposition
 
-1. Build a lookup table: `[{ name, lab, srgb }]`, converting every
-   dataset entry to OKLab once at build time.
-2. For a query hex, convert to OKLab; find the nearest entry by
-   Euclidean distance.
-3. Optional post-processing:
-   - **Family + modifier**: derive family (red / orange / … /
-     green / teal / blue / purple / pink) from a coarse ring
-     partition; use the fine name as a modifier.
-   - **Confidence threshold**: if the nearest-neighbour distance
-     is above X, fall back to the CSS-level coarse family name.
+**Canonical hue axis: HSL (sRGB-based).** HSL puts the primaries
+and secondaries at regular 60° intervals — `red 0°, yellow 60°,
+green 120°, cyan 180°, blue 240°, magenta 300°`. It doesn't
+perceptually stretch any hue family. OKLCH, which we use for
+distance measurements in the scoring system, would have biased
+the cluster placements (OKLCH stretches red→yellow to ~81° and
+compresses green→cyan to ~53°), so we picked HSL for the
+naming axis even though OKLCH is the overall "better" space.
 
-### 14.4 Where it lives
+**Lookup function:** given a rendered sRGB triple (or the current
+space's C corner for an angle), compute HSL hue, linear-scan the
+ranges table. 35 entries, covers 0–360° with no gaps.
 
-A new module (inline into `color-triangle.html` or a separate
-`design/hue-names.js`) exposing:
+**Survey first, curate second.** Before committing to any
+vocabulary, we surveyed named colors across 7 design systems
+(Tailwind, Material, Radix, Open Color, Primer, Adobe Spectrum,
+CSS named) — 148 entries total — and visualised the per-name
+HSL clusters at `design/hue-name-survey.html`. Names with ≥2
+sources in rough agreement formed the 20-name core. Names with
+1 source were added only to resolve specific contested zones or
+to give every 15° bin a unique name in every color space.
+
+### 14.3 How — the code
+
+Tuning constant and table:
 
 ```js
-hueNameFromSrgbHex(hex: string): string
-hueNameFromLinearRgb(r, g, b: number): string
+const HUE_NAME_RANGES = [
+  [  0,   9, "red"],
+  [  9,  16, "tomato"],
+  [ 16,  22, "coral"],
+  [ 22,  30, "orange"],
+  [ 30,  38, "tangerine"],  // Crayola
+  [ 38,  46, "amber"],
+  [ 46,  55, "gold"],       // CSS
+  [ 55,  68, "yellow"],
+  [ 68,  80, "olive"],
+  [ 80,  95, "chartreuse"],
+  [ 95, 120, "lime"],
+  [120, 128, "green"],
+  [128, 145, "grass"],      // Radix
+  [145, 160, "emerald"],    // Tailwind
+  [160, 167, "jade"],       // Radix
+  [167, 174, "teal"],
+  [174, 182, "turquoise"],  // CSS
+  [182, 187, "cyan"],
+  [187, 193, "aqua"],       // CSS alias
+  [193, 198, "cerulean"],   // traditional English hue name
+  [198, 203, "sky"],        // Tailwind
+  [203, 210, "dodger"],     // CSS dodgerblue
+  [210, 218, "azure"],      // traditional
+  [218, 238, "blue"],
+  [238, 252, "iris"],       // Radix
+  [252, 268, "indigo"],
+  [268, 280, "violet"],
+  [280, 295, "purple"],
+  [295, 303, "fuchsia"],
+  [303, 312, "orchid"],     // CSS
+  [312, 321, "magenta"],
+  [321, 328, "hotpink"],    // CSS hotpink
+  [328, 338, "pink"],
+  [338, 348, "rose"],       // Tailwind
+  [348, 357, "crimson"],
+  [357, 360, "red"],        // wrap
+];
 ```
 
-Baked-in table: 360 entries for the pure-hue ring (one per
-degree) so designer callers pay no cost. Studio role-map tooltips
-can call the generic function for any color.
+Conversion and lookup:
 
-### 14.5 Baseline for this app
+```js
+function linearRgbToHslHue(r, g, b) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (d < 1e-9) return 0;
+  let h = mx === r ? ((g - b) / d) % 6
+        : mx === g ? (b - r) / d + 2
+        :            (r - g) / d + 4;
+  h *= 60;
+  return ((h % 360) + 360) % 360;
+}
 
-Since our immediate need is **hue-ring labels** (not general color
-names across the whole triangle), start narrow:
+function hueNameForRgb(rgb) {
+  const h = linearRgbToHslHue(rgb[0], rgb[1], rgb[2]);
+  for (const [a, b, name] of HUE_NAME_RANGES) {
+    if (h >= a && h < b) return name;
+  }
+  return HUE_NAME_RANGES[0][2];
+}
 
-- 360 pure-hue samples in HWB (`hwb(h 0% 0%)` → sRGB).
-- For each, the nearest xkcd name (plus its hex).
-- Dedup runs of identical names → one anchor per hue region.
-- Replace `HUE_ANCHORS` with that table.
+const hueNameCache = new Map();
+function hueNameAt(angle) {
+  const key = state.space + ":" + Math.round(angle);
+  let name = hueNameCache.get(key);
+  if (name !== undefined) return name;
+  const rgb = strat().ringAt(angle);   // pure-hue sRGB in the
+                                        // active color space
+  name = hueNameForRgb(rgb);
+  hueNameCache.set(key, name);
+  return name;
+}
+```
 
-Later, extend to label non-pure stops if tooltips request it.
+Function name despite the argument: it's `linearRgbToHslHue` in
+code because it was added alongside the linear-RGB helpers, but
+it takes **gamma-encoded sRGB** values in `[0, 1]` — HSL is by
+definition in gamma space. The name will get tidied in a later
+cleanup pass.
 
-### 14.6 Open questions
+### 14.4 Survey-tool interaction
 
-- Granularity ceiling: at what level do names start to feel noisy
-  (e.g. "tealish-blue")?
-- Localisation: English only for now, but keep the structure
-  translatable.
-- Consistency across muddy / grey points: the xkcd dataset is
-  mostly saturated hues; for low-chroma interior points we may
-  need a grey-aware secondary table.
+`design/hue-name-survey.html` is the curation interface:
+
+- Loads the 148-entry dataset from `design/hue-name-survey.js`
+- Adjustable **chroma floor** slider (OKLCH) to drop muted
+  low-chroma entries from the clustering
+- Adjustable **min-sources** slider (default 2) to filter out
+  one-off names unless we've explicitly chosen to include them
+- **HSL / OKLCH** hue-space toggle so you can see how cluster
+  placement changes with the axis
+- **Per-name density strips** — one horizontal row per canonical
+  name, glow blobs where that name occurs across sources;
+  brighter glow = tighter agreement
+- **Dominant-name-per-5°-bin ribbon** — rolls up the filtered set
+  into an auto-generated first-draft vocabulary
+
+Adding a new design system to the survey: append entries to
+`COLOR_SURVEY` in `hue-name-survey.js` (each `{ source, name,
+hex }` — use whichever shade each system treats as the brand /
+solid / base, e.g. Tailwind 500, Radix 9). Reload the page and
+the rest updates.
+
+### 14.5 Diagnostic: `test/_hue-list-all-spaces.mjs`
+
+After any change to `HUE_NAME_RANGES`, run this test. It cycles
+through every supported color space, reads the tile-2 right-side
+hue list, and reports duplicates with exact HSL angles:
+
+```
+$ node test/_hue-list-all-spaces.mjs
+hwb     ✓ all unique
+oklch   ✓ all unique
+okhsl   ✓ all unique
+okhsv   ✓ all unique
+lchab   ✓ all unique
+jzazbz  ✓ all unique
+```
+
+Every range change should keep this clean. If a space reports
+duplicates (e.g. `teal×2, sky×2`), the tool prints the two
+offending HSL values so you can split the range correctly.
+
+### 14.6 Open / future work
+
+- **Boundary calibration.** Current range boundaries are
+  eyeballed from the survey's density strips plus the all-spaces
+  diagnostic. A labelled corpus would let us auto-tune.
+- **Two-layer naming** (family + modifier: `light blue`, `deep
+  purple`, `pale emerald`). For the studio's general
+  color-name-of-any-color feature that ranges beyond the pure
+  hue ring. Out of scope for v2.
+- **Extend the survey.** IBM Carbon, Atlassian, Salesforce
+  Lightning, Polaris, Fluent UI, Ant Design — all published,
+  just not yet fetched. Cheap data to add.
+- **Role-map wiring.** Studio tooltips and palette labels
+  should read the canonical name via `hueNameAt()` so tweaks
+  show up as plain English.
+- **Granularity ceiling.** 35 names is arguably dense already.
+  Watch for feedback that adjacent names (e.g. `dodger` vs
+  `azure`, `cerulean` vs `sky`, `grass` vs `green`) feel
+  indistinguishable in practice.
 
 ---
 
@@ -1097,38 +1252,51 @@ Later, extend to label non-pure stops if tooltips request it.
 
 ```
 design/
-  color-triangle.html   # the workbench (2500 LOC, one HTML file)
-  color-system.md       # this doc
-  color-scales.html     # earlier scale/plane visualizer, still useful
-  index.html            # separate app-mounted design harness
-  style-tiles.html      # not used by the workbench
+  color-triangle.html     # the workbench (~3700 LOC, one HTML file)
+  color-system.md         # this doc
+  hue-name-survey.html    # cross-system hue-name survey / curation tool (§14)
+  hue-name-survey.js      # 148-entry dataset behind it
+  color-scales.html       # earlier scale/plane visualizer, still useful
+  index.html              # separate app-mounted design harness
+  style-tiles.html        # not used by the workbench
 
 test/
-  _triangle-shot.mjs    # full workbench screenshot
-  _sec-zoom.mjs         # per-tile screenshot
-  _spaces-shot.mjs      # one per color space
-  _fit-check.mjs        # overflow audit
-  _cusp-delta.mjs       # ΔE cusp walk
-  _peer-hover-check.mjs # tile-3↔4 correlation
-  _arc-peer-check.mjs   # tile-2 correlation
-  _quant-drag-check.mjs # tile-3 drag-snap
-  _ease-check.mjs       # curve-slider behaviour
-  _okhsv-ring-zoom.mjs  # the recurring OKHSV ring smoothness check
-  _tooltip-*.mjs        # tooltip visibility probes
-  _tile4-dims.mjs       # measures tile-4 internal dimensions
+  _triangle-shot.mjs          # full workbench screenshot
+  _sec-zoom.mjs               # per-tile screenshot
+  _spaces-shot.mjs            # one per color space
+  _fit-check.mjs              # overflow audit
+  _cusp-delta.mjs             # ΔE cusp walk
+  _peer-hover-check.mjs       # tile-2↔4 correlation
+  _arc-peer-check.mjs         # tile-3 correlation
+  _quant-drag-check.mjs       # tile-2 drag-snap
+  _okhsv-ring-zoom.mjs        # the recurring OKHSV ring smoothness check
+  _tooltip-*.mjs              # tooltip visibility probes
+  _tile4-dims.mjs             # measures tile-4 internal dimensions
+  _hue-list-names.mjs         # dumps tile-2 hue-list rendering + HSL lookup
+  _hue-list-all-spaces.mjs    # cycles every color space, flags name duplicates
+  _hue-survey-shot.mjs        # screenshot of the hue-name-survey page
+  _score-shot.mjs             # screenshot + score pill readouts
+  _score-debug.mjs            # inspects the per-row/col/diagonal score rollup
+  _curve-check.mjs            # per-edge curve editor behaviour
+  _curve-persist.mjs          # curves survive reload via localStorage
+  _edge-strips.mjs            # edge-strip preview under each curve editor
+  _tile-sizes.mjs             # verifies tile 1 ↔ tile 2 triangle sizes match
 
-style.css               # app tokens (surface + accent scales)
+style.css                     # app tokens (surface + accent scales)
 ```
 
 ---
 
 ## 17. One-line summary
 
-`design/color-triangle.html` is an 8-color-space, 4-tile,
-2×2-grid playground for authoring a tint/shade/tone color system.
-Per-edge 2-D remap curves (per space) reshape how each triangle
-edge advances; Gaussian-smoothed cusp LUTs hide the sRGB cube
-corner; rAF-async drag holds 60fps; peer-hover makes the tile
-correspondences obvious. Next decisions: pick a space + a
-quantization + a naming scheme, add a scale-quality score to
-measure progress, then translate to real tokens in `style.css`.
+`design/color-triangle.html` is a 6-color-space, 4-tile,
+2×2-grid playground for authoring a tint/shade/tone color
+system. Per-edge 2-D remap curves (per space) reshape how each
+triangle edge advances; Gaussian-smoothed cusp LUTs hide the
+sRGB cube corner; per-tile score pills grade scale quality
+(Quality / Distinct / Smooth / Reach, 0–100, higher = better,
+OKLrab ΔE under the hood); the active space's pure-hue at any
+angle resolves through HSL to one of 35 canonical English hue
+names; rAF-async drag holds 60fps; peer-hover makes the tile
+correspondences obvious. Next decision: pick a space + a
+quantization, then translate to real tokens in `style.css`.

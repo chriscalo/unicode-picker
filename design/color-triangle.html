@@ -475,11 +475,11 @@
         top: calc(50% + var(--label-offset-y, 0px));
         transform: translate(-50%, -50%);
         font-family: var(--font-ui);
-        font-size: 9px;
+        font-size: 9.5px;
         font-variant-numeric: tabular-nums;
         color: var(--color-text-primary);
         background: var(--color-bg-panel);
-        padding: 1px 4px;
+        padding: 1px 5px;
         border-radius: 2px;
         border: 1px solid var(--color-border-subtle);
         pointer-events: none;
@@ -616,19 +616,6 @@
         <button type="button" id="save-tonalgrid">Save as tonalgrid</button>
       </div>
 
-      <div class="controls">
-        <div class="control">
-          <div class="control__label">Color space</div>
-          <div class="seg" data-decision="space">
-            <button data-value="hwb" title="Preferred finalist">HWB ★</button>
-            <button data-value="oklch" aria-pressed="true" title="Preferred finalist">OKLCH ★</button>
-            <button data-value="okhsl">OKHSL</button>
-            <button data-value="okhsv" title="Preferred finalist">OKHSV ★</button>
-            <button data-value="lchab">LCh(ab)</button>
-            <button data-value="jzazbz">Jzazbz</button>
-          </div>
-        </div>
-      </div>
     </header>
 
     <main>
@@ -640,6 +627,19 @@
             Continuous Color Picker
             <span class="info" tabindex="0" data-tooltip="Continuous tint / shade / tone picker. Triangle corners: pure hue (C), tint = hue + white (W), shade = hue + black (B). Interior points are tones (hue + grey). Drag the ring to change the hue.">i</span>
           </h2>
+          <div class="inline-controls">
+            <div class="inline-control">
+              <span class="inline-control__label">Color space</span>
+              <div class="seg" data-decision="space">
+                <button data-value="hwb" title="Preferred finalist">HWB ★</button>
+                <button data-value="oklch" aria-pressed="true" title="Preferred finalist">OKLCH ★</button>
+                <button data-value="okhsl">OKHSL</button>
+                <button data-value="okhsv" title="Preferred finalist">OKHSV ★</button>
+                <button data-value="lchab">LCh(ab)</button>
+                <button data-value="jzazbz">Jzazbz</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="tri-row">
@@ -719,8 +719,6 @@
               <span class="inline-control__label">N</span>
               <div class="seg" data-decision="arcN">
                 <button data-value="5">5</button>
-                <button data-value="7">7</button>
-                <button data-value="9">9</button>
                 <button data-value="11" aria-pressed="true">11</button>
                 <button data-value="21">21</button>
               </div>
@@ -760,11 +758,11 @@
             <div class="inline-control">
               <span class="inline-control__label">N</span>
               <div class="seg" data-decision="N">
-                <button data-value="2">2</button>
-                <button data-value="4">4</button>
+                <button data-value="3">3</button>
                 <button data-value="5">5</button>
-                <button data-value="10" aria-pressed="true">10</button>
-                <button data-value="20">20</button>
+                <button data-value="6">6</button>
+                <button data-value="11" aria-pressed="true">11</button>
+                <button data-value="21">21</button>
               </div>
             </div>
           </div>
@@ -991,44 +989,96 @@
       // Colour-name lookup for a given angle, per color space.
       // Each space has its own 0° so the anchors differ — HWB (sRGB
       // HSV) aligns with CSS named colours; OKLCH and HSLuv each
-      // have slightly different hue positions. Hand-anchored from
-      // the swatches produced at those angles.
-      const HWB_ANCHORS = [
-        [  0, "red"],      [ 30, "orange"], [ 60, "yellow"],
-        [ 90, "chartreuse"], [120, "green"], [150, "spring"],
-        [180, "cyan"],     [210, "azure"],  [240, "blue"],
-        [270, "violet"],   [300, "magenta"],[330, "rose"],
+      // Canonical hue-name ranges along the HSL hue wheel, derived
+      // from the cross-design-system survey at design/hue-name-survey
+      // .html. Ranges are [start, end) in HSL degrees; wrap via the
+      // final "red" entry that starts at 354° and the first that ends
+      // at 9°. 20 names, chosen for ≥2-source agreement in the
+      // survey. See design/color-system.md §14.
+      //
+      // Intentionally uses HSL (sRGB-based) hue as the keying axis,
+      // not OKLCH hue — OKLCH stretches red→yellow to ~81° and
+      // compresses green→cyan to ~53°, which warps cluster placement.
+      // The concrete sRGB we look up is whatever the active color
+      // space renders at its C corner for the given angle, so two
+      // spaces at "180°" that produce different pure colors get
+      // different names (by design).
+      const HUE_NAME_RANGES = [
+        [  0,   9, "red"],
+        [  9,  16, "tomato"],
+        [ 16,  22, "coral"],
+        [ 22,  30, "orange"],
+        [ 30,  38, "tangerine"],  // Crayola; bridges orange↔amber
+        [ 38,  46, "amber"],
+        [ 46,  55, "gold"],       // CSS (#ffd700); bridges amber↔yellow
+        [ 55,  68, "yellow"],
+        [ 68,  80, "olive"],
+        [ 80,  95, "chartreuse"],
+        [ 95, 120, "lime"],
+        [120, 128, "green"],
+        [128, 145, "grass"],      // Radix; splits HWB's two greens
+        [145, 160, "emerald"],    // Tailwind; bridges green↔teal
+        [160, 167, "jade"],       // Radix
+        [167, 174, "teal"],
+        [174, 182, "turquoise"],  // CSS
+        [182, 187, "cyan"],
+        [187, 193, "aqua"],       // CSS alias
+        [193, 198, "cerulean"],   // established English hue name
+        [198, 203, "sky"],        // Tailwind
+        [203, 210, "dodger"],     // CSS dodgerblue
+        [210, 218, "azure"],      // traditional English hue name
+        [218, 238, "blue"],
+        [238, 252, "iris"],       // Radix
+        [252, 268, "indigo"],
+        [268, 280, "violet"],
+        [280, 295, "purple"],
+        [295, 303, "fuchsia"],
+        [303, 312, "orchid"],     // CSS (#da70d6); bridges fuchsia↔magenta
+        [312, 321, "magenta"],
+        [321, 328, "hotpink"],    // CSS hotpink
+        [328, 338, "pink"],
+        [338, 348, "rose"],       // Tailwind
+        [348, 357, "crimson"],
+        [357, 360, "red"],        // wrap
       ];
-      const OKLAB_ANCHORS = [
-        [ 29, "red"],      [ 54, "orange"], [ 85, "yellow"],
-        [120, "chartreuse"], [142, "green"], [170, "teal"],
-        [196, "cyan"],     [232, "blue"],   [264, "indigo"],
-        [303, "magenta"],  [355, "rose"],
-      ];
-      const HSLUV_ANCHORS = [
-        [ 12, "red"],      [ 40, "orange"], [ 80, "yellow"],
-        [115, "chartreuse"],[130, "green"], [160, "teal"],
-        [192, "cyan"],     [225, "blue"],   [265, "violet"],
-        [300, "magenta"],  [345, "rose"],
-      ];
-      const HUE_ANCHORS = {
-        hwb:    HWB_ANCHORS,
-        oklch:  OKLAB_ANCHORS,
-        okhsl:  OKLAB_ANCHORS,
-        okhsv:  OKLAB_ANCHORS,
-        lchab:  HSLUV_ANCHORS,   // CIELab hue layout is close to CIELUV
-        jzazbz: OKLAB_ANCHORS,   // rough approximation
-        hsluv:  HSLUV_ANCHORS,
-        hpluv:  HSLUV_ANCHORS,
-      };
-      function hueNameAt(angle) {
-        const anchors = HUE_ANCHORS[state.space] || HUE_ANCHORS.hwb;
-        let best = anchors[0], bestD = 361;
-        for (const [a, name] of anchors) {
-          const d = Math.min(Math.abs(angle - a), 360 - Math.abs(angle - a));
-          if (d < bestD) { bestD = d; best = [a, name]; }
+
+      function linearRgbToHslHue(r, g, b) {
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+        const d = mx - mn;
+        if (d < 1e-9) return 0;
+        let h = 0;
+        if (mx === r)      h = ((g - b) / d) % 6;
+        else if (mx === g) h = (b - r) / d + 2;
+        else               h = (r - g) / d + 4;
+        h *= 60;
+        return ((h % 360) + 360) % 360;
+      }
+
+      // Look up the canonical hue name for a rendered sRGB triple.
+      // The HSL hue is derived directly from sRGB (not linear sRGB —
+      // HSL is gamma-encoded by definition).
+      function hueNameForRgb(rgb) {
+        const h = linearRgbToHslHue(rgb[0], rgb[1], rgb[2]);
+        for (const [a, b, name] of HUE_NAME_RANGES) {
+          if (h >= a && h < b) return name;
         }
-        return best[1];
+        return HUE_NAME_RANGES[0][2];
+      }
+
+      // Convenience wrapper: given a hue angle in the active space,
+      // render the C corner (pure hue), then look up its canonical
+      // name. Cached per (space, angle) since it's called from
+      // repaint hot paths and lookups are deterministic. Cache is
+      // cleared on page load automatically.
+      const hueNameCache = new Map();
+      function hueNameAt(angle) {
+        const key = state.space + ":" + Math.round(angle);
+        let name = hueNameCache.get(key);
+        if (name !== undefined) return name;
+        const rgb = strat().ringAt(angle);
+        name = hueNameForRgb(rgb);
+        hueNameCache.set(key, name);
+        return name;
       }
 
       // ═══════════════════════════════════════════════════════════
@@ -2072,7 +2122,7 @@
         const { w, b } = state.picker;
         const c = 1 - w - b;
         const rows = [
-          ["name", "TBD"], // TODO Task B: sRGB-keyed hue name (§14)
+          ["name", hueNameAt(state.hue)],
           ...strat().readout(state.hue, w, b),
         ];
         const rgb = atBaryEased(state.hue, w, b, c);
@@ -2185,12 +2235,12 @@
             // name) + degrees. The label nudges outward from the
             // ring centre along the radial so it doesn't overlap
             // the triangle.
-            const outward = 22;
+            const outward = 30;
             const lx = Math.cos(rad) * outward;
             const ly = -Math.sin(rad) * outward;
             dot.style.setProperty("--label-offset-x", `${lx}px`);
             dot.style.setProperty("--label-offset-y", `${ly}px`);
-            dot.dataset.tooltip = `${hueNameAt(angle)} ${angle.toFixed(0)}°`;
+            dot.dataset.tooltip = hueNameAt(angle);
             if (Math.abs(((state.hue - angle) % 360 + 540) % 360 - 180) < 0.5) {
               dot.setAttribute("aria-selected", "true");
             }
@@ -2219,7 +2269,7 @@
         const i = quant.i, k = quant.k, j = N - i - k;
         const w = i / N, b = j / N, c = k / N;
         const rows = [
-          ["name",  "TBD"], // TODO Task B: sRGB-keyed hue name (§14)
+          ["name",  hueNameAt(state.hue)],
           ["token", tokenName(i, j, k, N)],
           ...strat().readout(state.hue, w, b),
         ];
@@ -2950,16 +3000,22 @@
         updateScorePill(arcScoreEl,
           scoreArcSet(arcRgbs, { hue: state.hue }));
 
-        // Size the square swatch to fill vertical space (one row per
-        // arc), clamped at MIN_ARC_CELL so header labels stay legible.
+        // Size the square swatch to fit inside both the available
+        // height (one row per arc) and the available width (one
+        // column per stop + the label column). The tighter dimension
+        // wins so the grid never bleeds off the tile.
         requestAnimationFrame(() => {
-          const h = arcScalesTarget.clientHeight;
-          if (!h) return;
+          const boxW = arcScalesTarget.clientWidth;
+          const boxH = arcScalesTarget.clientHeight;
+          if (!boxW || !boxH) return;
           const HEADER_H = 16;
-          const totalGaps = ARC_GAP * state.arcCount;
+          const hGaps = ARC_GAP * state.arcCount;
+          const wGaps = ARC_GAP * stops;
           const cellH = Math.floor(
-            (h - HEADER_H - totalGaps) / state.arcCount);
-          const cell = Math.max(MIN_ARC_CELL, cellH);
+            (boxH - HEADER_H - hGaps) / state.arcCount);
+          const cellW = Math.floor(
+            (boxW - ARC_LABEL_COL - wGaps) / stops);
+          const cell = Math.max(8, Math.min(cellH, cellW));
           arcScalesTarget.style.gridTemplateColumns =
             `${ARC_LABEL_COL}px repeat(${stops}, ${cell}px)`;
           arcScalesTarget.style.gridTemplateRows =
@@ -3174,8 +3230,10 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
       });
       document.querySelectorAll('[data-decision="N"] button').forEach(btn => {
         btn.addEventListener("click", () => {
-          state.N = +btn.dataset.value;
-          setSegActive(btn.parentElement, state.N);
+          // Buttons show stop count (N+1); internal state.N is the
+          // ternary-grid division count (one less than stop count).
+          state.N = +btn.dataset.value - 1;
+          setSegActive(btn.parentElement, +btn.dataset.value);
           onNChanged();
         });
       });
