@@ -69,17 +69,20 @@ once. Four tiles, all driven from a single shared `state` object.
 
 ```
 ┌──────────────────────────┬──────────────────────────┐
-│ Continuous Color Picker  │ Tonal Arc Scales         │
-│ (ring + triangle)        │ (fixed painter's tri +   │
-│                          │  arc ramps on the right) │
+│ Continuous Color Picker  │ Quantized Color Picker   │
+│ (ring + triangle)        │ (ring + triangle +       │
+│                          │  ternary-grid dots)      │
 ├──────────────────────────┼──────────────────────────┤
-│ Quantized Color Picker   │ Tonal Grid Scale         │
-│ (ring + triangle +       │ (flat 2D grid of the     │
-│  ternary-grid dots)      │  same ternary cells)     │
+│ Tonal Arc Scales         │ Tonal Grid Scale         │
+│ (fixed painter's tri +   │ (flat 2D grid of the     │
+│  arc ramps on the right) │  same ternary cells)     │
 └──────────────────────────┴──────────────────────────┘
 ```
 
-Tiles 3 and 4 **show the same data** (the ternary grid at
+Top row: the two pickers (continuous + quantized). Bottom row:
+the two tonal-scale views (arcs + grid).
+
+Tiles 2 and 4 **show the same data** (the ternary grid at
 resolution N at the current hue), just laid out differently — dots
 on the triangle vs. a rectangular labelled grid. Hovering a cell
 in one highlights the matching cell in the other (see §7).
@@ -118,10 +121,10 @@ Everything tile-level reads from one object. Key fields:
 |---|---|
 | Color space seg | header (global) |
 | Tint / Shade / Pure curve editors (W↔B, B↔C, W↔C) | header (per-space, per-edge; §10) |
-| Hue steps seg | tile 3 (Quantized Color Picker) |
-| Ternary N seg | tile 4 (Tonal Grid Scale) — shared with tile 3 |
-| Arc N seg + Arcs seg | tile 2 (Tonal Arc Scales) |
-| Scale-quality score pills | tile 2 + tile 4 section heads (§13) |
+| Hue steps seg | tile 2 (Quantized Color Picker) |
+| Ternary N seg | tile 4 (Tonal Grid Scale) — shared with tile 2 |
+| Arc N seg + Arcs seg | tile 3 (Tonal Arc Scales) |
+| Scale-quality status bars | tile 3 + tile 4 bottoms (§13) |
 
 Hue itself has no slider — tile 1 and tile 3 rings *are* the hue
 picker.
@@ -172,13 +175,13 @@ starts ~line 600. Roughly top-to-bottom:
 10. **Section renderers**:
     - Tile 1 (`repaintPicker`, `updatePickerCursors`,
       `updatePickerReadout`).
-    - Tile 2 (`renderArcs` — draws the triangle, SVG arc paths, and
-      both HTML dots + ramp swatches; also wires the tile-2 peer
-      hover; calls `scoreArcSet` and paints the score pill).
-    - Tile 3 (`repaintQuant`, `renderQuantDots`, `updateQuantReadout`;
+    - Tile 2 (`repaintQuant`, `renderQuantDots`, `updateQuantReadout`;
       includes `snapToNearestQuantDot` for drag-snap).
+    - Tile 3 (`renderArcs` — draws the triangle, SVG arc paths, and
+      both HTML dots + ramp swatches; also wires the tile-3 peer
+      hover; calls `scoreArcSet` and paints the score pill).
     - Tile 4 (`renderGrid` — flat CSS grid; also wires the tile
-      3↔4 peer hover; calls `scoreGrid` and paints the score pill).
+      2↔4 peer hover; calls `scoreGrid` and paints the score pill).
 11. **Drag plumbing** — `attachDrag(stage, canvas, picker, hooks,
     dragKey)` for tile 1; tile 3 has its own inline pointerdown
     handler (slightly different hitTest — ring + triangle drag-snap).
@@ -217,12 +220,12 @@ Still open (per §8 TODO): **HCT** (Google Material CAM16-UCS).
 
 Two independent correlation systems:
 
-- `setPeerHover(i, k)` — tile 3 ↔ tile 4. Every cell carries
-  `data-cell-i` / `data-cell-k`; hover toggles
-  `[data-peer-hover]` on all matches. Also driven by
-  `snapToNearestQuantDot()` so drag-through in tile 3 keeps the
-  tile 4 highlight in sync.
-- `setArcPeerHover(a, j)` — tile 2 triangle dots ↔ ramp swatches.
+- `setPeerHover(i, k)` — tile 2 (Quantized Picker) ↔ tile 4
+  (Tonal Grid Scale). Every cell carries `data-cell-i` /
+  `data-cell-k`; hover toggles `[data-peer-hover]` on all
+  matches. Also driven by `snapToNearestQuantDot()` so
+  drag-through in tile 2 keeps the tile 4 highlight in sync.
+- `setArcPeerHover(a, j)` — tile 3 triangle dots ↔ ramp swatches.
   `data-arc-a` / `data-arc-j`, `[data-arc-peer-hover]`.
 
 Selectors share one CSS block with two alternative attributes.
@@ -234,7 +237,7 @@ Selectors share one CSS block with two alternative attributes.
 `onHueChanged()` behaviour depends on `activeDrag`:
 - `null` → full 4-tile repaint.
 - `"picker"` → only tile 1 + `requestIdleCallback(refreshIdleTiles)`.
-- `"quant"` → only tile 3 + same idle-queue.
+- `"quant"` → only tile 2 + same idle-queue.
 
 `onDragEnd()` (called from the pointerup handlers on rings) clears
 `activeDrag` and forces a full 4-tile repaint so everything
@@ -482,10 +485,11 @@ runtime lookup cost. Studio iframes reuse it via postMessage.
   `setArcPeerHover`, `data-cell-i / -k`, `data-arc-a / -j`.
 - *"how does the quant picker drag-snap?"* — `snapToNearestQuantDot`
   iterates all `(i, k)` grid cells by screen distance.
-- *"why does tile 2 look different from the others?"* — it's the
-  only tile with `flipped: true` geometry; the triangle is pinned
-  (painter's triangle, C at top, B bottom-left, W bottom-right)
-  and doesn't rotate with hue. The `cyShift` centres the bbox.
+- *"why does tile 3 look different from the other triangle
+  tiles?"* — it's the only tile with `flipped: true` geometry;
+  the triangle is pinned (painter's triangle, C at top, B
+  bottom-left, W bottom-right) and doesn't rotate with hue. The
+  `cyShift` centres the bbox.
 - *"fit-check fails / something overflows"* — `test/_fit-check.mjs`.
   Sections are `overflow: visible` so tooltips escape, but grid
   rows need `minmax(0, 1fr)` so they actually shrink to fit. Every

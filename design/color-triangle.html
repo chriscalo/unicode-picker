@@ -116,7 +116,8 @@
       }
       .curve-editor {
         width: 140px;
-        height: 70px;
+        min-height: 40px;
+        flex: 1 1 0;
         border-radius: 3px;
         border: 1px solid var(--color-border-subtle);
         display: block;
@@ -259,6 +260,7 @@
         align-items: center;
         gap: 16px;
         flex-wrap: wrap;
+        min-height: 30px;
       }
       h2 {
         font-size: var(--text-sm);
@@ -323,21 +325,83 @@
       /* ── picker stage ─────────────────────────────────────── */
 
       .tri-row {
-        display: grid;
-        grid-template-columns: auto 1fr;
+        display: flex;
+        flex-direction: row;
         gap: 12px;
-        align-items: start;
+        align-items: stretch;
         min-height: 0;
         flex: 1 1 0;
+      }
+      .curves-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+        min-height: 0;
+        align-self: stretch;
+        padding: 0 0 14px 14px;
+        overflow: hidden;
+      }
+      .curves-panel .control {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1 1 0;
+        min-height: 0;
+      }
+      .hue-list {
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(12, auto);
+        column-gap: 14px;
+        row-gap: 1px;
+        min-width: 0;
+        align-self: stretch;
+        padding: 0 0 0 14px;
+        font-family: var(--font-ui);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+        overflow: auto;
+      }
+      .hue-list__item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        white-space: nowrap;
+      }
+      .hue-list__item[data-current="true"] {
+        background: var(--color-bg-hover);
+      }
+      .hue-list__item[data-current="true"] .hue-list__name {
+        color: var(--color-text-primary);
+      }
+      .hue-list__swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid var(--color-border-subtle);
+        flex-shrink: 0;
+      }
+      .hue-list__angle {
+        color: var(--color-text-secondary);
+        min-width: 4ch;
+        text-align: right;
+      }
+      .hue-list__name {
+        color: var(--color-text-secondary);
       }
       .tri-stage {
         position: relative;
         aspect-ratio: 1;
         height: 100%;
+        width: auto;
         max-width: 100%;
         max-height: 100%;
-        width: auto;
         flex-shrink: 0;
+        min-width: 0;
+        min-height: 0;
       }
       canvas.tri-body,
       canvas.tri-ring {
@@ -393,6 +457,16 @@
         outline: 2px solid oklch(100% 0 0);
         outline-offset: -1px;
         z-index: 10;
+      }
+      polygon.hex-cell[data-peer-hover] {
+        stroke: oklch(100% 0 0);
+        stroke-width: 2.5;
+      }
+      text.hex-label {
+        font-family: var(--font-ui);
+        font-size: 11px;
+        fill: oklch(75% 0 0);
+        font-variant-numeric: tabular-nums;
       }
       .hue-step-dot[data-tooltip]::after {
         content: attr(data-tooltip);
@@ -494,6 +568,16 @@
         padding-right: 4px;
         min-width: 0;
       }
+      .arc-scale-header {
+        font-size: 9px;
+        color: var(--color-text-secondary);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.1em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+      }
       .arc-swatch {
         border-radius: 3px;
         border: 1px solid var(--color-border-subtle);
@@ -544,23 +628,6 @@
             <button data-value="jzazbz">Jzazbz</button>
           </div>
         </div>
-
-        <div class="control">
-          <div class="control__label">Tint curve (W↔B) <button type="button" class="curve-reset" data-edge="wb">reset</button></div>
-          <canvas id="curve-wb" class="curve-editor" width="140" height="70"></canvas>
-          <canvas id="edge-wb" class="edge-strip" width="140" height="14"></canvas>
-        </div>
-        <div class="control">
-          <div class="control__label">Shade curve (B↔C) <button type="button" class="curve-reset" data-edge="bc">reset</button></div>
-          <canvas id="curve-bc" class="curve-editor" width="140" height="70"></canvas>
-          <canvas id="edge-bc" class="edge-strip" width="140" height="14"></canvas>
-        </div>
-        <div class="control">
-          <div class="control__label">Pure curve (W↔C) <button type="button" class="curve-reset" data-edge="wc">reset</button></div>
-          <canvas id="curve-wc" class="curve-editor" width="140" height="70"></canvas>
-          <canvas id="edge-wc" class="edge-strip" width="140" height="14"></canvas>
-        </div>
-
       </div>
     </header>
 
@@ -586,11 +653,61 @@
               <div class="hue-cursor" id="picker-hue-cursor"></div>
             </div>
           </div>
+          <div class="curves-panel">
+            <div class="control">
+              <div class="control__label">Tint curve (W↔B) <button type="button" class="curve-reset" data-edge="wb">reset</button></div>
+              <canvas id="curve-wb" class="curve-editor" width="140" height="70"></canvas>
+              <canvas id="edge-wb" class="edge-strip" width="140" height="14"></canvas>
+            </div>
+            <div class="control">
+              <div class="control__label">Shade curve (B↔C) <button type="button" class="curve-reset" data-edge="bc">reset</button></div>
+              <canvas id="curve-bc" class="curve-editor" width="140" height="70"></canvas>
+              <canvas id="edge-bc" class="edge-strip" width="140" height="14"></canvas>
+            </div>
+            <div class="control">
+              <div class="control__label">Pure curve (W↔C) <button type="button" class="curve-reset" data-edge="wc">reset</button></div>
+              <canvas id="curve-wc" class="curve-editor" width="140" height="70"></canvas>
+              <canvas id="edge-wc" class="edge-strip" width="140" height="14"></canvas>
+            </div>
+          </div>
         </div>
         <div class="tile-status" id="picker-status"></div>
       </section>
 
-      <!-- 2. Tonal arcs (was 4) -->
+      <!-- 2. Quantized picker -->
+      <section>
+        <div class="section-head">
+          <h2>
+            Quantized Color Picker
+            <span class="info" tabindex="0" data-tooltip="Same tint / shade / tone space as tile 1, snapped to a finite grid. The only hues available are the evenly-spaced ring steps; the only tints, shades, and tones are the ternary-grid cells at resolution N.">i</span>
+          </h2>
+          <div class="inline-controls">
+            <div class="inline-control">
+              <span class="inline-control__label">Hue steps</span>
+              <div class="seg" data-decision="nHues">
+                <button data-value="12">12</button>
+                <button data-value="16">16</button>
+                <button data-value="24" aria-pressed="true">24</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tri-row">
+          <div class="tri-stage" id="quant-stage">
+            <canvas class="tri-ring" id="quant-ring" width="600" height="600"></canvas>
+            <canvas class="tri-body" id="quant-body" width="300" height="300"></canvas>
+            <div class="tri-overlay-rotating" id="quant-body-overlay"></div>
+            <div class="tri-overlay" id="quant-overlay">
+              <div class="hue-cursor" id="quant-hue-cursor"></div>
+            </div>
+          </div>
+          <div class="hue-list" id="hue-list"></div>
+        </div>
+        <div class="tile-status" id="quant-status"></div>
+      </section>
+
+      <!-- 3. Tonal arcs -->
       <section>
         <div class="section-head">
           <h2>
@@ -632,39 +749,7 @@
         <div class="tile-status" id="arc-score" title="Scale quality, 0–100 (higher = better). Combines Distinct (no near-identical pairs), Smooth (even ΔE pacing), and Reach (pure-corner chroma). See §13 of design/color-system.md."></div>
       </section>
 
-      <!-- 3. Quantized picker (was 2) -->
-      <section>
-        <div class="section-head">
-          <h2>
-            Quantized Color Picker
-            <span class="info" tabindex="0" data-tooltip="Same tint / shade / tone space as tile 1, snapped to a finite grid. The only hues available are the evenly-spaced ring steps; the only tints, shades, and tones are the ternary-grid cells at resolution N.">i</span>
-          </h2>
-          <div class="inline-controls">
-            <div class="inline-control">
-              <span class="inline-control__label">Hue steps</span>
-              <div class="seg" data-decision="nHues">
-                <button data-value="12">12</button>
-                <button data-value="16">16</button>
-                <button data-value="24" aria-pressed="true">24</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="tri-row">
-          <div class="tri-stage" id="quant-stage">
-            <canvas class="tri-ring" id="quant-ring" width="600" height="600"></canvas>
-            <canvas class="tri-body" id="quant-body" width="300" height="300"></canvas>
-            <div class="tri-overlay-rotating" id="quant-body-overlay"></div>
-            <div class="tri-overlay" id="quant-overlay">
-              <div class="hue-cursor" id="quant-hue-cursor"></div>
-            </div>
-          </div>
-        </div>
-        <div class="tile-status" id="quant-status"></div>
-      </section>
-
-      <!-- 4. 2D grid (was 3) -->
+      <!-- 4. Tonal grid scale -->
       <section>
         <div class="section-head">
           <h2>
@@ -685,7 +770,10 @@
           </div>
         </div>
 
-        <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
+        <div class="grid-hex-row" style="display: flex; flex: 1 1 0; min-height: 0; min-width: 0; gap: 12px; overflow: hidden;">
+          <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
+          <div id="hex-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;"></div>
+        </div>
         <div class="tile-status" id="grid-score" title="Scale quality, 0–100 (higher = better). Combines Distinct (no near-identical pairs), Smooth (even ΔE pacing), and Reach (pure-corner chroma). See §13 of design/color-system.md."></div>
       </section>
 
@@ -1983,7 +2071,10 @@
       function updatePickerReadout() {
         const { w, b } = state.picker;
         const c = 1 - w - b;
-        const rows = strat().readout(state.hue, w, b);
+        const rows = [
+          ["name", "TBD"], // TODO Task B: sRGB-keyed hue name (§14)
+          ...strat().readout(state.hue, w, b),
+        ];
         const rgb = atBaryEased(state.hue, w, b, c);
         renderStatusBar(pickerStatusEl, rows, rgb);
       }
@@ -2005,6 +2096,33 @@
       const quantOverlay     = document.getElementById("quant-overlay");
       const quantHueCursor   = document.getElementById("quant-hue-cursor");
       const quantStatusEl    = document.getElementById("quant-status");
+      const hueListEl        = document.getElementById("hue-list");
+
+      // Tile 2 right-side list of every quantized hue angle with its
+      // pure-color swatch and (coarse, for now) English name.
+      function renderHueList() {
+        if (!hueListEl) return;
+        const n = state.nHues || 24;
+        hueListEl.style.gridTemplateRows =
+          `repeat(${Math.min(n, 12)}, auto)`;
+        const s = strat();
+        const current = Math.round(state.hue);
+        const items = [];
+        for (let i = 0; i < n; i++) {
+          const angle = Math.round((i * 360) / n);
+          const rgb = s.ringAt(angle);
+          const name = hueNameAt(angle);
+          const isCurrent = angle === current;
+          items.push(
+            `<span class="hue-list__item" data-hue="${angle}" data-current="${isCurrent}">` +
+              `<span class="hue-list__swatch" style="background:${cssFromRgb(rgb)}"></span>` +
+              `<span class="hue-list__angle">${angle.toString().padStart(3, " ")}°</span>` +
+              `<span class="hue-list__name">${name}</span>` +
+            `</span>`
+          );
+        }
+        hueListEl.innerHTML = items.join("");
+      }
 
       function repaintQuant() {
         paintRing(quantRing);
@@ -2012,6 +2130,7 @@
         quantBody.style.transform = `rotate(${-state.hue}deg)`;
         quantBodyOverlay.style.transform = `rotate(${-state.hue}deg)`;
         renderQuantDots();
+        renderHueList();
         updateQuantReadout();
       }
       function renderQuantDots() {
@@ -2100,6 +2219,7 @@
         const i = quant.i, k = quant.k, j = N - i - k;
         const w = i / N, b = j / N, c = k / N;
         const rows = [
+          ["name",  "TBD"], // TODO Task B: sRGB-keyed hue name (§14)
           ["token", tokenName(i, j, k, N)],
           ...strat().readout(state.hue, w, b),
         ];
@@ -2225,9 +2345,14 @@
         );
         if (i == null) return;
         const sel = `[data-cell-i="${i}"][data-cell-k="${k}"]`;
-        document.querySelectorAll(sel).forEach(e =>
-          e.setAttribute("data-peer-hover", ""),
-        );
+        document.querySelectorAll(sel).forEach(e => {
+          e.setAttribute("data-peer-hover", "");
+          // SVG has no z-index; reorder to the end of the parent so
+          // the hover outline isn't covered by later siblings.
+          if (e.tagName.toLowerCase() === "polygon") {
+            e.parentNode.appendChild(e);
+          }
+        });
       }
       // Same idea for tile 2: hovering a dot on the triangle or a
       // swatch in the ramp grid highlights its (arc, stop) peer.
@@ -2499,6 +2624,119 @@
               `38px repeat(${cols}, minmax(0, ${maxCell}px))`;
           }
         });
+
+        renderHexGrid(gridRgbs, N);
+      }
+
+      // Hex-tiled triangular rendering of the same ternary cells, on
+      // the right side of tile 4. Corners: pure hue at top apex,
+      // black at bottom-left, white at bottom-right. Each row carries
+      // a "XXb" label on the left (black axis) and an "XXw" label on
+      // the right (white axis) matching the square grid's labels.
+      function renderHexGrid(gridRgbs, N) {
+        const hexTarget = document.getElementById("hex-target");
+        if (!hexTarget) return;
+        hexTarget.innerHTML = "";
+        requestAnimationFrame(() => {
+          const W = hexTarget.clientWidth;
+          const H = hexTarget.clientHeight;
+          if (!W || !H) return;
+
+          // Reserve room on each side for the "XXb" / "XXw" labels.
+          const LABEL_PAD = 34;
+          const drawW = Math.max(10, W - 2 * LABEL_PAD);
+
+          // Pointy-top hexagon. For N+1 rows stacked in a triangle:
+          //   total width  = N · s·√3 + s·√3  (half a hex both sides)
+          //   total height = 1.5 · N · s + 2s
+          const sByWidth  = drawW / (Math.sqrt(3) * (N + 1));
+          const sByHeight = H / (1.5 * N + 2);
+          const s = Math.max(2, Math.min(sByWidth, sByHeight) * 0.95);
+
+          const hexW = Math.sqrt(3) * s;
+          const triW = hexW * N;
+          const triH = 1.5 * N * s + 2 * s;
+
+          const startX = (W - triW) / 2 + triW / 2; // apex x
+          const startY = (H - triH) / 2 + s;        // apex y (centre)
+
+          const SVG_NS = "http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(SVG_NS, "svg");
+          svg.setAttribute("width", W);
+          svg.setAttribute("height", H);
+          svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+          // Row r (0..N): r+1 hexes. Each hex maps to bary
+          //   b_idx = r - i, w_idx = i, c_idx = N - r.
+          // gridRgbs is indexed [b_idx][w_idx] — we reuse it so the
+          // hex swatches show exactly the same colors as the square
+          // grid on the left.
+          for (let r = 0; r <= N; r++) {
+            const cy = startY + r * 1.5 * s;
+            const leftCx  = startX - (r / 2) * hexW;
+            const rightCx = startX + (r / 2) * hexW;
+
+            // Row labels: leftmost hex is (b=r, w=0), rightmost is
+            // (b=0, w=r). Black-axis label sits to the left of the
+            // left hex; white-axis label to the right of the right.
+            if (r > 0) {
+              const pct = Math.round((r / N) * 100);
+              const bLabel = document.createElementNS(SVG_NS, "text");
+              bLabel.setAttribute("x", (leftCx - hexW / 2 - 4).toFixed(1));
+              bLabel.setAttribute("y", cy.toFixed(1));
+              bLabel.setAttribute("text-anchor", "end");
+              bLabel.setAttribute("dominant-baseline", "middle");
+              bLabel.setAttribute("class", "hex-label");
+              bLabel.textContent =
+                pct.toString().padStart(2, "0") + "b";
+              svg.appendChild(bLabel);
+
+              const wLabel = document.createElementNS(SVG_NS, "text");
+              wLabel.setAttribute("x", (rightCx + hexW / 2 + 4).toFixed(1));
+              wLabel.setAttribute("y", cy.toFixed(1));
+              wLabel.setAttribute("text-anchor", "start");
+              wLabel.setAttribute("dominant-baseline", "middle");
+              wLabel.setAttribute("class", "hex-label");
+              wLabel.textContent =
+                pct.toString().padStart(2, "0") + "w";
+              svg.appendChild(wLabel);
+            }
+
+            for (let i = 0; i <= r; i++) {
+              const b_idx = r - i;
+              const w_idx = i;
+              const c_idx = N - r;
+              const rgb = gridRgbs[b_idx] && gridRgbs[b_idx][w_idx];
+              if (!rgb) continue;
+
+              const cx = startX + (i - r / 2) * hexW;
+
+              const pts = [];
+              for (let k = 0; k < 6; k++) {
+                const a = (k * 60 - 90) * Math.PI / 180;
+                pts.push(
+                  (cx + s * Math.cos(a)).toFixed(2) + "," +
+                  (cy + s * Math.sin(a)).toFixed(2),
+                );
+              }
+              const hex = document.createElementNS(SVG_NS, "polygon");
+              hex.setAttribute("class", "hex-cell");
+              hex.setAttribute("points", pts.join(" "));
+              hex.setAttribute("fill", cssFromRgb(rgb));
+              hex.setAttribute("stroke", "oklch(22% 0 0)");
+              hex.setAttribute("stroke-width", "1");
+              hex.dataset.cellI = w_idx;
+              hex.dataset.cellK = c_idx;
+              hex.addEventListener("mouseenter",
+                () => setPeerHover(w_idx, c_idx));
+              hex.addEventListener("mouseleave",
+                () => setPeerHover(null));
+              svg.appendChild(hex);
+            }
+          }
+
+          hexTarget.appendChild(svg);
+        });
       }
 
       // ═══════════════════════════════════════════════════════════
@@ -2655,13 +2893,33 @@
 
         // Single CSS grid so the x-gap between swatches matches
         // the y-gap between ramps exactly (both driven by the
-        // container's `gap`).
+        // container's `gap`). Swatches are square; cell size is
+        // the largest square that fits inside the scales panel,
+        // floored so the "100" label still fits legibly.
         arcScalesTarget.innerHTML = "";
         const stops = state.arcN;
+        const MIN_ARC_CELL = 20;
+        const ARC_LABEL_COL = 34;
+        const ARC_GAP = 3;
         arcScalesTarget.style.gridTemplateColumns =
-          `34px repeat(${stops}, minmax(0, 1fr))`;
+          `${ARC_LABEL_COL}px repeat(${stops}, ${MIN_ARC_CELL}px)`;
         arcScalesTarget.style.gridTemplateRows =
-          `repeat(${state.arcCount}, minmax(0, 1fr))`;
+          `16px repeat(${state.arcCount}, ${MIN_ARC_CELL}px)`;
+        arcScalesTarget.style.alignContent = "start";
+        arcScalesTarget.style.justifyContent = "start";
+
+        // Column-header row: empty corner, then position percentages.
+        const corner = document.createElement("div");
+        corner.className = "arc-scale-header";
+        arcScalesTarget.appendChild(corner);
+        const divisor = Math.max(1, stops - 1);
+        for (let j = 0; j < stops; j++) {
+          const posPct = Math.round((j / divisor) * 100);
+          const hdr = document.createElement("div");
+          hdr.className = "arc-scale-header";
+          hdr.textContent = posPct.toString().padStart(2, "0");
+          arcScalesTarget.appendChild(hdr);
+        }
 
         const arcRgbs = [];
         for (let a = 0; a < state.arcCount; a++) {
@@ -2671,7 +2929,6 @@
           const pct = Math.round(peak * 100);
           label.textContent = `c${pct.toString().padStart(2, "0")}`;
           arcScalesTarget.appendChild(label);
-          const divisor = Math.max(1, stops - 1);
           const rowRgbs = [];
           for (let j = 0; j < points.length; j++) {
             const { bary } = points[j];
@@ -2681,10 +2938,6 @@
             const sw = document.createElement("div");
             sw.className = "arc-swatch";
             sw.style.background = cssFromRgb(rgb);
-            const posPct = Math.round((j / divisor) * 100);
-            sw.textContent = posPct.toString().padStart(2, "0");
-            const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-            sw.setAttribute(luma > 0.55 ? "data-light" : "data-dark", "");
             sw.dataset.arcA = a;
             sw.dataset.arcJ = j;
             sw.addEventListener("mouseenter", () => setArcPeerHover(a, j));
@@ -2696,6 +2949,22 @@
 
         updateScorePill(arcScoreEl,
           scoreArcSet(arcRgbs, { hue: state.hue }));
+
+        // Size the square swatch to fill vertical space (one row per
+        // arc), clamped at MIN_ARC_CELL so header labels stay legible.
+        requestAnimationFrame(() => {
+          const h = arcScalesTarget.clientHeight;
+          if (!h) return;
+          const HEADER_H = 16;
+          const totalGaps = ARC_GAP * state.arcCount;
+          const cellH = Math.floor(
+            (h - HEADER_H - totalGaps) / state.arcCount);
+          const cell = Math.max(MIN_ARC_CELL, cellH);
+          arcScalesTarget.style.gridTemplateColumns =
+            `${ARC_LABEL_COL}px repeat(${stops}, ${cell}px)`;
+          arcScalesTarget.style.gridTemplateRows =
+            `${HEADER_H}px repeat(${state.arcCount}, ${cell}px)`;
+        });
       }
 
       // ═══════════════════════════════════════════════════════════
@@ -2943,13 +3212,17 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
       ];
 
       function setupHiDPICanvas(canvas) {
-        if (canvas._dpr) return;
         const dpr = window.devicePixelRatio || 1;
-        const cssW = canvas.width, cssH = canvas.height;
-        canvas.style.width = cssW + "px";
-        canvas.style.height = cssH + "px";
-        canvas.width = Math.round(cssW * dpr);
-        canvas.height = Math.round(cssH * dpr);
+        // Use the actual laid-out pixel size, not the canvas's
+        // intrinsic width/height attributes — curve editors flex to
+        // fill the available height inside the curves-panel.
+        const rect = canvas.getBoundingClientRect();
+        const cssW = Math.max(1, Math.round(rect.width) || canvas.width);
+        const cssH = Math.max(1, Math.round(rect.height) || canvas.height);
+        const targetW = Math.round(cssW * dpr);
+        const targetH = Math.round(cssH * dpr);
+        if (canvas.width !== targetW) canvas.width = targetW;
+        if (canvas.height !== targetH) canvas.height = targetH;
         canvas._dpr = dpr;
         canvas._cssW = cssW;
         canvas._cssH = cssH;
@@ -3052,10 +3325,26 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
         return { mx, my };
       }
 
+      // Curve editors flex to fill the tile-1 curves-panel, so their
+      // pixel-size can change whenever the tile resizes. A single
+      // ResizeObserver keeps each canvas's backing store in sync with
+      // its CSS size and redraws whatever the curve currently shows.
+      const curveResizeObs = typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(entries => {
+            for (const entry of entries) {
+              const canvas = entry.target;
+              const edge = canvas.dataset.edge;
+              if (!edge) continue;
+              drawCurveEditor(canvas, edge);
+            }
+          })
+        : null;
+
       for (const { id, edge } of CURVE_EDITORS) {
         const canvas = document.getElementById(id);
         canvas.dataset.edge = edge;
         setupHiDPICanvas(canvas);
+        if (curveResizeObs) curveResizeObs.observe(canvas);
         let dragging = -1;
         canvas.addEventListener("pointerdown", (e) => {
           const { mx, my } = canvasPos(canvas, e);
