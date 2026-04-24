@@ -114,6 +114,22 @@
         background: var(--color-text-primary);
         color: var(--color-bg-base);
       }
+      /* Preferred marker — filled dot next to the option label.
+         Matches design/index.html's convention so the harness and
+         designer share visual vocabulary. */
+      .seg button.is-preferred::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-text-primary);
+        margin-right: 6px;
+        vertical-align: baseline;
+      }
+      .seg button.is-preferred[aria-pressed="true"]::before {
+        background: var(--color-bg-base);
+      }
       .curve-editor {
         width: 140px;
         min-height: 40px;
@@ -631,10 +647,10 @@
             <div class="inline-control">
               <span class="inline-control__label">Color space</span>
               <div class="seg" data-decision="space">
-                <button data-value="hwb" title="Preferred finalist">HWB ★</button>
-                <button data-value="oklch" aria-pressed="true" title="Preferred finalist">OKLCH ★</button>
+                <button data-value="hwb" class="is-preferred" title="Preferred finalist">HWB</button>
+                <button data-value="oklch" class="is-preferred" aria-pressed="true" title="Preferred finalist">OKLCH</button>
                 <button data-value="okhsl">OKHSL</button>
-                <button data-value="okhsv" title="Preferred finalist">OKHSV ★</button>
+                <button data-value="okhsv" class="is-preferred" title="Preferred finalist">OKHSV</button>
                 <button data-value="lchab">LCh(ab)</button>
                 <button data-value="jzazbz">Jzazbz</button>
               </div>
