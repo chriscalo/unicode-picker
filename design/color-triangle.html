@@ -158,6 +158,50 @@
         margin-left: 4px;
       }
 
+      .tile-status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 6px 14px;
+        padding: 6px 2px 2px;
+        margin-top: 4px;
+        font-family: var(--font-ui);
+        color: var(--color-text-secondary);
+        border-top: 1px solid var(--color-border-subtle);
+        font-variant-numeric: tabular-nums;
+        min-height: 40px;
+      }
+      .tile-status__item {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        min-width: 6ch;
+      }
+      .tile-status__item--wide { min-width: 26ch; }
+      .tile-status__key {
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+      }
+      .tile-status__value {
+        color: var(--color-text-primary);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .tile-status__swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 3px;
+        border: 1px solid var(--color-border-subtle);
+        display: inline-block;
+        flex-shrink: 0;
+        align-self: flex-start;
+        margin-top: 2px;
+      }
       .inline-controls {
         display: flex;
         gap: 12px;
@@ -326,23 +370,6 @@
         pointer-events: none;
       }
 
-      .readouts {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        column-gap: 10px;
-        row-gap: 2px;
-        font-size: 10.5px;
-        font-family: var(--font-ui);
-        font-variant-numeric: tabular-nums;
-      }
-      .readouts dt { color: var(--color-text-secondary); }
-      .swatch-sample {
-        height: 36px;
-        margin-top: 8px;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--color-border-subtle);
-      }
-
       .quant-dot,
       .hue-step-dot {
         position: absolute;
@@ -509,10 +536,10 @@
         <div class="control">
           <div class="control__label">Color space</div>
           <div class="seg" data-decision="space">
-            <button data-value="hwb">HWB</button>
-            <button data-value="oklch" aria-pressed="true">OKLCH</button>
+            <button data-value="hwb" title="Preferred finalist">HWB ★</button>
+            <button data-value="oklch" aria-pressed="true" title="Preferred finalist">OKLCH ★</button>
             <button data-value="okhsl">OKHSL</button>
-            <button data-value="okhsv">OKHSV</button>
+            <button data-value="okhsv" title="Preferred finalist">OKHSV ★</button>
             <button data-value="lchab">LCh(ab)</button>
             <button data-value="jzazbz">Jzazbz</button>
           </div>
@@ -559,11 +586,8 @@
               <div class="hue-cursor" id="picker-hue-cursor"></div>
             </div>
           </div>
-          <div>
-            <dl class="readouts" id="picker-readouts"></dl>
-            <div class="swatch-sample" id="picker-sample"></div>
-          </div>
         </div>
+        <div class="tile-status" id="picker-status"></div>
       </section>
 
       <!-- 2. Tonal arcs (was 4) -->
@@ -605,6 +629,7 @@
           </div>
           <div class="arc-scales" id="arc-scales"></div>
         </div>
+        <div class="tile-status" id="arc-score" title="Scale quality, 0–100 (higher = better). Combines Distinct (no near-identical pairs), Smooth (even ΔE pacing), and Reach (pure-corner chroma). See §13 of design/color-system.md."></div>
       </section>
 
       <!-- 3. Quantized picker (was 2) -->
@@ -635,11 +660,8 @@
               <div class="hue-cursor" id="quant-hue-cursor"></div>
             </div>
           </div>
-          <div>
-            <dl class="readouts" id="quant-readouts"></dl>
-            <div class="swatch-sample" id="quant-sample"></div>
-          </div>
         </div>
+        <div class="tile-status" id="quant-status"></div>
       </section>
 
       <!-- 4. 2D grid (was 3) -->
@@ -664,6 +686,7 @@
         </div>
 
         <div id="grid-target" style="flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;"></div>
+        <div class="tile-status" id="grid-score" title="Scale quality, 0–100 (higher = better). Combines Distinct (no near-identical pairs), Smooth (even ΔE pacing), and Reach (pure-corner chroma). See §13 of design/color-system.md."></div>
       </section>
 
     </main>
@@ -928,6 +951,57 @@
         const cc = Math.max(0, Math.min(1, c));
         if (cc <= 0.0031308) return 12.92 * cc;
         return 1.055 * Math.pow(cc, 1 / 2.4) - 0.055;
+      }
+
+      function srgbToLinear(c) {
+        const cc = Math.max(0, Math.min(1, c));
+        if (cc <= 0.04045) return cc / 12.92;
+        return Math.pow((cc + 0.055) / 1.055, 2.4);
+      }
+
+      // Linear sRGB → OKLab (Björn Ottosson, 2020).
+      function linearRgbToOklab(r, g, b) {
+        const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+        const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+        const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+        const l_ = Math.cbrt(l);
+        const m_ = Math.cbrt(m);
+        const s_ = Math.cbrt(s);
+        return [
+          0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+          1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+          0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
+        ];
+      }
+
+      function srgbToOklab(rgb) {
+        return linearRgbToOklab(
+          srgbToLinear(rgb[0]), srgbToLinear(rgb[1]), srgbToLinear(rgb[2]),
+        );
+      }
+
+      // OKLrab (Ottosson 2023): replace OKLab's L with a perceptual-
+      // lightness estimator Lr so Euclidean distance tracks perceived
+      // lightness more faithfully, especially in the dark region.
+      // toe(0)=0, toe(1)=1; a and b channels are unchanged, so chroma
+      // = √(a²+b²) is identical to OKLab's.
+      const OKLR_K1 = 0.206;
+      const OKLR_K2 = 0.03;
+      const OKLR_K3 = (1 + OKLR_K1) / (1 + OKLR_K2);
+      function oklabToOklrab(lab) {
+        const L = lab[0];
+        const kL = OKLR_K3 * L - OKLR_K1;
+        const Lr = 0.5 * (kL + Math.sqrt(kL * kL + 4 * OKLR_K2 * OKLR_K3 * L));
+        return [Lr, lab[1], lab[2]];
+      }
+
+      function srgbToOklrab(rgb) {
+        return oklabToOklrab(srgbToOklab(rgb));
+      }
+
+      function deltaE_OKLrab(a, b) {
+        const dL = a[0] - b[0], da = a[1] - b[1], db = a[2] - b[2];
+        return Math.sqrt(dL * dL + da * da + db * db);
       }
 
       // — HSV / HWB — ------------------------------------------------
@@ -1880,8 +1954,7 @@
       const pickerBodyOverlay = document.getElementById("picker-body-overlay");
       const pickerCursor      = document.getElementById("picker-cursor");
       const pickerHueCursor   = document.getElementById("picker-hue-cursor");
-      const pickerReadouts    = document.getElementById("picker-readouts");
-      const pickerSample      = document.getElementById("picker-sample");
+      const pickerStatusEl    = document.getElementById("picker-status");
 
       function repaintPicker() {
         paintRing(pickerRing);
@@ -1911,9 +1984,8 @@
         const { w, b } = state.picker;
         const c = 1 - w - b;
         const rows = strat().readout(state.hue, w, b);
-        pickerReadouts.innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
         const rgb = atBaryEased(state.hue, w, b, c);
-        pickerSample.style.background = cssFromRgb(rgb);
+        renderStatusBar(pickerStatusEl, rows, rgb);
       }
 
       attachDrag(pickerStage, pickerBody, state.picker, {
@@ -1932,8 +2004,7 @@
       const quantBodyOverlay = document.getElementById("quant-body-overlay");
       const quantOverlay     = document.getElementById("quant-overlay");
       const quantHueCursor   = document.getElementById("quant-hue-cursor");
-      const quantReadouts    = document.getElementById("quant-readouts");
-      const quantSample      = document.getElementById("quant-sample");
+      const quantStatusEl    = document.getElementById("quant-status");
 
       function repaintQuant() {
         paintRing(quantRing);
@@ -2032,9 +2103,8 @@
           ["token", tokenName(i, j, k, N)],
           ...strat().readout(state.hue, w, b),
         ];
-        quantReadouts.innerHTML = rows.map(([key, v]) => `<dt>${key}</dt><dd>${v}</dd>`).join("");
         const rgb = atBaryEased(state.hue, w, b, c);
-        quantSample.style.background = cssFromRgb(rgb);
+        renderStatusBar(quantStatusEl, rows, rgb);
       }
 
       // Snap a (mx, my) in quant-stage coords to the nearest
@@ -2178,6 +2248,180 @@
         return `${jPct}b-${iPct}w`;
       }
 
+      // ═══════════════════════════════════════════════════════════
+      // Scale-quality score (§13 of design/color-system.md).
+      // Adjacent-pair ΔE in OKLab; CV for smoothness; near-identical
+      // count for wasted slots; signed reversal count for arcs;
+      // gamut-reach bonus for how colorful the pure corner is.
+      // ═══════════════════════════════════════════════════════════
+
+      // OKLrab Euclidean ΔE lives around 0.01–0.10 for "just
+      // noticeable" through "obvious". τ=0.01 is roughly the JND;
+      // pairs below it read as duplicates.
+      const SCORE_NEAR_IDENT_TAU = 0.01;
+      // Pure-corner chroma ≥ this counts as "fully saturated" for the
+      // Reach sub-score. Empirical p95 of chroma reachable in sRGB.
+      const SCORE_REFERENCE_CHROMA = 0.22;
+      // meanCV ≥ this counts as "fully uneven" for the Smooth sub-
+      // score. Stddev of adjacent ΔEs being half the mean is already
+      // clearly broken. Tune against the calibration corpus later.
+      const SCORE_CV_CEILING = 0.5;
+
+      function scoreScale(rgbs, { truncateEnds = false, isArc = false } = {}) {
+        const labs = rgbs.map(srgbToOklrab);
+        const d = [];
+        for (let i = 0; i < labs.length - 1; i++) {
+          d.push(deltaE_OKLrab(labs[i], labs[i + 1]));
+        }
+        if (d.length === 0) {
+          return { d: [], mean: 0, cv: 0, nearIdentical: 0,
+                   reversals: 0, combined: 0, worst: null };
+        }
+        const useRange = truncateEnds && d.length > 2
+          ? d.slice(1, -1) : d;
+        const mean = useRange.reduce((a, b) => a + b, 0) / useRange.length;
+        let variance = 0;
+        for (const x of useRange) variance += (x - mean) * (x - mean);
+        variance /= useRange.length;
+        const cv = mean > 1e-9 ? Math.sqrt(variance) / mean : 0;
+        const nearIdentical = d.filter(x => x < SCORE_NEAR_IDENT_TAU).length;
+        let reversals = 0;
+        if (isArc) {
+          // On an arc, perceptual distance from the midpoint should grow
+          // monotonically in each direction. A drop → reversal.
+          for (let i = 1; i < d.length; i++) {
+            // No reversal metric enforced for now; the CV term already
+            // penalises non-smooth arcs and monotonicity is tricky to
+            // define cleanly when the curve bends back.
+          }
+        }
+        let worstIdx = 0, worstD = -1, worstReason = "max jump";
+        for (let i = 0; i < d.length; i++) {
+          if (d[i] > worstD) { worstD = d[i]; worstIdx = i; }
+        }
+        let worstMinIdx = 0, worstMin = Infinity;
+        for (let i = 0; i < d.length; i++) {
+          if (d[i] < worstMin) { worstMin = d[i]; worstMinIdx = i; }
+        }
+        if (worstMin < SCORE_NEAR_IDENT_TAU) {
+          worstIdx = worstMinIdx; worstD = worstMin; worstReason = "near-identical";
+        }
+        return {
+          d, mean, cv, nearIdentical, reversals,
+          worst: { i: worstIdx, deltaE: worstD, reason: worstReason },
+        };
+      }
+
+      function scoreGamutReach(hue) {
+        // Distance of the reachable pure corner from the L axis in
+        // OKLrab. Uses the active strategy's own atBary at the C
+        // corner so every space is judged by what it actually renders.
+        // chroma = √(a² + b²) is identical in OKLab and OKLrab (only L
+        // changes); we use the Lr converter here purely for consistency.
+        const s = strat();
+        const rgb = s.atBary(hue, 0, 0, 1);
+        const lab = srgbToOklrab(rgb);
+        const chromaC = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+        return { chromaC, area: 0.5 * chromaC };
+      }
+
+      // Three sub-scores each in [0, 100] with explicit floors and
+      // ceilings, averaged into one Quality number in [0, 100].
+      // Higher = better. See §13.2 of design/color-system.md.
+      function combineScore({ cv, nearIdentical, pairCount, reach }) {
+        const distinctQ = pairCount > 0
+          ? 100 * (1 - nearIdentical / pairCount)
+          : 100;
+        const smoothQ = 100 * (1 - Math.min(1, cv / SCORE_CV_CEILING));
+        const reachQ = 100 * Math.min(1,
+          (reach.chromaC || 0) / SCORE_REFERENCE_CHROMA);
+        const quality = (distinctQ + smoothQ + reachQ) / 3;
+        return { quality, distinctQ, smoothQ, reachQ };
+      }
+
+      function scoreGrid(gridRgbs, N, { hue }) {
+        // gridRgbs[j][i] = sRGB triple at (b_idx=j, w_idx=i); cells with
+        // i + j > N are absent (null).
+        const rows = [], cols = [];
+        for (let j = 0; j <= N; j++) {
+          const row = [];
+          for (let i = 0; i <= N - j; i++) row.push(gridRgbs[j][i]);
+          if (row.length >= 2) rows.push(scoreScale(row));
+        }
+        for (let i = 0; i <= N; i++) {
+          const col = [];
+          for (let j = 0; j <= N - i; j++) col.push(gridRgbs[j][i]);
+          if (col.length >= 2) cols.push(scoreScale(col));
+        }
+        const diag = [];
+        for (let k = 0; k <= N; k++) {
+          const line = [];
+          for (let j = 0; j <= k; j++) {
+            const i = k - j;
+            if (i <= N && j <= N && gridRgbs[j][i]) line.push(gridRgbs[j][i]);
+          }
+          if (line.length >= 2) diag.push(scoreScale(line));
+        }
+        const all = [...rows, ...cols, ...diag];
+        const meanCV = all.length
+          ? all.reduce((s, r) => s + r.cv, 0) / all.length : 0;
+        const nearIdentical = all.reduce((s, r) => s + r.nearIdentical, 0);
+        const pairCount = all.reduce((s, r) => s + r.d.length, 0);
+        const reach = scoreGamutReach(hue);
+        const q = combineScore({
+          cv: meanCV, nearIdentical, pairCount, reach,
+        });
+        return { rows, cols, diag, meanCV, nearIdentical, pairCount,
+                 reach, ...q };
+      }
+
+      function scoreArcSet(arcRgbs, { hue }) {
+        // arcRgbs is an array of arcs, each an array of sRGB triples.
+        const perArc = arcRgbs.map(rgbs => scoreScale(rgbs,
+          { truncateEnds: true, isArc: true }));
+        const meanCV = perArc.length
+          ? perArc.reduce((s, r) => s + r.cv, 0) / perArc.length : 0;
+        const nearIdentical = perArc.reduce((s, r) => s + r.nearIdentical, 0);
+        const pairCount = perArc.reduce((s, r) => s + r.d.length, 0);
+        const reach = scoreGamutReach(hue);
+        const q = combineScore({
+          cv: meanCV, nearIdentical, pairCount, reach,
+        });
+        return { perArc, meanCV, nearIdentical, pairCount, reach, ...q };
+      }
+
+      function statusItem(key, value, wide = false) {
+        const cls = "tile-status__item" + (wide ? " tile-status__item--wide" : "");
+        return `<span class="${cls}">` +
+          `<span class="tile-status__key">${key}</span>` +
+          `<span class="tile-status__value">${value}</span>` +
+          `</span>`;
+      }
+
+      function updateScorePill(el, result) {
+        if (!el) return;
+        const fmt = n => Math.round(n).toString();
+        el.innerHTML =
+          statusItem("Quality",  fmt(result.quality)) +
+          statusItem("Distinct", fmt(result.distinctQ)) +
+          statusItem("Smooth",   fmt(result.smoothQ)) +
+          statusItem("Reach",    fmt(result.reachQ));
+      }
+
+      function renderStatusBar(el, rows, rgb) {
+        if (!el) return;
+        const swatch = rgb
+          ? `<span class="tile-status__swatch" style="background:${cssFromRgb(rgb)}"></span>`
+          : "";
+        const items = rows
+          .map(([k, v]) => statusItem(k, v, k === "css"))
+          .join("");
+        el.innerHTML = swatch + items;
+      }
+
+      const arcScoreEl = document.getElementById("arc-score");
+      const gridScoreEl = document.getElementById("grid-score");
+
       function renderGrid() {
         const { N, hue } = state;
         const s = strat();
@@ -2206,22 +2450,26 @@
         // the black-axis labels (00b, 10b, …). Pure color is at
         // top-left (j=0, i=0); pure white at top-right; pure black
         // at bottom-left.
+        const gridRgbs = [];
         for (let j = 0; j < rows; j++) {
           const rowLabel = document.createElement("div");
           rowLabel.className = "axis-label axis-label--row";
           rowLabel.textContent = pctLabel(Math.round((j / N) * 100)) + "b";
           grid.appendChild(rowLabel);
+          const rowRgbs = [];
           for (let i = 0; i < cols; i++) {
             const cell = document.createElement("div");
             cell.className = "cell";
             if (i + j > N) {
               cell.setAttribute("data-empty", "");
               grid.appendChild(cell);
+              rowRgbs.push(null);
               continue;
             }
             const k = N - i - j;
             const w = i / N, b = j / N, c = k / N;
             const rgb = atBaryEased(hue, w, b, c);
+            rowRgbs.push(rgb);
             cell.style.background = cssFromRgb(rgb);
             cell.title = tokenName(i, j, k, N);
             cell.dataset.cellI = i;
@@ -2230,7 +2478,10 @@
             cell.addEventListener("mouseleave", () => setPeerHover(null));
             grid.appendChild(cell);
           }
+          gridRgbs.push(rowRgbs);
         }
+
+        updateScorePill(gridScoreEl, scoreGrid(gridRgbs, N, { hue }));
 
         gridTarget.innerHTML = "";
         gridTarget.appendChild(grid);
@@ -2412,6 +2663,7 @@
         arcScalesTarget.style.gridTemplateRows =
           `repeat(${state.arcCount}, minmax(0, 1fr))`;
 
+        const arcRgbs = [];
         for (let a = 0; a < state.arcCount; a++) {
           const { peak, points } = arcData[a];
           const label = document.createElement("div");
@@ -2420,10 +2672,12 @@
           label.textContent = `c${pct.toString().padStart(2, "0")}`;
           arcScalesTarget.appendChild(label);
           const divisor = Math.max(1, stops - 1);
+          const rowRgbs = [];
           for (let j = 0; j < points.length; j++) {
             const { bary } = points[j];
             const [w, b, c] = bary;
             const rgb = atBaryEased(state.hue, w, b, c);
+            rowRgbs.push(rgb);
             const sw = document.createElement("div");
             sw.className = "arc-swatch";
             sw.style.background = cssFromRgb(rgb);
@@ -2437,7 +2691,11 @@
             sw.addEventListener("mouseleave", () => setArcPeerHover(null));
             arcScalesTarget.appendChild(sw);
           }
+          arcRgbs.push(rowRgbs);
         }
+
+        updateScorePill(arcScoreEl,
+          scoreArcSet(arcRgbs, { hue: state.hue }));
       }
 
       // ═══════════════════════════════════════════════════════════
