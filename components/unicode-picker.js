@@ -451,11 +451,11 @@ export class UnicodePicker extends HTMLElement {
   #moveNav(delta) {
     const buttons = this.#visibleNavButtons();
     if (!buttons.length) return;
-    const idx = Math.max(0,
+    const index = Math.max(0,
       buttons.indexOf(document.activeElement),
     );
     const next =
-      (idx + delta + buttons.length)
+      (index + delta + buttons.length)
       % buttons.length;
     const button = buttons[next];
     this.#activateBlock(button);
