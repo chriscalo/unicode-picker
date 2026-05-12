@@ -463,7 +463,7 @@ export class UnicodePicker extends HTMLElement {
   }
   
   #focusNavStart() {
-    const button = this.#visibleNavButtons()[0];
+    const button = this.#visibleNavButtons().at(0);
     if (!button) return;
     this.#activateBlock(button);
     button.focus();
