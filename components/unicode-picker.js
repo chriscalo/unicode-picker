@@ -295,7 +295,8 @@ export class UnicodePicker extends HTMLElement {
             .toUpperCase();
         return terms.every((term) =>
           entry.n.includes(term)
-          || blockName.includes(term),
+          || blockName.includes(term)
+          || entry.c.toUpperCase() === term,
         );
       },
     );
