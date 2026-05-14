@@ -160,32 +160,25 @@ char-grid .char-cell.copied::after {
 }
 
 char-grid .char-cell.copied::before {
+  --checkmark-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  /* half the total width of icon (14px) + gap (6px) + "Copied" text (~44px) */
+  --copied-icon-offset: 32px;
   position: absolute;
   z-index: 1;
-  left: calc(50% - 32px);
+  left: calc(50% - var(--copied-icon-offset));
   top: 50%;
   transform: translateY(-50%);
   width: 14px;
   height: 14px;
   background-color: var(--color-accent-text);
-  mask-image: url("data:image/svg+xml,\
-%3Csvg xmlns='http://www.w3.org/2000/svg' \
-viewBox='0 0 24 24' fill='none' \
-stroke='black' stroke-width='2' \
-stroke-linecap='round' stroke-linejoin='round'\
-%3E%3Cpolyline points='20 6 9 17 4 12'/%3E\
-%3C/svg%3E");
+  mask-image: var(--checkmark-svg);
   mask-repeat: no-repeat;
   mask-size: contain;
-  -webkit-mask-image: url("data:image/svg+xml,\
-%3Csvg xmlns='http://www.w3.org/2000/svg' \
-viewBox='0 0 24 24' fill='none' \
-stroke='black' stroke-width='2' \
-stroke-linecap='round' stroke-linejoin='round'\
-%3E%3Cpolyline points='20 6 9 17 4 12'/%3E\
-%3C/svg%3E");
+  mask-position: center;
+  -webkit-mask-image: var(--checkmark-svg);
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: contain;
+  -webkit-mask-position: center;
   content: "";
   animation:
     copied-fade 800ms
