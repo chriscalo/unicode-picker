@@ -286,19 +286,35 @@ export class UnicodePicker extends HTMLElement {
     
     this.#clearActiveBlock();
     const terms = query.toUpperCase().split(/\s+/);
-    this.#filtered = this.#allChars.filter(
-      (entry, index) => {
-        const blockIdx =
-          this.#blockIndexFor(index);
-        const blockName =
-          this.#blocks[blockIdx].name
-            .toUpperCase();
-        return terms.every((term) =>
+    const scored = [];
+    for (
+      let index = 0;
+      index < this.#allChars.length;
+      index++
+    ) {
+      const entry = this.#allChars[index];
+      const blockIdx =
+        this.#blockIndexFor(index);
+      const blockName =
+        this.#blocks[blockIdx].name
+          .toUpperCase();
+      const char = entry.c.toUpperCase();
+      if (
+        !terms.every((term) =>
           entry.n.includes(term)
-          || blockName.includes(term),
-        );
-      },
-    );
+          || blockName.includes(term)
+          || char === term,
+        )
+      ) continue;
+      // 0 = exact char match, 1 = name/block match
+      const score =
+        terms.some((term) => char === term)
+          ? 0 : 1;
+      scored.push([entry, score]);
+    }
+    // stable sort: exact char matches first
+    scored.sort((a, b) => a[1] - b[1]);
+    this.#filtered = scored.map(([entry]) => entry);
     this.#filteredBlocks =
       this.#computeFilteredBlocks();
     
