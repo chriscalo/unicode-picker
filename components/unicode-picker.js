@@ -58,6 +58,7 @@ export class UnicodePicker extends HTMLElement {
       () => {
         this.#search(this.#input.value);
         this.#updateClearButton();
+        this.#syncToURL();
       },
     );
     this.#clearButton.addEventListener(
@@ -66,6 +67,7 @@ export class UnicodePicker extends HTMLElement {
         this.#input.value = "";
         this.#search("");
         this.#updateClearButton();
+        this.#syncToURL();
         this.#input.focus();
       },
     );
@@ -147,10 +149,39 @@ export class UnicodePicker extends HTMLElement {
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
       `${count} characters`;
+
+    const initialQuery =
+      new URLSearchParams(location.search).get("q")
+      ?? "";
+    if (initialQuery) {
+      this.#input.value = initialQuery;
+      this.#search(initialQuery);
+    } else {
+      this.#render();
+    }
+
     this.#updateClearButton();
     this.#input.focus();
-    this.#render();
     this.#scrollBlockIntoView();
+
+    const onNavigation = () => {
+      const q =
+        new URLSearchParams(location.search).get("q")
+        ?? "";
+      if (q !== this.#input.value) {
+        this.#input.value = q;
+        this.#search(q);
+        this.#updateClearButton();
+      }
+    };
+    if ("navigation" in window) {
+      navigation.addEventListener(
+        "navigatesuccess",
+        onNavigation,
+      );
+    } else {
+      window.addEventListener("popstate", onNavigation);
+    }
   }
   
   #initTheme() {
@@ -547,7 +578,19 @@ export class UnicodePicker extends HTMLElement {
       this.#input.value = "";
       this.#search("");
       this.#updateClearButton();
+      this.#syncToURL();
     }
+  }
+
+  #syncToURL() {
+    const q = this.#input.value;
+    const url = new URL(location.href);
+    if (q) {
+      url.searchParams.set("q", q);
+    } else {
+      url.searchParams.delete("q");
+    }
+    history.replaceState(null, "", url);
   }
 }
 
