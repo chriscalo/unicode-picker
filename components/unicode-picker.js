@@ -22,7 +22,7 @@ export class UnicodePicker extends HTMLElement {
   #toast;
   #blocksNav;
   #themeToggle;
-  #qParam = useURLParam("q");
+  #searchQuery = useURLParam("q");
 
   constructor() {
     super();
@@ -59,7 +59,6 @@ export class UnicodePicker extends HTMLElement {
       "input",
       () => {
         this.#search(this.#input.value);
-        this.#updateClearButton();
         this.#syncToURL();
       },
     );
@@ -68,7 +67,6 @@ export class UnicodePicker extends HTMLElement {
       () => {
         this.#input.value = "";
         this.#search("");
-        this.#updateClearButton();
         this.#syncToURL();
         this.#input.focus();
       },
@@ -152,24 +150,23 @@ export class UnicodePicker extends HTMLElement {
     this.#status.textContent =
       `${count} characters`;
 
-    const initialQuery = this.#qParam.value ?? "";
+    const initialQuery = this.#searchQuery.value ?? "";
     if (initialQuery) {
       this.#input.value = initialQuery;
       this.#search(initialQuery);
     } else {
+      this.#updateClearButton();
       this.#render();
     }
 
-    this.#updateClearButton();
     this.#input.focus();
     this.#scrollBlockIntoView();
 
-    this.#qParam.addEventListener("change", () => {
-      const q = this.#qParam.value ?? "";
+    this.#searchQuery.addEventListener("change", () => {
+      const q = this.#searchQuery.value ?? "";
       if (q !== this.#input.value) {
         this.#input.value = q;
         this.#search(q);
-        this.#updateClearButton();
       }
     });
   }
@@ -294,6 +291,7 @@ export class UnicodePicker extends HTMLElement {
   }
   
   #search(query) {
+    this.#updateClearButton();
     if (!query.trim()) {
       this.#filtered = [];
       this.#status.textContent =
@@ -567,14 +565,13 @@ export class UnicodePicker extends HTMLElement {
     if (this.#input.value) {
       this.#input.value = "";
       this.#search("");
-      this.#updateClearButton();
       this.#syncToURL();
     }
   }
 
   #syncToURL() {
     const v = this.#input.value;
-    v ? this.#qParam.set(v) : this.#qParam.unset();
+    v ? this.#searchQuery.set(v) : this.#searchQuery.unset();
   }
 }
 
