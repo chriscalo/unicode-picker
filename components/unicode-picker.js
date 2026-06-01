@@ -2,7 +2,7 @@ import "./char-grid.js";
 import "./copy-toast.js";
 import "./unicode-picker.css";
 import { KEY, KeyListener } from "../lib/key-listener.js";
-import { PageURL } from "../lib/page-url.js";
+import { useURLParam } from "../lib/url-param.js";
 
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
@@ -22,7 +22,8 @@ export class UnicodePicker extends HTMLElement {
   #toast;
   #blocksNav;
   #themeToggle;
-  
+  #qParam = useURLParam("q");
+
   constructor() {
     super();
     const template = document.getElementById(
@@ -151,8 +152,7 @@ export class UnicodePicker extends HTMLElement {
     this.#status.textContent =
       `${count} characters`;
 
-    const initialQuery =
-      PageURL.url.searchParams.get("q") ?? "";
+    const initialQuery = this.#qParam.value ?? "";
     if (initialQuery) {
       this.#input.value = initialQuery;
       this.#search(initialQuery);
@@ -164,9 +164,8 @@ export class UnicodePicker extends HTMLElement {
     this.#input.focus();
     this.#scrollBlockIntoView();
 
-    PageURL.addEventListener("change", () => {
-      const q =
-        PageURL.url.searchParams.get("q") ?? "";
+    this.#qParam.addEventListener("change", () => {
+      const q = this.#qParam.value ?? "";
       if (q !== this.#input.value) {
         this.#input.value = q;
         this.#search(q);
@@ -574,16 +573,8 @@ export class UnicodePicker extends HTMLElement {
   }
 
   #syncToURL() {
-    PageURL.replace(
-      PageURL.deriveURL(url => {
-        const q = this.#input.value;
-        if (q) {
-          url.searchParams.set("q", q);
-        } else {
-          url.searchParams.delete("q");
-        }
-      }),
-    );
+    const v = this.#input.value;
+    v ? this.#qParam.set(v) : this.#qParam.unset();
   }
 }
 
