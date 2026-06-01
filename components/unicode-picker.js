@@ -60,14 +60,14 @@ export class UnicodePicker extends HTMLElement {
       () => {
         this.#search(this.#input.value);
         this.#syncToURL();
+        this.#updateClearButton();
       },
     );
     this.#clearButton.addEventListener(
       "click",
       () => {
         this.#input.value = "";
-        this.#search("");
-        this.#syncToURL();
+        this.#input.dispatchEvent(new InputEvent("input"));
         this.#input.focus();
       },
     );
@@ -155,9 +155,9 @@ export class UnicodePicker extends HTMLElement {
       this.#input.value = initialQuery;
       this.#search(initialQuery);
     } else {
-      this.#updateClearButton();
       this.#render();
     }
+    this.#updateClearButton();
 
     this.#input.focus();
     this.#scrollBlockIntoView();
@@ -166,7 +166,7 @@ export class UnicodePicker extends HTMLElement {
       const q = this.#searchQuery.value ?? "";
       if (q !== this.#input.value) {
         this.#input.value = q;
-        this.#search(q);
+        this.#input.dispatchEvent(new InputEvent("input"));
       }
     });
   }
@@ -291,7 +291,6 @@ export class UnicodePicker extends HTMLElement {
   }
   
   #search(query) {
-    this.#updateClearButton();
     if (!query.trim()) {
       this.#filtered = [];
       this.#status.textContent =
@@ -564,8 +563,7 @@ export class UnicodePicker extends HTMLElement {
   #clearSearch() {
     if (this.#input.value) {
       this.#input.value = "";
-      this.#search("");
-      this.#syncToURL();
+      this.#input.dispatchEvent(new InputEvent("input"));
     }
   }
 
