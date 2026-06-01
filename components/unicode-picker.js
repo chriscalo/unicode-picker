@@ -2,6 +2,7 @@ import "./char-grid.js";
 import "./copy-toast.js";
 import "./unicode-picker.css";
 import { KEY, KeyListener } from "../lib/key-listener.js";
+import { PageURL } from "../lib/page-url.js";
 
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
@@ -151,8 +152,7 @@ export class UnicodePicker extends HTMLElement {
       `${count} characters`;
 
     const initialQuery =
-      new URLSearchParams(location.search).get("q")
-      ?? "";
+      PageURL.url.searchParams.get("q") ?? "";
     if (initialQuery) {
       this.#input.value = initialQuery;
       this.#search(initialQuery);
@@ -164,24 +164,15 @@ export class UnicodePicker extends HTMLElement {
     this.#input.focus();
     this.#scrollBlockIntoView();
 
-    const onNavigation = () => {
+    PageURL.addEventListener("change", () => {
       const q =
-        new URLSearchParams(location.search).get("q")
-        ?? "";
+        PageURL.url.searchParams.get("q") ?? "";
       if (q !== this.#input.value) {
         this.#input.value = q;
         this.#search(q);
         this.#updateClearButton();
       }
-    };
-    if ("navigation" in window) {
-      navigation.addEventListener(
-        "navigatesuccess",
-        onNavigation,
-      );
-    } else {
-      window.addEventListener("popstate", onNavigation);
-    }
+    });
   }
   
   #initTheme() {
@@ -583,14 +574,16 @@ export class UnicodePicker extends HTMLElement {
   }
 
   #syncToURL() {
-    const q = this.#input.value;
-    const url = new URL(location.href);
-    if (q) {
-      url.searchParams.set("q", q);
-    } else {
-      url.searchParams.delete("q");
-    }
-    history.replaceState(null, "", url);
+    PageURL.replace(
+      PageURL.deriveURL(url => {
+        const q = this.#input.value;
+        if (q) {
+          url.searchParams.set("q", q);
+        } else {
+          url.searchParams.delete("q");
+        }
+      }),
+    );
   }
 }
 
