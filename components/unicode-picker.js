@@ -60,7 +60,6 @@ export class UnicodePicker extends HTMLElement {
       () => {
         this.#search(this.#input.value);
         this.#syncToURL();
-        this.#updateClearButton();
       },
     );
     this.#clearButton.addEventListener(
@@ -150,25 +149,26 @@ export class UnicodePicker extends HTMLElement {
     this.#status.textContent =
       `${count} characters`;
 
+    this.#searchQuery.addEventListener("change", () => {
+      const q = this.#searchQuery.value ?? "";
+      this.#clearButton.disabled = !this.#searchQuery.isSet;
+      if (q !== this.#input.value) {
+        this.#input.value = q;
+        this.#search(q);
+      }
+    });
+
     const initialQuery = this.#searchQuery.value ?? "";
+    this.#input.value = initialQuery;
+    this.#clearButton.disabled = !this.#searchQuery.isSet;
     if (initialQuery) {
-      this.#input.value = initialQuery;
       this.#search(initialQuery);
     } else {
       this.#render();
     }
-    this.#updateClearButton();
 
     this.#input.focus();
     this.#scrollBlockIntoView();
-
-    this.#searchQuery.addEventListener("change", () => {
-      const q = this.#searchQuery.value ?? "";
-      if (q !== this.#input.value) {
-        this.#input.value = q;
-        this.#input.dispatchEvent(new InputEvent("input"));
-      }
-    });
   }
   
   #initTheme() {
@@ -254,11 +254,6 @@ export class UnicodePicker extends HTMLElement {
       }
       button.disabled = !hasMatch;
     }
-  }
-  
-  #updateClearButton() {
-    this.#clearButton.disabled =
-      this.#input.value.length === 0;
   }
   
   #select(index) {
