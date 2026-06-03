@@ -2,6 +2,7 @@ import "./char-grid.js";
 import "./copy-toast.js";
 import "./unicode-picker.css";
 import { KEY, KeyListener } from "../lib/key-listener.js";
+import { useURLParam } from "../lib/url-param.js";
 
 const RECENTS_KEY = "unicode-picker-recents";
 const MAX_RECENTS = 36;
@@ -21,7 +22,8 @@ export class UnicodePicker extends HTMLElement {
   #toast;
   #blocksNav;
   #themeToggle;
-  
+  #searchQuery = useURLParam("q");
+
   constructor() {
     super();
     const template = document.getElementById(
@@ -57,15 +59,14 @@ export class UnicodePicker extends HTMLElement {
       "input",
       () => {
         this.#search(this.#input.value);
-        this.#updateClearButton();
+        this.#syncToURL();
       },
     );
     this.#clearButton.addEventListener(
       "click",
       () => {
         this.#input.value = "";
-        this.#search("");
-        this.#updateClearButton();
+        this.#input.dispatchEvent(new InputEvent("input"));
         this.#input.focus();
       },
     );
@@ -147,9 +148,26 @@ export class UnicodePicker extends HTMLElement {
       this.#allChars.length.toLocaleString();
     this.#status.textContent =
       `${count} characters`;
-    this.#updateClearButton();
+
+    this.#searchQuery.addEventListener("change", () => {
+      const q = this.#searchQuery.value ?? "";
+      this.#clearButton.disabled = !this.#searchQuery.isSet;
+      if (q !== this.#input.value) {
+        this.#input.value = q;
+        this.#search(q);
+      }
+    });
+
+    const initialQuery = this.#searchQuery.value ?? "";
+    this.#input.value = initialQuery;
+    this.#clearButton.disabled = !this.#searchQuery.isSet;
+    if (initialQuery) {
+      this.#search(initialQuery);
+    } else {
+      this.#render();
+    }
+
     this.#input.focus();
-    this.#render();
     this.#scrollBlockIntoView();
   }
   
@@ -236,11 +254,6 @@ export class UnicodePicker extends HTMLElement {
       }
       button.disabled = !hasMatch;
     }
-  }
-  
-  #updateClearButton() {
-    this.#clearButton.disabled =
-      this.#input.value.length === 0;
   }
   
   #select(index) {
@@ -545,9 +558,13 @@ export class UnicodePicker extends HTMLElement {
   #clearSearch() {
     if (this.#input.value) {
       this.#input.value = "";
-      this.#search("");
-      this.#updateClearButton();
+      this.#input.dispatchEvent(new InputEvent("input"));
     }
+  }
+
+  #syncToURL() {
+    const v = this.#input.value;
+    v ? this.#searchQuery.set(v) : this.#searchQuery.unset();
   }
 }
 
