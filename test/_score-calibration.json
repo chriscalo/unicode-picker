@@ -1,0 +1,127 @@
+{
+  "schema": {
+    "user_judgment": "5-point: A++=A much better, A+=A slightly better, 0=about the same, B+=B slightly better, B++=B much better",
+    "rules": "predictions committed BEFORE user judgment; locked once user has rated"
+  },
+  "pairs": [
+    {
+      "id": "R1",
+      "dimension": "Reach",
+      "hue": 240,
+      "curves": "identity",
+      "A": { "space": "hwb",   "screenshot": "/tmp/calib_R1_A_hwb.png" },
+      "B": { "space": "hpluv", "screenshot": "/tmp/calib_R1_B_hpluv.png" },
+      "prediction": {
+        "verdict": "A++",
+        "rationale": "HWB C-corner reaches 100% of max sRGB chroma at h=240 (chroma 0.313 vs target 0.313). HPLuv reaches 58% (chroma 0.101 vs target 0.174). Both spaces hit pure white and pure black exactly.",
+        "numbers": {
+          "A_hwb":   { "whiteDE": 0.0, "blackDE": 0.0, "C_chroma": 0.313, "C_target": 0.313, "C_reach": 1.00 },
+          "B_hpluv": { "whiteDE": 0.0, "blackDE": 0.0, "C_chroma": 0.101, "C_target": 0.174, "C_reach": 0.58 }
+        }
+      },
+      "user_judgment": "A++",
+      "user_notes": "agreed. too easy"
+    },
+    {
+      "id": "R2",
+      "dimension": "Reach",
+      "hue": 240,
+      "curves": "identity",
+      "A": { "space": "hwb",   "screenshot": "/tmp/calib_R2_A_hwb.png" },
+      "B": { "space": "okhsl", "screenshot": "/tmp/calib_R2_B_okhsl.png" },
+      "prediction": {
+        "verdict": "0",
+        "rationale": "Both hit 100% of max sRGB chroma AT THEIR RENDERED OKLrab HUE (HWB at 264°, OKHSL at 240°). Different absolute chromas (0.313 vs 0.164) because sRGB gamut is anisotropic — blue corner is more chromatic than OKLab-true-blue. Per the §13.1 definition, both pass Reach.",
+        "numbers": {
+          "A_hwb":   { "C_chroma": 0.313, "C_target_at_renderedHue": 0.313, "C_reach": 1.00, "renderedHueDeg": 264.05 },
+          "B_okhsl": { "C_chroma": 0.164, "C_target_at_renderedHue": 0.164, "C_reach": 1.00, "renderedHueDeg": 240.00 }
+        },
+        "calibration_question": "If you judge Reach by 'how saturated does the C corner LOOK' (absolute chroma), HWB is better. If you judge by 'does the C corner reach max possible at its rendered hue', they're tied. Which matches your eye? Either answer tells me which formula is right."
+      },
+      "user_judgment": "0",
+      "user_notes": "tied. confirms 'reach is per-rendered-hue' (definition a)"
+    },
+    {
+      "id": "S1",
+      "dimension": "Smoothness",
+      "hue": 240,
+      "curves": "identity",
+      "A": { "space": "hwb",   "screenshot": "/tmp/calib_S1_A_hwb.png" },
+      "B": { "space": "okhsv", "screenshot": "/tmp/calib_S1_B_okhsv.png" },
+      "prediction": {
+        "verdict": "0",
+        "rationale": "OKHSV is actually more linear than HWB on edges (W↔B 0.000 vs 0.034; B↔C 0.016 vs 0.034). Both have moderate W↔C non-linearity (0.136 vs 0.158). Net: OKHSV slightly better on edge linearity. If your earlier OKHSV-cramming complaint shows up here, my edge metric is missing it.",
+        "numbers": {
+          "A_hwb":   { "WB_dev": 0.034, "WC_dev": 0.158, "BC_dev": 0.034, "max_edge_dev": 0.158 },
+          "B_okhsv": { "WB_dev": 0.000, "WC_dev": 0.136, "BC_dev": 0.016, "max_edge_dev": 0.136 }
+        }
+      },
+      "user_judgment": "A++",
+      "user_notes": "HWB: same as before — B-W edge mildly dominated by white. OKHSV: black fully compacted into corner — much worse failure. My edge metric (B↔C dev 0.016) missed it entirely."
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "date": "2026-04-25",
+      "topic": "Reference space",
+      "finding": "OKLrab Lr is the right reference for adjacent-step ΔE measurements. Validated by black→blue ramp test: user prefers Lr-uniform spacing (cells visibly distinct in dark end, no JND-crushing) over L-uniform (dark stops compress below JND). Grayscale midpoint test gave a separate result (visual middle gray sits at OKLab L=0.5, not Lr=0.5) but that's about absolute middle-gray perception, not adjacent-step pacing — different question, doesn't affect ΔE measurements.",
+      "metric": "Use OKLrab Lr ΔE for Smoothness and Distinctness measurements."
+    },
+    {
+      "id": "M2",
+      "date": "2026-04-25",
+      "topic": "Corner compaction sub-metric for Smoothness",
+      "finding": "User-validated metric for 'tiny corner' failure: count of stops in a 1-D scale whose OKLrab Lr falls below a darkness threshold (e.g., 0.20). Few stops below threshold = small dark zone = compacted black corner. Validated at h=240 normalized so each space's C corner = sRGB pure blue: user rated jzazbz most compacted and oklch least compacted; the metric ranks identically. Threshold-robust across 0.15, 0.20, 0.25, 0.30. Per-step ΔE / maxDev did not catch this — they measure pacing uniformity, not corner-influence size.",
+      "metric": "For each 1-D scale, count stops in each corner's perceptual region: black corner |{Lr < 0.20}|; white corner |{Lr > 0.80}|; pure corner |{ΔE_to_corner < ~0.20}|. Few stops = tiny corner. Many stops = dominant corner. Penalty proportional to deviation from a target band per corner.",
+      "validation_data": {
+        "hue_aligned_to": "sRGB pure blue",
+        "Lr_below_0_20_per_space": {
+          "hwb": 6, "oklch": 7, "okhsl": 6, "okhsv": 6, "lchab": 5, "jzazbz": 3
+        },
+        "user_ranking": { "most_compacted": "jzazbz", "least_compacted": "oklch" }
+      }
+    },
+    {
+      "id": "M3",
+      "date": "2026-04-25",
+      "topic": "Hue drift sub-metric for Smoothness",
+      "finding": "Some spaces' interpolation between two corners drifts the OKLrab hue away from the corner's hue — e.g., HWB's W↔C (white-to-blue) path passes through purple before returning to blue. Visible artifact independent of compaction or pacing. User identified HWB and LCh(ab) as suffering this on W↔C at h=240; LCh peaks 32° off, HWB 21° off. OKLCH/OKHSL/OKHSV hold OKLrab hue constant by design (drift ≈ 0°).",
+      "metric": "For each edge (or 1-D scale) ending at the C corner, compute OKLrab hue at every cell with chroma > some_min (e.g., 0.05). hueDrift = max over those cells of |hueCircular(cell) − hue(C_corner)|. Penalty above some threshold (e.g., 10°).",
+      "validation_data": {
+        "edge": "W↔C, hue normalized to sRGB blue (C target hue = 264.2°)",
+        "max_hue_drift_deg": {
+          "hwb": 20.8, "oklch": 2.3, "okhsl": 0.0, "okhsv": 0.0, "lchab": 32.4, "jzazbz": 5.3
+        },
+        "user_observation": "HWB and LCh(ab) go through purple on the way from white to blue."
+      }
+    },
+    {
+      "id": "M5",
+      "date": "2026-04-25",
+      "topic": "v2 Smoothness scoring — top/bottom validated",
+      "finding": "Aggregate v2 Smoothness (4 sub-metrics, quadratic-shortfall, equal weight) ranks the 6 UI spaces consistently with user's eye at the top and bottom. Tested at h=240 normalized so each space's C corner = sRGB pure blue, identity curves. Metric ranking: okhsv 92, oklch 81, okhsl 79, hwb 77, lchab 69, jzazbz 58. User-confirmed: best = okhsv, worst = jzazbz. Note: with custom user curves applied, HWB/OKLCH would likely pull ahead — calibration here was at identity curves only. Middle-ranking validation deferred.",
+      "metric_aggregation": "Per 1-D scale: aggregateShortfall over [pacing, cornerInfluenceA, cornerInfluenceB, hueDrift?, chromaAdequacy?] — last two only when scale ends at C corner.",
+      "open_items": [
+        "Validate at additional hues (currently sRGB-blue only)",
+        "Validate middle-rankings (3 of 4 middle spaces unranked)",
+        "Wire into production scoreScale / combineScore",
+        "Decide aggregation across multiple 1-D scales in a grid"
+      ]
+    },
+    {
+      "id": "M4",
+      "date": "2026-04-25",
+      "topic": "Chroma adequacy sub-metric for Smoothness",
+      "finding": "Some spaces' interpolation between W and C never builds chroma in the interior — the path stays low-chroma for most of its length, then jumps to the C corner's chroma at the end. OKHSL is the canonical example: at the W↔C midpoint, chroma is only 26% of the C-corner's chroma (linear-ideal would be 50%). User identified this as 'extremely desaturated grays' on the way to blue.",
+      "metric": "For each edge starting at W or B and ending at C, compute chroma at the midpoint stop / chroma at the C-corner stop. Linear-ideal = 0.5. Significantly less than 0.5 indicates 'chroma collapse' (path keeps colors muted, then jumps).",
+      "validation_data": {
+        "edge": "W↔C, hue normalized to sRGB blue",
+        "chroma_midpoint_over_max": {
+          "hwb": 0.59, "oklch": 0.47, "okhsl": 0.26, "okhsv": 0.46, "lchab": 0.51, "jzazbz": 0.40
+        },
+        "user_observation": "OKHSL goes through extremely desaturated grays before arriving at blue."
+      }
+    }
+  ]
+}

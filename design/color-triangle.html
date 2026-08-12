@@ -2450,13 +2450,53 @@
       // noticeable" through "obvious". τ=0.01 is roughly the JND;
       // pairs below it read as duplicates.
       const SCORE_NEAR_IDENT_TAU = 0.01;
-      // Pure-corner chroma ≥ this counts as "fully saturated" for the
-      // Reach sub-score. Empirical p95 of chroma reachable in sRGB.
-      const SCORE_REFERENCE_CHROMA = 0.22;
       // meanCV ≥ this counts as "fully uneven" for the Smooth sub-
       // score. Stddev of adjacent ΔEs being half the mean is already
       // clearly broken. Tune against the calibration corpus later.
       const SCORE_CV_CEILING = 0.5;
+      // Aggregate sub-scores so a single bad component drags the result
+      // harder than the arithmetic mean would: quadratic mean of
+      // shortfalls. For inputs xs in [0, 100] the result is also in
+      // [0, 100]; equal inputs yield the mean; spread inputs score lower.
+      function aggregateShortfall(xs) {
+        if (!xs.length) return 0;
+        let sumSq = 0;
+        for (const x of xs) {
+          const d = 100 - x;
+          sumSq += d * d;
+        }
+        return 100 - Math.sqrt(sumSq / xs.length);
+      }
+      // Smooth sub-metric calibration — gradient uniformity of the
+      // rendered triangle. Anchored so HWB scores ~90 across the
+      // board. See §13 of design/color-system.md.
+      //   smoothLrRamp     — Lr drop in the corner shell vs. mid-ramp;
+      //                      ratio ≈ 1 = uniform, > 1 = corner cliff
+      //   smoothDarkArea   — fraction of triangle below Lr 0.4
+      //                      (small dark area implies a cliff near the
+      //                      black corner — different facet of ramp)
+      //   smoothInteriorC  — interior median chroma; low = washed-out
+      //                      (chroma bunched at edges, not gradient)
+      //   smoothDarkC      — median chroma where Lr ∈ [0.1, 0.4]
+      //                      (low = chroma collapses as you darken)
+      const SCORE_SMOOTH_LR_RAMP_RANGE  = [2.00, 1.00]; // dropSharpness
+      const SCORE_SMOOTH_DARK_AREA_RANGE = [0.10, 0.25]; // darkAreaFrac
+      const SCORE_SMOOTH_INT_C_RANGE    = [0.02, 0.10]; // interior medC
+      const SCORE_SMOOTH_DARK_C_RANGE   = [0.01, 0.07]; // dark zone medC
+      // Reach calibration — peak chroma achievable. ≥ 0.22 = full sRGB
+      // pure-color reach.
+      const SCORE_REACH_PEAK_C_RANGE    = [0.00, 0.22];
+      const SCORE_SAMPLE_GRID_N         = 36; // sampling resolution
+      // v2 Smoothness sub-metric calibration (eye-validated 2026-04-25;
+      // see test/_score-calibration.json M2..M5):
+      //   CORNER_REGION_DE   — ΔE radius around an endpoint defining
+      //                        its perceptual basin
+      //   HUE_DRIFT_CEIL_DEG — drift this large = full hue-drift penalty
+      //   CHROMA_ADEQUACY_DEV_CEIL — |midRatio - 0.5| this large = full
+      //                              chroma-adequacy penalty
+      const SCORE_CORNER_REGION_DE       = 0.20;
+      const SCORE_HUE_DRIFT_CEIL_DEG     = 30;
+      const SCORE_CHROMA_ADEQUACY_DEV_CEIL = 0.5;
 
       function scoreScale(rgbs, { truncateEnds = false, isArc = false } = {}) {
         const labs = rgbs.map(srgbToOklrab);
@@ -2466,7 +2506,9 @@
         }
         if (d.length === 0) {
           return { d: [], mean: 0, cv: 0, nearIdentical: 0,
-                   reversals: 0, combined: 0, worst: null };
+                   pacing: 100, cornerA: 100, cornerB: 100,
+                   hueDrift: 100, chromaAdequacy: 100, smoothness: 100,
+                   worst: null };
         }
         const useRange = truncateEnds && d.length > 2
           ? d.slice(1, -1) : d;
@@ -2476,16 +2518,101 @@
         variance /= useRange.length;
         const cv = mean > 1e-9 ? Math.sqrt(variance) / mean : 0;
         const nearIdentical = d.filter(x => x < SCORE_NEAR_IDENT_TAU).length;
-        let reversals = 0;
-        if (isArc) {
-          // On an arc, perceptual distance from the midpoint should grow
-          // monotonically in each direction. A drop → reversal.
-          for (let i = 1; i < d.length; i++) {
-            // No reversal metric enforced for now; the CV term already
-            // penalises non-smooth arcs and monotonicity is tricky to
-            // define cleanly when the curve bends back.
+
+        // v2 Smoothness sub-metrics on the actual stops:
+        //   1. Pacing — uniformity of adjacent ΔEs
+        //   2. Corner-influence — count of stops in each endpoint's basin
+        //   3. Hue drift — does the path bow through the wrong hue?
+        //   4. Chroma adequacy — does chroma rise smoothly to the C end?
+        const pacing = 100 * (1 - Math.min(1, cv / SCORE_CV_CEILING));
+
+        const N1 = labs.length;
+        const A = labs[0], B = labs[N1 - 1];
+        const nearA = labs.filter(p => deltaE_OKLrab(p, A) < SCORE_CORNER_REGION_DE).length;
+        const nearB = labs.filter(p => deltaE_OKLrab(p, B) < SCORE_CORNER_REGION_DE).length;
+        const idealMin = Math.ceil(N1 / 6);
+        const idealMax = Math.floor(N1 / 2);
+        function cornerScoreFromCount(count) {
+          if (count >= idealMin && count <= idealMax) return 100;
+          if (count < idealMin) return 100 * (count / Math.max(1, idealMin));
+          return 100 * Math.max(0, 1 - (count - idealMax) / Math.max(1, N1 - idealMax));
+        }
+        const cornerA = cornerScoreFromCount(nearA);
+        const cornerB = cornerScoreFromCount(nearB);
+
+        const cA = Math.sqrt(A[1] * A[1] + A[2] * A[2]);
+        const cB = Math.sqrt(B[1] * B[1] + B[2] * B[2]);
+        const cMax = Math.max(cA, cB);
+        const chromaticEnd = cA > cB ? A : B;
+        let hueDrift = 100;
+        let chromaAdequacy = 100;
+        const hasChromaticEnd = cMax > 0.05;
+
+        // Black-pocket compaction (only fires when one endpoint is at
+        // the black corner, Lr < 0.10). Counts cells with Lr < 0.20 and
+        // compares to the linear-Lr-uniform ideal for a path from black
+        // up to the other endpoint's Lr. Below ideal = pinched black
+        // (jzazbz signature). Calibration M2.
+        let blackPocket = 100;
+        const aIsBlack = A[0] < 0.10;
+        const bIsBlack = B[0] < 0.10;
+        // Only fire blackPocket on edges with one black end and one
+        // CHROMATIC end (i.e., the B↔C edge). W↔B is grayscale; its
+        // dark-cell count is governed by the toe function, not by the
+        // path being "compacted," so the linear-Lr-uniform ideal does
+        // not apply there.
+        const otherEndChromatic = aIsBlack ? cB > 0.05 : cA > 0.05;
+        if ((aIsBlack !== bIsBlack) && otherEndChromatic) {
+          const farLr = aIsBlack ? B[0] : A[0];
+          if (farLr > 0.05) {
+            const darkCount = labs.filter(p => p[0] < 0.20).length;
+            const idealCount = Math.max(1, Math.round((0.20 / farLr) * N1));
+            // One-sided: penalize only when dark cells are FEWER than
+            // the linear-Lr-uniform ideal (compaction). Above-ideal =
+            // path is naturally darker, not a smoothness failure.
+            if (darkCount < idealCount) {
+              const shortfall = idealCount - darkCount;
+              blackPocket = 100 * Math.max(0,
+                1 - shortfall / idealCount);
+            }
           }
         }
+        if (hasChromaticEnd) {
+          const cHue = Math.atan2(chromaticEnd[2], chromaticEnd[1]) * 180 / Math.PI;
+          let maxDriftDeg = 0;
+          for (const p of labs) {
+            const ch = Math.sqrt(p[1] * p[1] + p[2] * p[2]);
+            if (ch > 0.05) {
+              let h = Math.atan2(p[2], p[1]) * 180 / Math.PI;
+              let dh = Math.abs(h - cHue);
+              if (dh > 180) dh = 360 - dh;
+              if (dh > maxDriftDeg) maxDriftDeg = dh;
+            }
+          }
+          hueDrift = 100 * (1 - Math.min(1, maxDriftDeg / SCORE_HUE_DRIFT_CEIL_DEG));
+          const mid = labs[Math.floor((N1 - 1) / 2)];
+          const cMid = Math.sqrt(mid[1] * mid[1] + mid[2] * mid[2]);
+          if (cMax > 1e-6) {
+            const ratio = cMid / cMax;
+            const dev = Math.abs(ratio - 0.5);
+            chromaAdequacy = 100 * (1 - Math.min(1, dev / SCORE_CHROMA_ADEQUACY_DEV_CEIL));
+          }
+        }
+
+        // Smoothness aggregates only the failures that hit the user's
+        // eye (calibration 2026-04-25):
+        //   - hue drift (path bows through wrong hue)
+        //   - chroma adequacy (washed-out middle)
+        //   - black pocket (pinched black corner; jzazbz signature)
+        // Pacing was dropped (rewards muted-but-uniform). Generic
+        // corner-influence was dropped (breaks on intrinsically-bright
+        // chromatic corners like cyan / yellow where every cell sits
+        // within ΔE 0.20 of both endpoints).
+        const subs = [];
+        if (hasChromaticEnd) subs.push(hueDrift, chromaAdequacy);
+        if ((aIsBlack !== bIsBlack) && otherEndChromatic) subs.push(blackPocket);
+        const smoothness = subs.length ? aggregateShortfall(subs) : 100;
+
         let worstIdx = 0, worstD = -1, worstReason = "max jump";
         for (let i = 0; i < d.length; i++) {
           if (d[i] > worstD) { worstD = d[i]; worstIdx = i; }
@@ -2498,35 +2625,107 @@
           worstIdx = worstMinIdx; worstD = worstMin; worstReason = "near-identical";
         }
         return {
-          d, mean, cv, nearIdentical, reversals,
+          d, mean, cv, nearIdentical,
+          pacing, cornerA, cornerB, hueDrift, chromaAdequacy, blackPocket,
+          smoothness,
           worst: { i: worstIdx, deltaE: worstD, reason: worstReason },
         };
       }
 
-      function scoreGamutReach(hue) {
-        // Distance of the reachable pure corner from the L axis in
-        // OKLrab. Uses the active strategy's own atBary at the C
-        // corner so every space is judged by what it actually renders.
-        // chroma = √(a² + b²) is identical in OKLab and OKLrab (only L
-        // changes); we use the Lr converter here purely for consistency.
-        const s = strat();
-        const rgb = s.atBary(hue, 0, 0, 1);
-        const lab = srgbToOklrab(rgb);
-        const chromaC = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
-        return { chromaC, area: 0.5 * chromaC };
+      // Dense triangle sample → metrics for the Smooth and Reach
+      // sub-scores. Smooth aggregates four gradient-uniformity facets
+      // (see SCORE_SMOOTH_* constants above). Reach is peak chroma.
+      // Sampled via atBaryEased so the user's curves count toward
+      // what the space actually delivers.
+      function sampleSpaceMetrics(hue) {
+        const N = SCORE_SAMPLE_GRID_N;
+        const samples = [];
+        for (let i = 0; i <= N; i++) {
+          for (let j = 0; j <= N - i; j++) {
+            const w = i / N, b = j / N, c = 1 - w - b;
+            if (c < -1e-9) continue;
+            const rgb = atBaryEased(hue, w, b, c);
+            const lab = srgbToOklrab(rgb);
+            samples.push({
+              w, b, c,
+              lr: lab[0],
+              ch: Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]),
+            });
+          }
+        }
+        const median = (xs) => {
+          if (!xs.length) return 0;
+          const a = xs.slice().sort((x, y) => x - y);
+          return a[a.length >> 1];
+        };
+        const meanOf = (xs) => xs.length
+          ? xs.reduce((s, x) => s + x, 0) / xs.length : 0;
+
+        // Lr ramp along w_b: 10 uniform shells; consecutive drops
+        // must be roughly equal for a smooth gradient.
+        const shellMeans = [];
+        for (let k = 0; k < 10; k++) {
+          const lo = k / 10, hi = (k + 1) / 10;
+          const sub = samples.filter(p => p.b >= lo && p.b < hi + 1e-9);
+          shellMeans.push(meanOf(sub.map(p => p.lr)));
+        }
+        const drops = [];
+        for (let k = 0; k < shellMeans.length - 1; k++) {
+          drops.push(shellMeans[k] - shellMeans[k + 1]);
+        }
+        const lastDrop = drops[drops.length - 1];
+        const midDrops = drops.slice(2, 7);
+        const midDropMean = meanOf(midDrops);
+        const dropSharpness = midDropMean > 1e-6
+          ? lastDrop / midDropMean : 1;
+
+        const interior = samples.filter(p =>
+          p.w >= 0.15 && p.b >= 0.15 && p.c >= 0.15);
+        const dark = samples.filter(p => p.lr >= 0.1 && p.lr <= 0.4);
+        const darkAreaFrac =
+          samples.filter(p => p.lr < 0.4).length / samples.length;
+        const interiorMedC = median(interior.map(p => p.ch));
+        const darkMedC = median(dark.map(p => p.ch));
+        let peakC = 0;
+        for (const p of samples) if (p.ch > peakC) peakC = p.ch;
+
+        // Linear remap, clamped to [0, 100]. lo→0, hi→100 (works in
+        // either direction because the constants encode the polarity).
+        const remap = (x, [lo, hi]) => {
+          const t = (x - lo) / (hi - lo);
+          return Math.max(0, Math.min(1, t)) * 100;
+        };
+        // Smooth sub-metrics (gradient uniformity facets):
+        const smoothLrRamp    = remap(dropSharpness, SCORE_SMOOTH_LR_RAMP_RANGE);
+        const smoothDarkArea  = remap(darkAreaFrac,  SCORE_SMOOTH_DARK_AREA_RANGE);
+        const smoothInteriorC = remap(interiorMedC,  SCORE_SMOOTH_INT_C_RANGE);
+        const smoothDarkC     = remap(darkMedC,      SCORE_SMOOTH_DARK_C_RANGE);
+        // Reach sub-metric (peak chroma achievable):
+        const reachPeak       = remap(peakC,         SCORE_REACH_PEAK_C_RANGE);
+
+        return {
+          smoothLrRamp, smoothDarkArea, smoothInteriorC, smoothDarkC,
+          reachPeak,
+          // raw stats (for tooltips / diagnostics):
+          dropSharpness, darkAreaFrac, interiorMedC, darkMedC, peakC,
+        };
       }
 
       // Three sub-scores each in [0, 100] with explicit floors and
       // ceilings, averaged into one Quality number in [0, 100].
       // Higher = better. See §13.2 of design/color-system.md.
-      function combineScore({ cv, nearIdentical, pairCount, reach }) {
+      function combineScore({ nearIdentical, pairCount, perScaleSmoothness, metrics }) {
         const distinctQ = pairCount > 0
           ? 100 * (1 - nearIdentical / pairCount)
           : 100;
-        const smoothQ = 100 * (1 - Math.min(1, cv / SCORE_CV_CEILING));
-        const reachQ = 100 * Math.min(1,
-          (reach.chromaC || 0) / SCORE_REFERENCE_CHROMA);
-        const quality = (distinctQ + smoothQ + reachQ) / 3;
+        // Smoothness is the mean of per-scale v2 smoothness scores
+        // (each scale aggregates its own pacing/corner/hue/chroma sub-
+        // metrics via quadratic shortfall — see scoreScale).
+        const smoothQ = perScaleSmoothness.length
+          ? perScaleSmoothness.reduce((s, x) => s + x, 0) / perScaleSmoothness.length
+          : 100;
+        const reachQ = metrics.reachPeak;
+        const quality = aggregateShortfall([distinctQ, smoothQ, reachQ]);
         return { quality, distinctQ, smoothQ, reachQ };
       }
 
@@ -2554,31 +2753,38 @@
           if (line.length >= 2) diag.push(scoreScale(line));
         }
         const all = [...rows, ...cols, ...diag];
-        const meanCV = all.length
-          ? all.reduce((s, r) => s + r.cv, 0) / all.length : 0;
         const nearIdentical = all.reduce((s, r) => s + r.nearIdentical, 0);
         const pairCount = all.reduce((s, r) => s + r.d.length, 0);
-        const reach = scoreGamutReach(hue);
+        // Smoothness only aggregates the 3 corner-to-corner edges:
+        //   rows[0]  = W↔C (top row, b=0 throughout)
+        //   cols[0]  = W↔B (leftmost col, c=0 throughout)
+        //   diag[N]  = B↔C (last diagonal, w=0 throughout)
+        // The other 27 interior 1D scales don't terminate at corners,
+        // so corner-influence / hue-drift / chroma-adequacy don't apply.
+        const cornerEdges = [];
+        if (rows[0]) cornerEdges.push(rows[0]);
+        if (cols[0]) cornerEdges.push(cols[0]);
+        if (diag.length) cornerEdges.push(diag[diag.length - 1]);
+        const perScaleSmoothness = cornerEdges.map(r => r.smoothness);
+        const metrics = sampleSpaceMetrics(hue);
         const q = combineScore({
-          cv: meanCV, nearIdentical, pairCount, reach,
+          nearIdentical, pairCount, perScaleSmoothness, metrics,
         });
-        return { rows, cols, diag, meanCV, nearIdentical, pairCount,
-                 reach, ...q };
+        return { rows, cols, diag, nearIdentical, pairCount,
+                 metrics, cornerEdges, ...q };
       }
 
       function scoreArcSet(arcRgbs, { hue }) {
-        // arcRgbs is an array of arcs, each an array of sRGB triples.
         const perArc = arcRgbs.map(rgbs => scoreScale(rgbs,
           { truncateEnds: true, isArc: true }));
-        const meanCV = perArc.length
-          ? perArc.reduce((s, r) => s + r.cv, 0) / perArc.length : 0;
         const nearIdentical = perArc.reduce((s, r) => s + r.nearIdentical, 0);
         const pairCount = perArc.reduce((s, r) => s + r.d.length, 0);
-        const reach = scoreGamutReach(hue);
+        const perScaleSmoothness = perArc.map(r => r.smoothness);
+        const metrics = sampleSpaceMetrics(hue);
         const q = combineScore({
-          cv: meanCV, nearIdentical, pairCount, reach,
+          nearIdentical, pairCount, perScaleSmoothness, metrics,
         });
-        return { perArc, meanCV, nearIdentical, pairCount, reach, ...q };
+        return { perArc, nearIdentical, pairCount, metrics, ...q };
       }
 
       function statusItem(key, value, wide = false) {
@@ -2672,7 +2878,9 @@
           gridRgbs.push(rowRgbs);
         }
 
-        updateScorePill(gridScoreEl, scoreGrid(gridRgbs, N, { hue }));
+        const gridResult = scoreGrid(gridRgbs, N, { hue });
+        window.__lastGridResult = gridResult;
+        updateScorePill(gridScoreEl, gridResult);
 
         gridTarget.innerHTML = "";
         gridTarget.appendChild(grid);
@@ -3672,6 +3880,33 @@ document.querySelectorAll('[data-decision="space"] button').forEach(btn => {
         document.getElementById("save-tonalgrid")
           .addEventListener("click", () => postExport("tonalgrid"));
       }
+
+      window.__diag = {
+        spaces: Object.keys(STRATEGIES),
+        atBary(space, hue, w, b, c) {
+          return STRATEGIES[space].atBary(hue, w, b, c);
+        },
+        atBaryEased(hue, w, b, c) {
+          return atBaryEased(hue, w, b, c);
+        },
+        srgbToOklrab,
+        srgbToOklab,
+        hueNameAt,
+        deltaE: deltaE_OKLrab,
+        sampleSpaceMetrics,
+        setSpace(space) { state.space = space; },
+        setHue(h) {
+          state.hue = ((+h % 360) + 360) % 360;
+          onHueChanged();
+        },
+        resetAllCurvesToIdentity() {
+          for (const sp of Object.keys(STRATEGIES)) {
+            state.curves[sp] = {
+              wb: identityCurve(), bc: identityCurve(), wc: identityCurve(),
+            };
+          }
+        },
+      };
     </script>
   </body>
 </html>

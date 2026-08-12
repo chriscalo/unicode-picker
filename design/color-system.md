@@ -63,6 +63,676 @@ Goal: pin down a color system with these properties —
 The workbench lets you dial all of those in and see each facet at
 once. Four tiles, all driven from a single shared `state` object.
 
+### 2.1 The four-stage pipeline (and why each stage is independent)
+
+The system is a pipeline of four problems. Critical insight: each
+stage gets to pick its own color space — what's right for the hue
+wheel is not necessarily what's right for the painter's triangle,
+and the triangle-quantization step (arcs vs. grid) is a usability
+question that isn't a color-science question at all.
+
+**Stage 1 — Constructing the hue wheel.** Sample a continuous wheel of pure colors
+and pick the color space that best supports it. "Good" here:
+- No stretches of perceptually identical hue (e.g., the long
+  green plateau that plagues raw HSL/HSV).
+- Vibrant — the wheel includes the most colorful colors at each
+  hue (full sRGB chroma, not muddied).
+- No sharp discontinuities or kinks moving around the ring.
+
+This is a property of the *wheel*, not of any triangle. Score
+the wheel directly, in a fixed reference space (OKLrab).
+
+**Stage 2 — Hue quantization.** Pick K evenly-spaced hue angles
+(typically 12 / 16 / 24) such that the resulting discrete set
+feels distinct — no two adjacent quantized hues read as the
+same color. This is the discrete sibling of Stage 1.
+
+The space chosen here doesn't need to match Stage 3 or 4. The
+hue angles are just numbers; how the triangle interprets them
+is a downstream concern.
+
+**Stage 3 — Constructing the painter's triangle (pure ↔ black ↔
+white).** For each quantized hue, build the triangle and pick
+the color space
+that produces the best 2-D mixing. **Stage 3's color space need
+not match Stage 1's** — the wheel hands Stage 3 a list of pure
+RGB values; how the triangle interpolates around each of those
+is an independent choice. The wheel might be in space X for its
+hue distribution properties while the triangle is in space Y
+for its mixing properties.
+
+"Good" is the §13.1 axes — Reach, Distinctness, Smoothness —
+but with two important clarifications now that Stage 1 is
+separate:
+
+- **The pure-corner chroma is fixed by Stage 1.** Whichever
+  color space we use for Stage 1 sets how chromatic the pure
+  hue is. Stage 3's "Reach.C-corner" is therefore largely a
+  Stage-1 inheritance, not a free variable. It still matters —
+  Stage 3 must not *clip* the pure corner — but it's not the
+  primary differentiator at this stage.
+- **The white and black corners must be exact.** No Stage-3
+  failure should leave white grey-ish or black anything-but-
+  black. Reach at W and B is binary in practice.
+
+Stage 3's primary differentiators are therefore **Smoothness**
+(the path failures: pinched/dominant corner, hue drift, chroma
+collapse — see §13.1) and **Distinctness** (no near-duplicate
+stops in the extracted scale).
+
+**Hue stability across the whole triangle is the highest-order
+Stage 3 quality.** The triangle should read as one hue's family
+— start from a pure blue at the C corner and the entire
+interior should still feel "blue-ish." The classic failure: a
+blue triangle whose mid-tones bow through purple before
+returning to blue at the corners. Mathematically this is the
+**hue drift** sub-metric (max OKLrab hue deviation from the C
+corner along any path), but conceptually it's the umbrella
+quality — none of the other Stage 3 facets matter if the
+triangle's identity drifts. Spaces that hold OKLrab hue
+constant by construction (OKLCH, OKHSL, OKHSV) get this for
+free; spaces that interpolate in linear sRGB (HWB) or in
+non-perceptual lightness axes (LCh(ab)) do not.
+
+Open question (M6, deferred): score the *triangle* as a
+substrate vs. score the *scale* extracted from it. The latter
+is what the user sees, but a triangle scored without a chosen
+extraction model is also meaningful for ranking spaces.
+Currently the metric scores the extracted scale (M2..M5).
+
+**Stage 4 — Triangle quantization (arcs vs. tonal grid).** This
+stage is its own form of quantization — picking which finite
+set of points inside the triangle becomes the actual ship-able
+scale, the same way Stage 2 picks which finite set of hues
+becomes the wheel's quantized vocabulary. Two competing
+quantization models: an arc set (curves through the triangle)
+or a tonal grid (a triangular array of cells). The choice
+between them is **driven by usability, not by color science** —
+both quantize the same triangle and would, in principle,
+produce compatible scales if the underlying triangle is good.
+The choice is about which model is easier for designers to work
+with. Score-wise, both feed into the same Smoothness /
+Distinctness measurement on their respective stops.
+
+### 2.2 Per-stage quality signals (eye-validated, 2026-04-25)
+
+The set below was confirmed via per-stage forced-choice
+calibration. Additions need the same kind of empirical
+validation before being written into a score.
+
+**Stage 1 — Constructing the hue wheel.**
+
+GOOD:
+- Equal angles around the ring → equal perceived hue change.
+- Maximum chroma at every hue (the wheel reaches the most
+  colorful sRGB value available at each angle).
+- Smooth continuous transitions (no jumps or kinks around the
+  ring).
+- Spans the full visible gamut — all identifiable hue families
+  appear somewhere on the ring.
+
+BAD:
+- Hue plateaus (long stretches of perceptually identical hue —
+  the canonical raw-HSL/HSV failure with greens).
+- Muted / desaturated wheel (overall low chroma).
+- Sharp discontinuities or kinks.
+- Some hue families compacted into tiny angular sweeps while
+  others sprawl.
+
+**Stage 2 — Hue quantization.**
+
+GOOD:
+- Every quantized slot is perceptually distinct from its
+  neighbors.
+- All major hue families are present — each gets at least one
+  slot.
+- Every slot is fully chromatic — no slot lands in a muted
+  region of the wheel.
+
+Note: even *perceptual* spacing of slots is **not** a quality
+signal. Distinctness, family coverage, and per-slot vibrancy
+are what matter; geometric uniformity is not a strict
+requirement.
+
+BAD:
+- Adjacent slots indistinguishable (read as the same color).
+- Duplicate hue-family slots (e.g., two slots both reading as
+  "green").
+- Missing hue families (an entire color family doesn't appear
+  at any slot).
+- Some slots land in muted regions of the wheel even though
+  others are vibrant.
+
+**Stage 3 — Constructing the painter's triangle.**
+
+GOOD:
+- Whole triangle reads as one hue family — start blue at the C
+  corner and the entire interior still feels blue-ish. This is
+  the umbrella Stage 3 quality (§2.1).
+- W reaches pure white, B reaches pure black. **Soft constraint**
+  — the penalty for falling short is modest as long as the
+  corners are very close to pure white / pure black.
+- Interior reaches meaningful chroma — no washed-out grey
+  middle.
+- Smooth gradient corner-to-corner. **Sharp slopes anywhere are
+  bad**, not just outright discontinuities — any sudden change
+  in pacing along a corner-to-corner path is a failure.
+
+BAD:
+- Hue drift through the wrong hue — the path between corners
+  bows through a different hue family (the canonical
+  blue→purple→blue failure).
+- Pinched corner — a corner's color exists only in a tiny
+  pinprick of the triangle's area.
+- Middle dominated by black, white, or grey. **Asymmetric** —
+  pure-color dominance in the middle is *not* a failure;
+  black-, white-, or grey-dominance is.
+- W or B noticeably off (significant departure from pure white
+  / pure black; small departures fall under the soft GOOD
+  constraint above).
+- Any sharp slope along a corner-to-corner path (covered by
+  Smoothness above; called out separately because the user's
+  eye treats these as distinct from kinks).
+
+**Stage 4 — Triangle quantization (arcs vs. tonal grid).**
+
+GOOD:
+- All adjacent stops in the extracted scale are perceptibly
+  different from each other.
+- Stops cover the full triangle and are rationally distributed
+  — designers can find a stop wherever they need one in the
+  triangle's interior.
+- Intuitive naming / addressing — designers can pick stops by
+  intent (e.g., `c50`, `c60`) rather than by trial.
+
+BAD:
+- Near-duplicate adjacent stops in the extracted scale.
+- Layout hard for designers to navigate or reason about.
+
+Open question: whether stops clipping outside the valid
+barycentric region is a real concern in practice (the current
+arc and grid models stay valid by construction; flagged as
+unverified).
+
+### 2.3 Stage 1 metrics (eye-validated, 2026-04-25)
+
+**Two metrics**: Vibrancy and Hue evenness. Each is a property
+of the **continuous** hue wheel (the locus of C-corner colors as
+the input hue angle goes 0°→360°). Sampling resolution is for
+numerical accuracy, not quantization — quantization is Stage 2's
+job.
+
+(An earlier draft of this section had a third metric, "Color
+smoothness," but it was dropped: every smoothness failure on the
+6 candidate spaces sits at a compressed-category boundary, so
+the compression-only Hue evenness metric below already catches
+all of them. Smoothness as a separable concept never produced
+rankings the user's eye agreed with that Hue evenness didn't
+already give.)
+
+All metrics evaluated in OKLrab as the reference space (a fixed
+neutral ruler, independent of which space we're scoring).
+
+**Why OKLrab as reference?**
+- *Perceptually uniform under Euclidean ΔE* — by Ottosson's design
+  goal, vector distance in OKLrab approximates perceived distance
+  reasonably well across the gamut, including the blue/purple
+  region CIELab gets wrong.
+- *Independent of every candidate space* — none of the 6 strategies
+  *is* OKLrab, so it sits outside the competition.
+- *Lr correction handles the dark region* — OKLab's `L` is
+  non-uniform near black; OKLrab's `Lr` (Ottosson 2023) corrects
+  it with a ~10-line toe function. Stage 3 failures live in dark
+  territory, so this matters.
+- *Cheap and dependency-free* — ~30 LOC; no viewing-condition
+  parameters to misset (CAM16-UCS would be the next step up but
+  costs 300+ LOC and has knobs that *must* be set right).
+
+**1. Vibrancy** — the wheel reaches max chroma at every hue.
+- Computation: at each sampled angle θ, render the C-corner color,
+  convert to OKLrab, take its chroma `c = √(a² + b²)` and its hue
+  angle `η = atan2(b, a)`. Look up the maximum sRGB chroma
+  achievable at OKLrab hue `η` from a precomputed gamut table.
+  Per-sample saturation ratio = `c / maxC(η)`.
+- **Metric: mean of per-hue saturation ratios.** "On average,
+  what % of full saturation does each hue reach?" A space at
+  gamut max everywhere averages 1.0; a sub-gamut space averages
+  < 1.
+- Calibration on the 6 UI spaces (mean ratio):
+  HWB 0.999, OKHSL 1.001, OKHSV 0.996, OKLCH 0.992,
+  LCh(ab) 0.990, Jzazbz 0.982.
+  All within 2% of gamut max — weak differentiator on the 6 UI
+  spaces. The metric exists to catch sub-gamut candidates
+  (e.g., HPLuv averages ~0.6).
+
+**2. Hue evenness** — does every named perceptual hue category
+get a fair share of the wheel's angular sweep?
+
+The wheel's hue domain is partitioned into **16 perceptual
+categories** (8 primaries + 8 transitions): R, R-O, O, O-Y, Y,
+Y-G, G, G-C, C, C-B, B, B-P, P, P-M, M, M-R.
+
+The **category boundaries are eye-calibrated** to the user (via
+forced-choice probes 2026-04-25): for each transition, ~12
+swatches were rendered with a randomized window offset so the
+boundary couldn't be guessed from position; the user identified
+the marker number where the transition occurs.
+
+| boundary    | eye-calibrated angle (°) |
+|-------------|--------------------------|
+| R ↔ R-O     | 2.06                     |
+| R-O ↔ O     | 11.63                    |
+| O ↔ O-Y     | 32.07                    |
+| O-Y ↔ Y     | 46.40                    |
+| Y ↔ Y-G     | 65.17                    |
+| Y-G ↔ G     | 85.24                    |
+| G ↔ G-C     | 137.00                   |
+| G-C ↔ C     | 175.47                   |
+| C ↔ C-B     | 188.98                   |
+| C-B ↔ B     | 200.65                   |
+| B ↔ B-P     | 253.26                   |
+| B-P ↔ P     | 265.04                   |
+| P ↔ P-M     | 287.63                   |
+| P-M ↔ M     | 290.09                   |
+| M ↔ M-R     | 327.52                   |
+| M-R ↔ R     | 346.37                   |
+
+Per-boundary uncertainty is ±1–2 marker slots ≈ ±5–11°. The
+P↔P-M and P-M↔M boundaries landed within 1 marker of each
+other (P-M reads as ~2.5° wide), which is likely calibration
+noise — flagged for re-test.
+
+The category widths are intentionally **unequal** (G = 51.8°,
+B = 52.6°, R = 15.7°, C = 13.5°). This reflects that human
+perception isn't uniform across HSL hue: some color families
+span more HSL angle than others before reading as a different
+family.
+- Bucket every wheel sample by its sRGB HSL hue into one of the
+  16 categories using the eye-calibrated boundaries above.
+- **Ideal share per category = 360° ÷ 16 = 22.5° = 6.25%.**
+  Symmetric — every category gets equal angular share at the
+  ideal.
+- Per-category deviation: `e_i = share_i − 1/16`.
+- **Metric: compression-only RMSE.** Stretches are forgivable;
+  compressions are not. A family that gets *less* than its fair
+  share reads as a "missing" or "kinked" region; a family that
+  gets *more* is just generously represented and the eye doesn't
+  penalize it.
+  ```
+  compression_i = max(0, ideal − share_i)
+  RMSE_c = sqrt(mean(compression_i²))   over all 16 categories
+  score = 1 − RMSE_c / max_RMSE_c
+  ```
+  where `max_RMSE_c = ideal × sqrt((N − 1) / N)` is the RMSE
+  when a single category has share = 0 and the others have at
+  least their ideal share. For N = 16, ideal = 1/16, so
+  `max_RMSE_c ≈ 0.0605`.
+
+- Calibration on the 6 UI spaces, eye-calibrated boundaries:
+
+  | space   | RMSE_c | score |
+  |---------|--------|-------|
+  | hwb     | 0.0153 | 0.908 ← best |
+  | oklch   | 0.0157 | 0.905 |
+  | okhsv   | 0.0157 | 0.905 |
+  | okhsl   | 0.0163 | 0.901 |
+  | jzazbz  | 0.0166 | 0.900 |
+  | lchab   | 0.0188 | 0.889 |
+
+  HWB ranks best, matching the user's perception. Spread is
+  small (0.019 between best and worst) because at this hue level
+  none of the 6 spaces is genuinely broken — they're all
+  passable wheels with different distributions.
+
+- Note on HWB's green and blue: HWB renders sRGB-HSL hue
+  uniformly, and sRGB-HSL allocates ~50° to green and ~50° to
+  blue (vs ~22.5° each at perceptual-uniform). The compression-
+  only metric measures these as zero-penalty stretches —
+  consistent with the user's eye (HWB green is wide but doesn't
+  read as a flaw).
+
+### 2.4 Stage 2 metrics (eye-validated, 2026-04-25)
+
+**Three metrics**: Distinctness, Family coverage, Vibrancy. Each is a
+property of a **specific K-slot quantization** of the wheel — the
+metric depends on K, unlike the continuous Stage 1 wheel metrics. The
+slot picker takes K uniform input-hue angles 0, 360°/K, 2·360°/K, …
+and renders the C-corner color at each.
+
+The three metrics map 1:1 to the three Stage 2 GOOD signals from §2.2:
+
+| metric          | GOOD signal                                          |
+|-----------------|------------------------------------------------------|
+| Distinctness    | every quantized slot perceptually distinct from neighbors |
+| Family coverage | all major hue families present (each gets ≥ 1 slot)  |
+| Vibrancy        | every slot is fully chromatic                        |
+
+All metrics evaluated in OKLrab as the reference space (same neutral
+ruler used in Stage 1; see §2.3 for why OKLrab).
+
+Note: even *perceptual* spacing of slots is **not** a quality
+signal (per §2.2). Distinctness is therefore a JND-floor metric, not
+a gap-evenness metric — it asks "is any pair below the perceptibility
+threshold" rather than "are all gaps equal".
+
+**1. Distinctness** — no adjacent slot pair perceptually too close.
+- For the K slot colors `s_0, s_1, …, s_{K-1}`, compute adjacent ΔE
+  in OKLrab around the wheel: `ΔE_i = ‖s_i − s_{(i+1) mod K}‖`.
+- **Metric: mean of clamped safety margin.**
+  ```
+  distinctness = (1/K) · Σ min(1, ΔE_i / JND)
+  ```
+  Each pair contributes its safety margin up to `JND`, saturating
+  at 1.0 for any pair safely above the threshold. Pairs below `JND`
+  contribute `ΔE_i / JND` < 1 and pull the mean down.
+- `JND = 0.010` in OKLrab — calibrated to "barely perceptible
+  hue/chroma difference". Pairs below this read as the same color.
+- This is a hard-floor sanity check, not a competitive metric. All
+  6 UI spaces clear it at K ≤ 24; HWB at K=32 has 1 sub-JND pair
+  (score 0.980) due to the wide green stretch starting to close up.
+
+**2. Family coverage** — all 16 perceptual categories represented.
+- Classify each slot's sRGB-HSL hue using the eye-calibrated 16
+  category boundaries from §2.3.
+- **Metric:** `coverage = |{c : count(c) ≥ 1}| / min(K, 16)`.
+- For K ≥ 16, score = 1.0 iff every one of the 16 categories has
+  at least one slot. For K < 16, score = 1.0 iff K distinct
+  categories are hit.
+- Caveat: the P-M category is only ~2.46° wide (a calibration
+  artifact noted in §2.3). At K=24 the slot spacing is 15°, which
+  makes hitting P-M nearly impossible regardless of color space.
+  Every space currently misses P-M at K=24; this is masking real
+  differences and would need re-calibration of P-M to fix.
+
+**3. Vibrancy** — every slot fully chromatic.
+- Same per-hue saturation ratio as §2.3: at each slot, render the
+  C-corner color, convert to OKLrab, take `c = √(a² + b²)` and hue
+  angle `η = atan2(b, a)`, look up `maxC(η)` from the precomputed
+  sRGB gamut table.
+- **Metric:** `vibrancy = (1/K) · Σ c_i / maxC(η_i)`.
+- Identical formula to the Stage 1 Vibrancy metric, evaluated on
+  the K slots instead of the continuous wheel.
+
+**Calibration on the 6 UI spaces, K=24 and K=32** (vibrancy ratios
+> 1 are gamut-table coarseness artifacts):
+
+| space   | dist. K=24 | cov. K=24 | vib. K=24 | dist. K=32 | cov. K=32 | vib. K=32 |
+|---------|------------|-----------|-----------|------------|-----------|-----------|
+| hwb     | 1.000      | 0.875 (14/16) | 0.999 | **0.980** | **0.938 (15/16)** | 0.998 |
+| oklch   | 1.000      | 0.875 (14/16) | 0.989 | 1.000 | 0.875 (14/16) | 1.000 |
+| okhsl   | 1.000      | 0.875 (14/16) | 0.998 | 1.000 | 0.875 (14/16) | 1.007 |
+| okhsv   | 1.000      | 0.875 (14/16) | 0.993 | 1.000 | 0.875 (14/16) | 1.003 |
+| lchab   | 1.000      | 0.813 (13/16) | 0.983 | 1.000 | 0.813 (13/16) | 0.983 |
+| jzazbz  | 1.000      | 0.813 (13/16) | 0.974 | 1.000 | 0.813 (13/16) | 0.985 |
+
+K=24 missing categories: HWB {R-O, P-M}; OKLCH/OKHSL/OKHSV {R, P-M};
+LChab/Jzazbz {R-O, B-P, P-M}. At K=24, distinctness doesn't
+separate the 6 spaces (all clear JND). Family coverage and vibrancy
+are the differentiators: HWB and the OK family tie on coverage,
+HWB wins on vibrancy.
+
+K=32 reveals an asymmetry: HWB gains a category (15/16, picks up
+B-P) but loses distinctness (one adjacent pair below JND in the
+wide green stretch — visible in `stage2_rings.png` bottom-left).
+The OK family's coverage stays flat at 14/16 even with 8 more
+slots — narrow categories the OK family compresses (R / P-M)
+remain unhittable. LChab/Jzazbz never exceed 13/16.
+
+Eye-validation tile: `node test/_stage2-validation.mjs` renders the
+6 spaces × 2 K values to `/tmp/stage2_rings.png` for direct visual
+comparison. Locked in 2026-04-26.
+
+### 2.5 Stage 3 metrics (calibration in progress, 2026-04-27)
+
+**Four metrics**: Hue stability, Corner reach, Smoothness, Midpoint
+correctness. Each is a property of the **painter's triangle** built
+around a chosen hue, evaluated in OKLrab. Triangle quality varies
+per hue (gamut shape isn't isotropic), so each metric sweeps the
+hue wheel and aggregates.
+
+The four metrics map 1:1 to the four Stage 3 GOOD signals from §2.2:
+
+| metric              | GOOD signal                                              |
+|---------------------|----------------------------------------------------------|
+| Hue stability       | whole triangle reads as one hue family                   |
+| Corner reach        | all 3 corners (W, B, C) hit their idealized targets      |
+| Smoothness          | corner-to-corner gradient flows evenly (Lab L* uniformity) |
+| Midpoint correctness| 3 edge midpoints + centroid sit at perceptual halfway    |
+
+**Symmetry rule (eye-validated).** All Stage 3 metrics treat every
+corner and every midpoint identically — no special case for any
+specific corner. The "black compaction" failure mode the user
+brings up is the canonical *example*, but the metric formula is
+applied uniformly to all 3 corners (W, B, C) so it generalizes.
+
+**1. Hue stability** — interior OKLrab hue stays close to the
+C-corner's OKLrab hue (no blue→purple→blue drift).
+- For each hue, sample the triangle interior on a barycentric grid
+  (default N=20). At each sample, render the color in the candidate
+  space, convert to OKLrab, take its hue angle. Skip near-grey
+  samples (chroma < 0.02) where hue is mathematically unstable.
+- Per-hue: `maxDrift = max angular distance from C-corner hue`.
+- **Metric:** `stability = 1 − min(1, mean(maxDrift) / 30°)`. A space
+  with average max-drift of 0° scores 1.0; 30° drift saturates to 0.
+- 30° threshold = the typical width of a single perceptual category
+  (§2.3); drift larger than that means the triangle has bowed into
+  a *different* hue family.
+
+**2. Corner reach** — all 3 corners hit their idealized targets.
+- W → pure white (1,1,1); B → pure black (0,0,0); C → max sRGB
+  chroma at C's rendered OKLrab hue (the sub-gamut question from
+  Stage 1 vibrancy, evaluated for the C corner specifically).
+- Per-hue per-corner sub-scores combined as: `wScore = 1 − min(1,
+  wReachDE / 0.20)`, `bScore = 1 − min(1, bReachDE / 0.20)`,
+  `cScore = cChroma / maxC(cHue)`. Final: mean of the three.
+- All 6 current UI spaces hit perfect W and B corners; differences
+  show up on the C corner (sub-gamut spaces score < 1 here).
+
+**3. Smoothness** — gradient pacing along corner-to-corner paths is
+even (no perceptual jumps).
+- Eye-validated finding (2026-04-27): the user judged
+  chroma.js's `correctLightness` (CIE L* uniform) as the **smoothest
+  W↔B gradient** of the four lightness models tested (sRGB-uniform,
+  linear Y, CIE L*, OKLrab Lr). CIE L* and OKLrab Lr produced
+  effectively identical midpoints (sRGB #76/#76) and equally good
+  shape uniformity.
+- **Metric formulation:** for each of the 3 corner-to-corner paths
+  (W↔C, B↔C, W↔B), sample N_PATH points evenly in barycentric
+  coords, convert to OKLrab, and measure path uniformity in `Lr`.
+  Uniform `Lr` step sizes = smooth gradient.
+- This is the SHAPE measurement — it doesn't depend on viewing
+  conditions. The MIDPOINT POSITION measurement (§4 below) handles
+  the viewing-condition dependence separately.
+
+**4. Midpoint correctness** — every midpoint anchor reads as
+perceptually halfway. Symmetric across all 4 anchors.
+- 4 anchors per triangle: 3 edge midpoints (W↔C, B↔C, W↔B) +
+  triangle centroid.
+- Per-anchor: render the color at that barycentric coord, convert
+  to OKLrab. Compute the **perceptual ideal** = γ-corrected lerp of
+  the defining corners' OKLrab values:
+  ```
+  Lr_ideal = ((Lr_a^γ + Lr_b^γ) / 2)^(1/γ)
+  a_ideal  = (a_a + a_b) / 2
+  b_ideal  = (b_a + b_b) / 2
+  ```
+  (For the centroid, average all 3 corners.) γ accounts for
+  surround-dependent lightness perception (§2.6 below).
+- Per-anchor: `midDE = ‖rendered − ideal‖_OKLrab`.
+- **Metric:** `midpoint = 1 − min(1, mean(midDE) / threshold)`,
+  threshold from eye calibration (TBD; preliminary value pending).
+
+**Eye-calibration findings (2026-04-27, in dark surround):**
+
+The user's perceptual W↔B halfway sits at sRGB **#353535**
+(OKLrab Lr ≈ 0.23) — *much* darker than any standard perceptual
+lightness model places it:
+
+| model              | model's halfway grey | gap from #353535 |
+|--------------------|----------------------|------------------|
+| linear luminance Y | ~#B4B4B4             | huge             |
+| CIE L*             | ~#777777             | 0.27             |
+| OKLrab Lr          | ~#767676             | 0.27             |
+| chroma.js correctLightness (Lab L*) | ~#767676 | 0.27 |
+| Munsell Value      | ~#777777             | 0.20 (closest)   |
+
+This is **not** a flaw in any individual model — all of them assume
+neutral-grey surround viewing conditions. The triangle and strips
+are rendered on the dark-mode UI background (#1a1a1a), which
+triggers a documented perceptual shift (§2.6).
+
+Power-law correction fitted from one data point:
+`perceived_L(Lr) = Lr^γ` with `γ = log(0.5)/log(0.23) ≈ 0.47`.
+This γ is the calibration target for midpoint correctness in dark
+surround.
+
+**Stages of metric agreement with the user's eye (so far):**
+- OKHSL blue: midDE_linear=0.003 said "pass" on W↔B; user said
+  fail (looks 75% white). midDE_perceptual (γ=0.47)=0.269: now
+  flagged as fail. ✓
+- OKLCH blue: midDE_linear=0.082; midDE_perceptual=0.189. Both
+  flag as fail; user agrees. ✓
+
+**Pending:**
+- Lock in midpoint-correctness threshold from more eye samples.
+- Implement the corner-compaction sub-metric (count of triangle
+  samples within ΔE basin of each corner; identical formula per
+  corner; below-expected count → compaction).
+- Re-run full Stage 3 calibration table on the 6 UI spaces with
+  the corrected metrics.
+
+### 2.6 Open decision — neutral-surround γ value
+
+**STATUS: OPEN, 2026-04-27.** The Stage 3 metric uses a γ-corrected
+perceptual lerp for midpoint-correctness. The γ value to use is an
+unresolved decision.
+
+**Eye-calibration findings (Hubbard interval estimation):**
+
+| condition         | Lr halfway (best estimate) | Lr halfway (90% CI) | implied γ |
+|-------------------|----------------------------|---------------------|-----------|
+| dark surround #1a1a1a | 0.23 (point)            | not bracketed       | 0.47      |
+| neutral surround #767676 | 0.37 (best)          | 0.31–0.46 (~50% CI) / 0.18–0.60 (~90% CI) | **0.70** |
+| published-standard average observer | 0.50           | —                   | 1.00      |
+
+The surround correction (Bartleson-Breneman, §2.7) explains the dark
+→ neutral shift (γ 0.47 → 0.70) but doesn't close the gap to the
+published-mean observer (γ = 1.0). Residual gap = personal-eye
+calibration relative to the standard observer.
+
+**Two options:**
+
+| option | γ | metric matches | designer perceives mid as | end-user perceives mid as |
+|--------|----|----------------|---------------------------|---------------------------|
+| A. γ=1.0 (standard) | 1.0 | CIE L* / OKLrab Lr / chroma.js | ~28 sRGB-units too light | aligns with average observer |
+| B. γ=0.7 (this user's eye) | 0.7 | this designer's perception | aligned | ~28 sRGB-units too dark |
+
+**Trade-off summary:**
+- **A** is reproducible (matches research; future designers don't
+  inherit one user's calibration), but the design-time loop is
+  asymmetric — the designer sees midpoints lighter than they "are."
+- **B** keeps the design-time loop true for this user, but ships a
+  one-eye calibration to other designers and end-users.
+
+**Pending action items before resolving:**
+1. Apply a γ-correction along all edges of the rendered triangle
+   (current task) so we can see what the corrected output looks like
+   at γ=0.7 and γ=1.0, and compare directly.
+2. Decide whether the design tool's painter's-triangle UI should
+   render with the correction (so the designer perceives midpoints
+   correctly) or without (showing the "raw" math).
+3. If A is chosen, add a separate "designer compensation profile"
+   layer that's local to the tool but doesn't propagate into shipped
+   palettes.
+
+### 2.7 Viewing-condition correction (Bartleson-Breneman)
+
+The Stage 3 midpoint-correctness metric uses a γ-corrected lerp
+because perceived lightness depends on **surround luminance**, a
+documented effect not captured by CIE L* / OKLrab Lr / Lab L*
+directly. These models assume a neutral-grey surround; designs
+viewed against dark or light surrounds shift perception.
+
+**Two named effects:**
+
+1. **Bartleson-Breneman effect** — perceived contrast/midpoint
+   shifts with surround luminance. *Dark surround* compresses the
+   perceived value range, with the strongest compression at the
+   dark end. Mid-greys read as *lighter* than they are. The
+   classic correction is a power-law tone curve with exponent < 1
+   applied to the lightness axis. CIE L* itself uses an effective
+   exponent of ~0.43 modeling photopic daylight viewing; dark
+   surround needs an additional correction (≈ 0.5–0.7 on top).
+2. **Crispening effect** — simultaneous-contrast amplification of
+   lightness differences either side of the surround's lightness.
+   On a #1a1a1a background, mid-greys appear pushed brighter and
+   blacks appear pushed darker, exaggerating apparent range while
+   distorting the midpoint.
+
+**Practical implication: dark-mode and light-mode need different
+γ corrections.**
+
+The COLORS produced by the palette don't change between dark and
+light viewing — they are the same sRGB values. But how those
+colors *look* — and therefore where the perceptual halfway sits —
+varies with surround.
+
+| viewing context  | expected γ on Lr axis | perceptual halfway grey |
+|------------------|------------------------|-------------------------|
+| dark surround (#1a1a1a) | ≈ 0.47 (eye-calibrated) | ~#353535 (Lr 0.23) |
+| neutral grey surround   | ≈ 1.0 (no correction)   | ~#767676 (Lr 0.50) |
+| light surround (white)  | > 1.0 (opposite shift)  | ~#A0A0A0 (Lr ~0.65) |
+
+The numeric corrections for grey and light surround above are
+estimates from the literature; we have not eye-calibrated them.
+Calibrating both modes would mean repeating the W↔B halfway probe
+on a neutral-grey and on a white background.
+
+**Where this matters for the system:**
+
+- **Stage 3 metric scoring** — when the metric is used to score a
+  triangle for use in dark-mode UI, apply the dark γ. For
+  light-mode targeting, apply the light γ. Same metric formula,
+  different γ.
+- **Palette extraction (Stage 4)** — if a single palette must serve
+  both modes, the extracted scale's perceptual midpoints will
+  match in only one of the two modes. The other mode will see the
+  midpoints as off. Splitting into a "dark-mode palette" and
+  "light-mode palette" with the same hue/chroma but different
+  lightness curves is one resolution; accepting the asymmetry is
+  another.
+- **Designer experience** — the painter's triangle UI in
+  `color-triangle.html` runs on dark surround, so the rendered
+  triangle is what the designer sees with the dark-γ-shifted
+  perception. Designs created here are dark-surround-optimized by
+  default.
+
+Sources / literature:
+- Bartleson, C. J., & Breneman, E. J. (1967). *Brightness perception
+  in complex fields*. JOSA 57.
+- CIECAM02 / CIECAM16 — surround-conditional lightness model J,
+  with `c` (surround) parameter for dark/dim/average surrounds.
+- Whittle (1992) — perceived brightness on dark backgrounds
+  dominated by luminance contrast.
+- The crispening effect's surround-lightness dependence is studied
+  in (Park et al., 2017) and similar.
+
+### 2.8 Why this decomposition matters
+
+Mixing the stages was the source of confusion across several
+calibration rounds:
+
+- We were trying to score Reach in Stage 3 against the *hue's*
+  ideal chroma, but that's really a Stage 1 question.
+- We confused "which color space is best overall" with "which
+  is best at Stage X" — the answer is different per stage and
+  there's no requirement they match.
+- The Stage 4 (extraction model) question is logically last and
+  doesn't depend on the earlier choices, but it kept getting
+  bundled into Stage 3 calibration.
+
+Each stage is a separate decision with its own score.
+
 ---
 
 ## 3. Tile layout (2 × 2 quadrants, 100dvh, no page scroll)
@@ -526,47 +1196,133 @@ runtime lookup cost. Studio iframes reuse it via postMessage.
 
 ## 13. Task A detail — scale-quality score
 
-Status: **v1 shipped.** Lives in `design/color-triangle.html`
-alongside the other render helpers. Score pills in the tile 2 and
-tile 4 section heads update on every render.
+Status: **v1 shipped, v2 framework agreed (this section), v2 code
+in progress.** Score pills in the tile 2 and tile 4 section heads
+update on every render.
 
-### 13.1 Goals — why we measure
+### 13.1 Goals — why we measure, and the three qualities
 
-The per-edge curves (§10) let you sculpt how each triangle edge
-paces its transition. Before the score existed, "is this better?"
-was a visual judgment — fine for an A vs. B but terrible for
-A/B/C/D comparison, for tuning curve weights, or for deciding
-which color space to ship. The score turns the question into a
-number that updates live as you drag a knot.
+The whole point of this designer is to generate visually pleasing
+and useful color scales for UI design and dataviz. A color scale
+is a gradient of hue-related colors covering the pure color, tints,
+shades, and tones. We use the **pure–black–white triangle** as
+*the* model for thinking about color modification, and extract
+either an arc set or a tonal grid of stops from it. Per-edge curves
+(§10) sculpt how each barycentric axis paces its transition. The
+score turns "is this better?" into a number that updates live as
+you drag a knot, so A/B/C/D comparison and color-space-shipping
+decisions become quantitative.
 
-Three qualities we care about in any scale. Each is expressed as
-a 0-to-100 sub-score (higher = better) against an explicit
-ceiling, so the number reads as "how close to perfect":
+Three independent qualities we care about, each expressed as a
+0-to-100 sub-score (higher = better):
 
-1. **Distinct (100 = every slot pulls its weight).** Adjacent
-   swatches that look identical are duplicates dressed up as
-   variety — they waste a name in the role map and make the
-   scale feel padded. `100 · (1 − nearIdentical / pairCount)`:
-   100 means zero near-identical pairs, 0 means every adjacent
-   pair is a duplicate.
-2. **Smooth (100 = perfectly even pacing).** If the jump from
-   `c50` to `c60` is twice the jump from `c60` to `c70`, the
-   scale reads as broken even when every step is distinguishable.
-   `100 · (1 − min(1, meanCV / CV_CEILING))`: 100 means the
-   adjacent-pair ΔEs all match their mean; 0 means CV hit
-   `SCORE_CV_CEILING` (stddev half the mean — clearly uneven).
-3. **Reach (100 = saturated pure corner).** A scale that's
-   technically even but sits in a muddy low-chroma band (HPLuv
-   at most hues) isn't useful for UI — the pure corner is
-   supposed to be the *pure* corner. `100 · min(1, chromaC /
-   SCORE_REFERENCE_CHROMA)`: 100 means the pure-corner chroma
-   hits the p95 of what sRGB can reach, 0 means pure-corner is
-   on the L axis.
+1. **Reach** — measured on the corner stops of the chosen scale.
+   The three corners that anchor the triangle should reach
+   perceptual extremes:
+   - the **pure corner** stop should reach the most saturated
+     sRGB color at this hue (for that hue's gamut),
+   - the **white corner** stop should reach pure white,
+   - the **black corner** stop should reach pure black.
 
-Combined **Quality** is the unweighted mean of the three.
-Everything is bounded `[0, 100]`, so the pill reads like a grade
-rather than an abstract score: higher is better, and 100 has a
-concrete meaning (hit every sub-ceiling).
+   If any corner falls short, no scale extracted from the
+   triangle can recover that range. The canonical failure in our
+   tool is **HPLuv**, whose pure corner reaches only ~60% of the
+   max sRGB chroma at the hue. The corner targets (true white,
+   true black, max-sRGB-chroma-at-hue) are external to the scale
+   — see §13.2 for the gamut-target lookup.
+
+2. **Distinctness** — every stop in the scale should be
+   sufficiently different from the others. The most common
+   failure is (near-)duplicate stops, which waste slots and make
+   selection ambiguous. Counted as the number of adjacent stop
+   pairs with `ΔE_OKLrab < 0.01` (the just-noticeable-difference
+   threshold). Unchanged from v1.
+
+3. **Smoothness** — measured on the actual stops in the chosen
+   scale (each arc; each grid row, column, and diagonal). Two
+   failure modes the eye sees as different things, both very
+   common:
+   - **Tiny corner.** Colors similar to a corner anchor exist
+     only in a very small area around that corner. Most common
+     in our tool: **Jzazbz** packing dark shades into a pinprick
+     at the black corner.
+   - **Dominant corner.** One corner anchor dominates *most* of
+     the triangle's area. Most common in our tool: **OKHSL**,
+     where the white corner's influence stretches into the
+     interior and leaves the middle of the triangle muted.
+   - **Sharp discontinuities** (rare) — a single step much
+     larger than its neighbors.
+
+   Empirically (eye-validated calibration corpus in
+   `test/_score-calibration.json`, 2026-04-25): per-step ΔE
+   uniformity *alone* does not catch the failures the eye sees.
+   Smoothness needs four complementary sub-metrics, each with a
+   distinct user-articulated failure mode:
+
+   - **Pacing uniformity (sharp discontinuities)** — adjacent-
+     step ΔE in OKLrab should be roughly equal along every 1-D
+     scale. Quantified as CV(ΔEs) or max-deviation-from-
+     cumulative-linear. Catches kinks, but not tiny/dominant
+     corner failures on its own.
+   - **Corner-influence size (tiny / dominant corner)** — for
+     each corner, count the stops in the scale that fall close
+     to that corner's perceptual region:
+     - black corner: `|{stop : Lr(stop) < 0.20}|`
+     - white corner: `|{stop : Lr(stop) > 0.80}|`
+     - pure corner: `|{stop : ΔE_OKLrab(stop, C) < ~0.20}|`
+     Too few = tiny corner; too many = dominant corner.
+     Calibration M2 (h=240, normalized to sRGB blue): jzazbz
+     scores 3/11 dark stops while oklch scores 7/11 — matches
+     user's perceptual ranking.
+   - **Hue drift (path-bows-through-wrong-hue)** — interpolation
+     between corners can drift OKLrab hue away from the
+     endpoint hues (e.g., white→blue passing through purple
+     before returning). For each edge ending at the C corner,
+     `hueDrift = max over cells (with C > 0.05) of
+     |hue(cell) − hue(C corner)|`. Calibration M3 (h=240,
+     W↔C edge): HWB 21°, LCh(ab) 32° — matches user's
+     "goes through purple"; OKLCH/OKHSL/OKHSV ≈ 0° by design.
+   - **Chroma adequacy (washed-out interior)** — interpolation
+     can stay low-chroma for most of an edge, then jump at the
+     end. For each W↔C or B↔C edge, `chromaMidpoint /
+     chromaAtCcorner`. Linear-ideal = 0.5; well below = chroma
+     collapses in the middle. Calibration M4: OKHSL 0.26 —
+     matches user's "extremely desaturated grays."
+
+   All four feed into the Smoothness sub-score; aggregation is
+   TBD (likely quadratic-shortfall over the four facets).
+
+   "Perceptually linear" is defined by human vision; color
+   spaces only approximate it. We measure in OKLrab (see below).
+
+Combined **Quality** aggregates the three. Each sub-score lives
+in `[0, 100]` so the pill reads like a grade — higher is better,
+and 100 has a concrete meaning (hit every ceiling).
+
+#### Reference color space — OKLrab
+
+**Critical constraint: every measurement must be independent of
+the color space being scored.** Otherwise an HWB candidate is
+judged by HWB's own ruler and an OKLCH candidate by OKLCH's, and
+the rankings are meaningless.
+
+The fixed reference is **OKLrab** (Ottosson, 2023): OKLab with
+the perceptual-lightness correction `Lr` replacing `L`. Reasons:
+
+1. **Independent of every candidate.** None of the eight
+   candidate strategies (HWB / OKLCH / OKHSL / OKHSV / LCh(ab) /
+   Jzazbz / HSLuv / HPLuv) *is* OKLrab, so it sits outside the
+   competition.
+2. **Perceptually uniform under Euclidean ΔE.** Vector math
+   suffices — no ΔE2000-style hue-rotation / chroma-weighting
+   corrections.
+3. **Dark-region uniformity.** Most failure modes in our spaces
+   live near the black corner. OKLab's `L` mis-paces darks;
+   OKLrab's `Lr` corrects this with a ~10-line toe function.
+4. **Cheap, already in the codebase.** CAM16-UCS is the next
+   step up but costs 300+ lines and has viewing-condition knobs
+   that must be set correctly. Don't switch until calibration
+   shows OKLrab ranking something wrong in a way CAM16 would fix.
 
 Suggested threshold reading:
 

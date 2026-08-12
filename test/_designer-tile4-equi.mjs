@@ -14,8 +14,9 @@ const tile4 = await page.$("main > section:nth-child(4)");
 await tile4.screenshot({ path: "/tmp/tile4-default.png" });
 
 await page.click("#equi-toggle");
-await page.waitForTimeout(600);
+await page.waitForTimeout(800);
 await tile4.screenshot({ path: "/tmp/tile4-equi.png" });
+await page.screenshot({ path: "/tmp/all-tiles-equi.png", fullPage: false });
 
 await browser.close();
 console.log("saved");
